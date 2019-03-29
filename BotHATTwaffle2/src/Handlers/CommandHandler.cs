@@ -18,6 +18,7 @@ namespace BotHATTwaffle2.Handlers
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service, DataService data)
         {
+            Console.WriteLine("Setting up CommandHandler...");
             _commands = commands;
             _client = client;
             _service = service;

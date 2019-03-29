@@ -9,17 +9,22 @@ using Discord.WebSocket;
 
 namespace BotHATTwaffle2.src.Handlers
 {
-    class UserJoinHandler
+    class UserHandler
     {
         private readonly DataService _data;
         private readonly DiscordSocketClient _client;
+        private readonly LogHandler _log;
 
-        public UserJoinHandler(DataService data, DiscordSocketClient client)
+        public UserHandler(DataService data, DiscordSocketClient client, LogHandler log)
         {
+            Console.WriteLine("Setting up UserHandler...");
+
             _data = data;
             _client = client;
+            _log = log;
 
             _client.UserJoined += UserJoinedEventHandler;
+            _client.UserLeft += UserLeftEventHandler;
         }
 
         private async Task UserJoinedEventHandler(SocketGuildUser user)
@@ -31,6 +36,11 @@ namespace BotHATTwaffle2.src.Handlers
                 .Replace("[WELCOME]", _data.WelcomeChannel.Mention);
 
             await _data.GeneralChannel.SendMessageAsync(message);
+        }
+
+        private async Task UserLeftEventHandler(SocketGuildUser user)
+        {
+            await _log.LogMessage($"{user.Username} has left the guild!");
         }
     }
 }

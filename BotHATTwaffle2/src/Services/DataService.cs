@@ -33,7 +33,7 @@ namespace BotHATTwaffle2.Services
         public SocketRole AdminRole { get; private set; }
         public SocketRole CompetitiveTesterRole { get; private set; }
 
-        public DataService(DiscordSocketClient client, Random random)
+        public DataService(DiscordSocketClient client)
         {
             _client = client;
 
@@ -113,6 +113,8 @@ namespace BotHATTwaffle2.Services
 
                 return channel;
             }
+
+
         }
 
         /// <summary>

@@ -31,21 +31,23 @@ namespace BotHATTwaffle2
             _services = new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
+                .AddSingleton<GuildHandler>()
                 .AddSingleton<CommandHandler>()
-                .AddSingleton<UserJoinHandler>()
+                .AddSingleton<LogHandler>()
+                .AddSingleton<UserHandler>()
                 .AddSingleton<DataService>()
                 .AddSingleton<Random>()
                 .AddSingleton<IHelpService, HelpService>()
                 .BuildServiceProvider();
 
             // Event subscriptions
-            _client.Log += LogEventHandler;
             _client.Ready += ReadyEventHandler;
-            _client.GuildAvailable += GuildAvailableEventHandler;
 
+            _services.GetRequiredService<LogHandler>();
+            _services.GetRequiredService<GuildHandler>();
             _data = _services.GetRequiredService<DataService>();
             await _services.GetRequiredService<CommandHandler>().InstallCommandsAsync();
-            _services.GetRequiredService<UserJoinHandler>();
+            _services.GetRequiredService<UserHandler>();
 
             // Remember to keep token private or to read it from an 
             // external source! In this case, we are reading the token 
@@ -60,32 +62,9 @@ namespace BotHATTwaffle2
             await Task.Delay(-1);
         }
 
-        private Task LogEventHandler(LogMessage msg)
-        {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Raised when the guild (server) becomes available.
-        /// <para>
-        /// Calls for the configuration to be read from the file.
-        /// </para>
-        /// </summary>
-        /// <remarks>
-        /// The configuration is called to be read here because some configuration fields are parsed into objects. Some of this
-        /// parsing requires the guild to be available so that names and roles can be retrieved.
-        /// Because this bot is intended to be used on only one server, this should only get raised once.
-        /// </remarks>
-        /// <param name="guild">The guild that has become available.</param>
-        /// <returns>No object or value is returned by this method when it completes.</returns>
-        private async Task GuildAvailableEventHandler(SocketGuild guild)
-        {
-            await _data.DeserialiseConfig();
-        }
-
         private Task ReadyEventHandler()
         {
+            Console.WriteLine("Guild ready!");
             return Task.CompletedTask;
         }
        
