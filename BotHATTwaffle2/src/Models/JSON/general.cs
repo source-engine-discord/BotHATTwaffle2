@@ -27,6 +27,6 @@ namespace BotHATTwaffle2
 
         [DefaultValue("competitive_level_testing")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string compeitiveTestingChannel { get; set; }
+        public string competitiveTestingChannel { get; set; }
     }
 }
