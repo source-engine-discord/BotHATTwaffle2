@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.src.Services.Calendar;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -37,6 +38,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<UserHandler>()
                 .AddSingleton<DataService>()
                 .AddSingleton<Random>()
+                .AddSingleton<GoogleCalendar>()
                 .AddSingleton<IHelpService, HelpService>()
                 .BuildServiceProvider();
 
@@ -48,6 +50,8 @@ namespace BotHATTwaffle2
             _data = _services.GetRequiredService<DataService>();
             await _services.GetRequiredService<CommandHandler>().InstallCommandsAsync();
             _services.GetRequiredService<UserHandler>();
+            _services.GetRequiredService<GoogleCalendar>();
+            
 
             // Remember to keep token private or to read it from an 
             // external source! In this case, we are reading the token 
@@ -55,6 +59,9 @@ namespace BotHATTwaffle2
             // environment variables, you may find more information on the 
             // Internet or by using other methods such as reading from 
             // a configuration.
+
+            Console.Read();
+
             await _client.LoginAsync(TokenType.Bot, _services.GetRequiredService<DataService>().RootSettings.program_settings.botToken);
             await _client.StartAsync();
 

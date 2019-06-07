@@ -20,5 +20,9 @@ namespace BotHATTwaffle2
         [DefaultValue("CHANGEME#1111")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public ulong alertUser { get; set; }
+
+        [DefaultValue("CHANGEME")]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public string testCalendarID { get; set; }
     }
 }
