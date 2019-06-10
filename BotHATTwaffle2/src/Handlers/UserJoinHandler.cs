@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
-using Discord.Commands;
 using Discord.WebSocket;
 
 namespace BotHATTwaffle2.src.Handlers
 {
-    class UserHandler
+    internal class UserHandler
     {
-        private readonly DataService _data;
         private readonly DiscordSocketClient _client;
+        private readonly DataService _data;
         private readonly LogHandler _log;
 
         public UserHandler(DataService data, DiscordSocketClient client, LogHandler log)
@@ -29,7 +25,7 @@ namespace BotHATTwaffle2.src.Handlers
 
         private async Task UserJoinedEventHandler(SocketGuildUser user)
         {
-            string message = _data.RootSettings.general.welcomeMessage;
+            var message = _data.RootSettings.general.welcomeMessage;
 
             //Replace placeholders
             message = message.Replace("[USER]", user.Mention)

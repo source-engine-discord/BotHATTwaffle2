@@ -1,26 +1,30 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.src.Services.Calendar;
+using BotHATTwaffle2.src.Services.Playtesting;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 
-
 namespace BotHATTwaffle2
 {
-    class Program
+    internal class Program
     {
-        private CommandService _commands;
+        private const ConsoleColor logColor = ConsoleColor.Red;
         private DiscordSocketClient _client;
-        private IServiceProvider _services;
+        private CommandService _commands;
         private DataService _data;
+        private LogHandler _log;
+        private IServiceProvider _services;
 
         public static void Main(string[] args)
-            => new Program().MainAsync().GetAwaiter().GetResult();
+        {
+            new Program().MainAsync().GetAwaiter().GetResult();
+        }
 
         public async Task MainAsync()
         {
@@ -36,22 +40,21 @@ namespace BotHATTwaffle2
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<LogHandler>()
                 .AddSingleton<UserHandler>()
+                .AddSingleton<ScheduleHandler>()
                 .AddSingleton<DataService>()
                 .AddSingleton<Random>()
                 .AddSingleton<GoogleCalendar>()
+                .AddSingleton<PlaytestService>()
                 .AddSingleton<IHelpService, HelpService>()
                 .BuildServiceProvider();
 
-            // Event subscriptions
-            _client.Ready += ReadyEventHandler;
-
-            _services.GetRequiredService<LogHandler>();
-            _services.GetRequiredService<GuildHandler>();
             _data = _services.GetRequiredService<DataService>();
+            _log = _services.GetRequiredService<LogHandler>();
+            _services.GetRequiredService<GuildHandler>();
+            _services.GetRequiredService<ScheduleHandler>();
             await _services.GetRequiredService<CommandHandler>().InstallCommandsAsync();
             _services.GetRequiredService<UserHandler>();
             _services.GetRequiredService<GoogleCalendar>();
-            
 
             // Remember to keep token private or to read it from an 
             // external source! In this case, we are reading the token 
@@ -60,20 +63,13 @@ namespace BotHATTwaffle2
             // Internet or by using other methods such as reading from 
             // a configuration.
 
-            Console.Read();
-
-            await _client.LoginAsync(TokenType.Bot, _services.GetRequiredService<DataService>().RootSettings.program_settings.botToken);
+            await _client.LoginAsync(TokenType.Bot,
+                _services.GetRequiredService<DataService>().RootSettings.program_settings.botToken);
+            _data.SetLogHandler(_services.GetRequiredService<LogHandler>());
             await _client.StartAsync();
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
         }
-
-        private Task ReadyEventHandler()
-        {
-            Console.WriteLine("Guild ready!");
-            return Task.CompletedTask;
-        }
-       
     }
 }

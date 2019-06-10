@@ -1,41 +1,52 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using Discord.WebSocket;
 
 namespace BotHATTwaffle2.src.Handlers
 {
-    class GuildHandler
+    internal class GuildHandler
     {
-        private readonly DataService _data;
+        private const ConsoleColor logColor = ConsoleColor.DarkGreen;
         private readonly DiscordSocketClient _client;
+        private readonly DataService _data;
+        private readonly LogHandler _log;
+        private readonly ScheduleHandler _schedule;
 
-        public GuildHandler(DataService data, DiscordSocketClient client)
+        public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule)
         {
             Console.WriteLine("Setting up GuildHandler...");
 
+            _log = log;
             _data = data;
             _client = client;
+            _schedule = schedule;
 
             _client.GuildAvailable += GuildAvailableEventHandler;
-
-            //Not used yet
-            //_client.GuildUnavailable += GuildUnavailableEventHandler;
+            _client.GuildUnavailable += GuildUnavailableEventHandler;
+            _client.Ready += ReadyEventHandler;
         }
 
         private async Task GuildAvailableEventHandler(SocketGuild guild)
         {
-            Console.WriteLine($"Guild Available: {guild.Name}");
+            await _log.LogMessage($"Guild Available: {guild.Name}", false, color: logColor);
             await _data.DeserialiseConfig();
+
+            _schedule.AddRequiredJobs();
         }
 
-        /*
+
         private async Task GuildUnavailableEventHandler(SocketGuild guild)
         {
-            //Not used yet
+            await _log.LogMessage($"GUILD UNAVAILABLE: {guild.Name}", false, color: ConsoleColor.Red);
+
+            _schedule.RemoveAllJobs();
         }
-        */
+
+        private Task ReadyEventHandler()
+        {
+            _ = _log.LogMessage("Guild ready!", false, color: logColor);
+            return Task.CompletedTask;
+        }
     }
 }

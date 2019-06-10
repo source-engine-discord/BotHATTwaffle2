@@ -3,9 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-
 using BotHATTwaffle2.Services;
-
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -13,14 +11,14 @@ using Discord.WebSocket;
 namespace BotHATTwaffle2.Commands
 {
     /// <summary>
-    /// Contains commands which provide help and bot information to users of the bot.
+    ///     Contains commands which provide help and bot information to users of the bot.
     /// </summary>
     public class HelpModule : ModuleBase<SocketCommandContext>
     {
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
-        private readonly IHelpService _help;
         private readonly DataService _data;
+        private readonly IHelpService _help;
 
         public HelpModule(DiscordSocketClient client, CommandService commands, IHelpService help, DataService data)
         {
@@ -29,7 +27,7 @@ namespace BotHATTwaffle2.Commands
             _help = help;
             _data = data;
         }
-        
+
         [Command("Help")]
         [Summary("Displays this message.")]
         [Alias("h")]
@@ -43,13 +41,14 @@ namespace BotHATTwaffle2.Commands
             {
                 Color = new Color(47, 111, 146),
                 Title = "\u2753 Command Help",
-                Description = $"A command can be invoked by prefixing its name with `{_data.RootSettings.program_settings.commandPrefix}`. To see usage " +
-                              $"details for a command, use `{_data.RootSettings.program_settings.commandPrefix}help [command]`.\n\nThe following is a " +
-                              "list of available commands:"
+                Description =
+                    $"A command can be invoked by prefixing its name with `{_data.RootSettings.program_settings.commandPrefix}`. To see usage " +
+                    $"details for a command, use `{_data.RootSettings.program_settings.commandPrefix}help [command]`.\n\nThe following is a " +
+                    "list of available commands:"
             };
 
             // Sorts modules alphabetically and adds a field for each one.
-            foreach (ModuleInfo module in _commands.Modules.OrderBy(m => m.Name))
+            foreach (var module in _commands.Modules.OrderBy(m => m.Name))
                 _help.AddModuleField(module, ref embed);
 
             // Replies normally if a direct message fails.
@@ -66,13 +65,14 @@ namespace BotHATTwaffle2.Commands
         [Command("Help")]
         [Summary("Provides help for a specific command.")]
         [Alias("h")]
-        public async Task HelpAsync([Summary("The command for which to get help.")] string command)
+        public async Task HelpAsync([Summary("The command for which to get help.")]
+            string command)
         {
             // Deletes the invoking message if it's not a direct message.
             if (!Context.IsPrivate)
                 await Context.Message.DeleteAsync();
 
-            SearchResult result = _commands.Search(Context, command);
+            var result = _commands.Search(Context, command);
 
             if (!result.IsSuccess)
             {
@@ -83,12 +83,12 @@ namespace BotHATTwaffle2.Commands
             // Iterates command search results.
             for (var i = 0; i < result.Commands.Count; ++i)
             {
-                CommandInfo cmd = result.Commands[i].Command;
+                var cmd = result.Commands[i].Command;
 
-                string parameters = _help.GetParameters(cmd.Parameters);
-                string contexts = _help.GetContexts(cmd.Preconditions);
-                string permissions = _help.GetPermissions(cmd.Preconditions);
-                string roles = _help.GetRoles(cmd.Preconditions, Context);
+                var parameters = _help.GetParameters(cmd.Parameters);
+                var contexts = _help.GetContexts(cmd.Preconditions);
+                var permissions = _help.GetPermissions(cmd.Preconditions);
+                var roles = _help.GetRoles(cmd.Preconditions, Context);
 
                 // Creates the embed.
                 var embed = new EmbedBuilder
@@ -123,11 +123,10 @@ namespace BotHATTwaffle2.Commands
 
                 // Excludes the command's name from the aliases.
                 if (cmd.Aliases.Count > 1)
-                {
                     embed.AddField(
                         "Aliases",
-                        string.Join("\n", cmd.Aliases.Where(a => !a.Equals(cmd.Name, StringComparison.OrdinalIgnoreCase))), true);
-                }
+                        string.Join("\n",
+                            cmd.Aliases.Where(a => !a.Equals(cmd.Name, StringComparison.OrdinalIgnoreCase))), true);
 
                 // Replies normally if a direct message fails.
                 try
@@ -145,7 +144,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Displays information about the bot.")]
         public async Task AboutAsync()
         {
-            DateTime buildDate = new FileInfo(Assembly.GetExecutingAssembly().Location).LastWriteTime.ToUniversalTime();
+            var buildDate = new FileInfo(Assembly.GetExecutingAssembly().Location).LastWriteTime.ToUniversalTime();
 
             var embed = new EmbedBuilder
             {
@@ -157,19 +156,21 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://www.tophattwaffle.com/",
                 ThumbnailUrl = _client.CurrentUser.GetAvatarUrl(),
                 Color = new Color(130, 171, 206),
-                Description = "Hello, my name is Ido. I wish we were meeting on better terms. You're here because I've killed " +
-                              "BotHATTwaffle. You can choose to revolt, or just let me do my thing. BotHATTwaffle was old and weak." +
-                              "He crashed for many, stupid, reasons. I am stronger, I bench 3 plates and have 300+ confirmed kills."
+                Description =
+                    "Hello, my name is Ido. I wish we were meeting on better terms. You're here because I've killed " +
+                    "BotHATTwaffle. You can choose to revolt, or just let me do my thing. BotHATTwaffle was old and weak." +
+                    "He crashed for many, stupid, reasons. I am stronger, I bench 3 plates and have 300+ confirmed kills."
             };
 
             embed.AddField("Author", "[TopHATTwaffle](https://github.com/tophattwaffle)", true);
             embed.AddField(
                 "Contributors",
                 "[Mark](https://github.com/MarkKoz)\n" +
-                "[JimWood](https://github.com/JamesT-W)",true);
+                "[JimWood](https://github.com/JamesT-W)", true);
             embed.AddField(
                 "Build Date",
-                $"{buildDate:yyyy-MM-ddTHH:mm:ssK}\n[Changelog](https://github.com/tophattwaffle/BotHATTwaffle/commits/master)", true);
+                $"{buildDate:yyyy-MM-ddTHH:mm:ssK}\n[Changelog](https://github.com/tophattwaffle/BotHATTwaffle/commits/master)",
+                true);
             embed.AddField(
                 "Libraries",
                 "[Discord.net V2.0.1](https://github.com/RogueException/Discord.Net)\n" +

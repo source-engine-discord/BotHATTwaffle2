@@ -5,6 +5,10 @@ namespace BotHATTwaffle2
 {
     public class program_settings
     {
+        [DefaultValue(false)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public bool debug { get; set; }
+
         [DefaultValue("CHANGEME")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public string botToken { get; set; }
@@ -24,5 +28,7 @@ namespace BotHATTwaffle2
         [DefaultValue("CHANGEME")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public string testCalendarID { get; set; }
+
+        public string imgurAPI { get; set; }
     }
 }

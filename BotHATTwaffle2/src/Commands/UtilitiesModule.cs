@@ -24,11 +24,12 @@ namespace BotHATTwaffle2.Commands
         }
 
         /// <summary>
-        /// Toggles the invoking user's roles.
+        ///     Toggles the invoking user's roles.
         /// </summary>
         /// <remarks>
-        /// Yields a list of all toggleable roles when invoked without parameters. The roles which can be used with this command
-        /// are specified in the <c>roleMeWhiteListCSV</c> config field.
+        ///     Yields a list of all toggleable roles when invoked without parameters. The roles which can be used with this
+        ///     command
+        ///     are specified in the <c>roleMeWhiteListCSV</c> config field.
         /// </remarks>
         /// <param name="roles">A case-insensitive space-delimited list of roles to toggle.</param>
         /// <returns>No object or value is returned by this method when it completes.</returns>
@@ -45,16 +46,17 @@ namespace BotHATTwaffle2.Commands
         {
             if (string.IsNullOrWhiteSpace(roles))
             {
-                await ReplyAsync($"Toggleable roles are:```\n{string.Join("\n", _dataService.RootSettings.lists.roles)}```" +
-                                 $"\n`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.");
+                await ReplyAsync(
+                    $"Toggleable roles are:```\n{string.Join("\n", _dataService.RootSettings.lists.roles)}```" +
+                    "\n`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.");
                 return;
             }
 
             var roleNames = new List<string>();
 
-            foreach (string role in _dataService.RootSettings.lists.roles)
+            foreach (var role in _dataService.RootSettings.lists.roles)
             {
-                Match match = Regex.Match(roles, $@"\b{role}\b", RegexOptions.IgnoreCase);
+                var match = Regex.Match(roles, $@"\b{role}\b", RegexOptions.IgnoreCase);
 
                 if (!match.Success) continue;
 
@@ -69,30 +71,28 @@ namespace BotHATTwaffle2.Commands
             }
 
             // Splits the remaining roles not found in the whitelist. Filters out empty elements.
-            ImmutableArray<string> rolesInvalid = roles.Split(' ').Where(r => !string.IsNullOrWhiteSpace(r)).ToImmutableArray();
+            var rolesInvalid = roles.Split(' ').Where(r => !string.IsNullOrWhiteSpace(r)).ToImmutableArray();
 
             // Finds all SocketRoles from roleNames.
-            IEnumerable<SocketRole> rolesValid =
+            var rolesValid =
                 Context.Guild.Roles.Where(r => roleNames.Contains(r.Name, StringComparer.InvariantCultureIgnoreCase));
 
-            var user = (SocketGuildUser)Context.User;
+            var user = (SocketGuildUser) Context.User;
             var rolesAdded = new List<SocketRole>();
             var rolesRemoved = new List<SocketRole>();
 
             // Updates roles.
-            foreach (SocketRole role in rolesValid)
-            {
+            foreach (var role in rolesValid)
                 if (user.Roles.Contains(role))
                 {
-                    await ((IGuildUser)user).RemoveRoleAsync(role);
+                    await ((IGuildUser) user).RemoveRoleAsync(role);
                     rolesRemoved.Add(role);
                 }
                 else
                 {
-                    await ((IGuildUser)user).AddRoleAsync(role);
+                    await ((IGuildUser) user).AddRoleAsync(role);
                     rolesAdded.Add(role);
                 }
-            }
 
             // Builds the response.
             var logMessage = new StringBuilder();
@@ -103,25 +103,25 @@ namespace BotHATTwaffle2.Commands
 
             if (rolesAdded.Any())
             {
-                string name = $"Added ({rolesAdded.Count})";
+                var name = $"Added ({rolesAdded.Count})";
 
-                embed.AddField(name, string.Join("\n", rolesAdded.Select(r =>r.Mention)),true);
+                embed.AddField(name, string.Join("\n", rolesAdded.Select(r => r.Mention)), true);
                 logMessage.AppendLine($"{name}\n    " + string.Join("\n    ", rolesAdded.Select(r => r.Name)));
             }
 
             if (rolesRemoved.Any())
             {
-                string name = $"Removed ({rolesRemoved.Count})";
+                var name = $"Removed ({rolesRemoved.Count})";
 
-                embed.AddField(name, string.Join("\n", rolesRemoved.Select(r => r.Mention)),true);
+                embed.AddField(name, string.Join("\n", rolesRemoved.Select(r => r.Mention)), true);
                 logMessage.AppendLine($"{name}\n    " + string.Join("\n    ", rolesRemoved.Select(r => r.Name)));
             }
 
             if (rolesInvalid.Any())
             {
-                string name = $"Failed ({rolesInvalid.Count()})";
+                var name = $"Failed ({rolesInvalid.Count()})";
 
-                embed.AddField(name, string.Join("\n", rolesInvalid),true);
+                embed.AddField(name, string.Join("\n", rolesInvalid), true);
                 embed.WithFooter("Failures occur when roles don't exist or toggling them is disallowed.");
                 logMessage.Append($"{name}\n    " + string.Join("\n    ", rolesInvalid));
             }

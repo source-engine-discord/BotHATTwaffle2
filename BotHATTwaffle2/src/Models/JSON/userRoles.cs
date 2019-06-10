@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using Newtonsoft.Json;
-
-namespace BotHATTwaffle2
+﻿namespace BotHATTwaffle2
 {
     public class userRoles
     {

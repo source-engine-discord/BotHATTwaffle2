@@ -3,21 +3,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-
 using Discord;
 using Discord.Commands;
 
 namespace BotHATTwaffle2.Commands.Readers
 {
     /// <summary>
-    /// Retrieves a role by parsing a string.
+    ///     Retrieves a role by parsing a string.
     /// </summary>
     /// Derived from https://github.com/RogueException/Discord.Net/blob/dev/src/Discord.Net.Commands/Readers/RoleTypeReader.cs
     /// <typeparam name="T">The role's type.</typeparam>
     public static class RoleTypeReader<T> where T : class, IRole
     {
         /// <summary>
-        /// Tries to parses a given string as a role.
+        ///     Tries to parses a given string as a role.
         /// </summary>
         /// <param name="guild">The guild in which to search for the role.</param>
         /// <param name="input">A string representing a role by mention, id, or name.</param>
@@ -27,7 +26,7 @@ namespace BotHATTwaffle2.Commands.Readers
             if (guild != null)
             {
                 var results = new Dictionary<ulong, TypeReaderValue>();
-                IReadOnlyCollection<IRole> roles = guild.Roles;
+                var roles = guild.Roles;
                 ulong id;
 
                 // By Mention (1.0)
@@ -40,7 +39,7 @@ namespace BotHATTwaffle2.Commands.Readers
 
                 // By Name (0.7-0.8)
                 // Acounts for name being null because GetrolesAsync returns categories in 1.0.
-                foreach (IRole role in roles.Where(x => string.Equals(input, x.Name, StringComparison.OrdinalIgnoreCase)))
+                foreach (var role in roles.Where(x => string.Equals(input, x.Name, StringComparison.OrdinalIgnoreCase)))
                     AddResult(results, role as T, role.Name == input ? 0.80f : 0.70f);
 
                 if (results.Count > 0)
@@ -51,29 +50,31 @@ namespace BotHATTwaffle2.Commands.Readers
         }
 
         /// <summary>
-        /// Gets the best role result for the given string.
+        ///     Gets the best role result for the given string.
         /// </summary>
         /// <param name="guild">The guild in which to search for the role.</param>
         /// <param name="input">A string representing a role by mention, id, or name.</param>
         /// <returns>The role result with the highest score or <c>null</c> if no results exist.</returns>
         public static async Task<T> GetBestResultAsync(IGuild guild, string input)
         {
-            TypeReaderResult result = await ReadAsync(guild, input);
+            var result = await ReadAsync(guild, input);
 
             return GetBestResult(result);
         }
 
         /// <summary>
-        /// Gets the best role result for the given string.
+        ///     Gets the best role result for the given string.
         /// </summary>
         /// <param name="context">The context in which to search for the role.</param>
         /// <param name="input">A string representing a role by mention, id, or name.</param>
         /// <returns>The role result with the highest score or <c>null</c> if no results exist.</returns>
-        public static async Task<T> GetBestResultAsync(ICommandContext context, string input) =>
-            await GetBestResultAsync(context.Guild, input);
+        public static async Task<T> GetBestResultAsync(ICommandContext context, string input)
+        {
+            return await GetBestResultAsync(context.Guild, input);
+        }
 
         /// <summary>
-        /// Gets the best role result from the given results.
+        ///     Gets the best role result from the given results.
         /// </summary>
         /// <param name="result">The results of a parse.</param>
         /// <returns>The role result with the highest score or <c>null</c> if no results exist.</returns>
@@ -86,7 +87,7 @@ namespace BotHATTwaffle2.Commands.Readers
         }
 
         /// <summary>
-        /// Adds a result to the given dictionary.
+        ///     Adds a result to the given dictionary.
         /// </summary>
         /// <param name="results">The dictionary to which to add the result.</param>
         /// <param name="role">The result's role.</param>

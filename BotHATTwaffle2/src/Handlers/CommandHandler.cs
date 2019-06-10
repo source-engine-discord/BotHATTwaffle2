@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
-
 using BotHATTwaffle2.Services;
-
 using Discord.Commands;
 using Discord.WebSocket;
 
@@ -13,10 +11,11 @@ namespace BotHATTwaffle2.Handlers
     {
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
-        private readonly IServiceProvider _service;
         private readonly DataService _data;
+        private readonly IServiceProvider _service;
 
-        public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service, DataService data)
+        public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
+            DataService data)
         {
             Console.WriteLine("Setting up CommandHandler...");
             _commands = commands;
@@ -24,7 +23,7 @@ namespace BotHATTwaffle2.Handlers
             _service = service;
             _data = data;
         }
-        
+
         public async Task InstallCommandsAsync()
         {
             // Hook the MessageReceived event into our command handler
@@ -38,8 +37,8 @@ namespace BotHATTwaffle2.Handlers
             //
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
-            await _commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
-                                            services: _service);
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(),
+                _service);
         }
 
         private async Task HandleCommandAsync(SocketMessage messageParam)
@@ -49,11 +48,11 @@ namespace BotHATTwaffle2.Handlers
             if (message == null) return;
 
             // Create a number to track where the prefix ends and the command begins
-            int argPos = 0;
+            var argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
             if (!(message.HasCharPrefix(_data.RootSettings.program_settings.commandPrefix[0], ref argPos) ||
-                message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
+                  message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
                 return;
 
@@ -66,9 +65,9 @@ namespace BotHATTwaffle2.Handlers
             // Keep in mind that result does not indicate a return value
             // rather an object stating if the command executed successfully.
             var result = await _commands.ExecuteAsync(
-                context: context,
-                argPos: argPos,
-                services: _service);
+                context,
+                argPos,
+                _service);
 
             // Optionally, we may inform the user if the command fails
             // to be executed; however, this may not always be desired,
