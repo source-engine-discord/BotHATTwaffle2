@@ -6,8 +6,8 @@ namespace BotHATTwaffle2.src.Models.LiteDB
 {
     class AnnounceMessage
     {
-        public int id { get; set; }
+        public int Id { get; set; }
         public DateTime AnnouncementDateTime { get; set; }
-        public ulong AnnouncementID { get; set; }
+        public ulong AnnouncementId { get; set; }
     }
 }

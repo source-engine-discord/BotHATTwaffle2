@@ -1,14 +1,15 @@
 ﻿using System;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.src.Services.Playtesting;
+using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.src.Handlers;
 using Discord.WebSocket;
 using FluentScheduler;
 
-namespace BotHATTwaffle2.src.Handlers
+namespace BotHATTwaffle2.Handlers
 {
     internal class ScheduleHandler
     {
-        private const ConsoleColor logColor = ConsoleColor.DarkMagenta;
+        private const ConsoleColor LogColor = ConsoleColor.DarkMagenta;
         private readonly DiscordSocketClient _client;
         private readonly DataService _data;
         private readonly LogHandler _log;
@@ -38,7 +39,7 @@ namespace BotHATTwaffle2.src.Handlers
 
         public void AddRequiredJobs()
         {
-            _ = _log.LogMessage("Adding required scheduled jobs...", false, color: logColor);
+            _ = _log.LogMessage("Adding required scheduled jobs...", false, color: LogColor);
 
             //Add schedule for playtest information
             JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement(), s => s
@@ -52,26 +53,26 @@ namespace BotHATTwaffle2.src.Handlers
             foreach (var allSchedule in JobManager.AllSchedules)
             {
                 _ = _log.LogMessage($"{allSchedule.Name} runs at: {allSchedule.NextRun}", 
-                    false, color: logColor);
+                    false, color: LogColor);
             }
         }
 
         private void FluentJobStart(JobStartInfo info)
         {
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage($"FLUENT JOB STARTED:{info.Name}", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage($"FLUENT JOB STARTED:{info.Name}", false, color: LogColor);
         }
 
         private void FluentJobEnd(JobEndInfo info)
         {
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage($"FLUENT JOB ENDED:{info.Name}", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage($"FLUENT JOB ENDED:{info.Name}", false, color: LogColor);
         }
 
         private void FluentJobException(JobExceptionInfo info)
         {
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage($"FLUENT JOB EXCEPTION:\n{info.Exception}", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage($"FLUENT JOB EXCEPTION:\n{info.Exception}", false, color: LogColor);
         }
     }
 }

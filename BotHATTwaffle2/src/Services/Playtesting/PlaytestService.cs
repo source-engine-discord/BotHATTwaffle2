@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Threading.Tasks;
-using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.src.Models.LiteDB;
-using BotHATTwaffle2.src.Services.Calendar;
 using Discord;
 
-namespace BotHATTwaffle2.src.Services.Playtesting
+namespace BotHATTwaffle2.Services.Playtesting
 {
     public class PlaytestService
     {
-        private const ConsoleColor logColor = ConsoleColor.DarkYellow;
+        private const ConsoleColor LogColor = ConsoleColor.DarkYellow;
         private static AnnouncementMessage _announcementMessage;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _data;
         private readonly LogHandler _log;
-        private readonly Random _random;
         private IUserMessage PlaytestAnnouncementMessage { get; set; }
         private int _failedToFetch = 0;
         private int _failedRetryCount = 60;
@@ -27,12 +25,11 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             _data = data;
             _log = log;
             _calendar = calendar;
-            _random = random;
 
             PlaytestAnnouncementMessage = null;
             _oldMessage = null;
 
-            _announcementMessage = new AnnouncementMessage(_calendar, _data, _random, _log);
+            _announcementMessage = new AnnouncementMessage(_calendar, _data, random, _log);
         }
 
         /// <summary>
@@ -48,13 +45,13 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             //Check old message, required for fresh boot with empty collection in db
             if (!_calendar.GetTestEvent().IsValid)
             {
-                if (_data.RootSettings.program_settings.debug)
-                    _ = _log.LogMessage("No test was found!", false, color: logColor);
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("No test was found!", false, color: LogColor);
 
                 if (PlaytestAnnouncementMessage != null)
                 {
-                    if (_data.RootSettings.program_settings.debug)
-                        _ = _log.LogMessage("Attempting to deleted outdated announcement", false, color: logColor);
+                    if (_data.RootSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Attempting to deleted outdated announcement", false, color: LogColor);
                     try
                     {
                         await _data.AnnouncementChannel.DeleteMessageAsync(PlaytestAnnouncementMessage);
@@ -62,7 +59,7 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                     catch
                     {
                         _ = _log.LogMessage("Failed to delete outdated playtest message. It may have been deleted",
-                            false, color: logColor);
+                            false, color: LogColor);
                     }
                 }
                 PlaytestAnnouncementMessage = null;
@@ -71,8 +68,8 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             }
 
 
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage("Posting or updating playtest announcement", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Posting or updating playtest announcement", false, color: LogColor);
 
 
             if (PlaytestAnnouncementMessage == null)
@@ -96,7 +93,8 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             {
                 //Compare the current event edit time with the last know.
                 //The current event edit time will be different from last known if the event has changed.
-                if (_calendar.GetTestEventNoUpdate().EventEditTime.Value.Equals(_lastSeenEditTime))
+                var eventEditTime = _calendar.GetTestEventNoUpdate().EventEditTime;
+                if (eventEditTime != null && eventEditTime.Value.Equals(_lastSeenEditTime))
                 {
                     await PlaytestAnnouncementMessage.ModifyAsync(x =>
                     {
@@ -110,7 +108,10 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                     await _data.AnnouncementChannel.DeleteMessageAsync(PlaytestAnnouncementMessage);
                     await PostNewAnnouncement();
                 }
-                _lastSeenEditTime = _calendar.GetTestEventNoUpdate().LastEditTime.Value;
+
+                var lastEditTime = _calendar.GetTestEventNoUpdate().LastEditTime;
+                if (lastEditTime != null)
+                    _lastSeenEditTime = lastEditTime.Value;
             }
             catch
             {
@@ -118,15 +119,15 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                 if (_failedToFetch >= _failedRetryCount)
                 {
                     _ = _log.LogMessage($"Tried to update announcement messages {_failedToFetch}, but failed." +
-                                        $"\nCreated a new message next time.", false, color: logColor);
+                                        $"\nCreated a new message next time.", false, color: LogColor);
                     PlaytestAnnouncementMessage = null;
                 }
                 else
                 {
                     //Have not failed enough, lets keep trying.
                     _failedToFetch++;
-                    if (_data.RootSettings.program_settings.debug)
-                        _ = _log.LogMessage($"Failed to update playtest announcement {_failedToFetch} times", false, color: logColor);
+                    if (_data.RootSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Failed to update playtest announcement {_failedToFetch} times", false, color: LogColor);
                 }
             }
         }
@@ -137,8 +138,8 @@ namespace BotHATTwaffle2.src.Services.Playtesting
         /// <returns></returns>
         private async Task PostNewAnnouncement()
         {
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage("Posting new announcement", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Posting new announcement", false, color: LogColor);
 
             try
             {
@@ -146,13 +147,18 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                 PlaytestAnnouncementMessage = await _data.AnnouncementChannel.SendMessageAsync(embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual));
 
                 //Hand off the message and time to be stored in the DB for use on restarts
-                DatabaseHandler.StoreAnnouncement(PlaytestAnnouncementMessage, _calendar.GetTestEventNoUpdate().EventEditTime.Value);
+                var eventEditTime = _calendar.GetTestEventNoUpdate().EventEditTime;
+                if (eventEditTime != null)
+                    DatabaseHandler.StoreAnnouncement(PlaytestAnnouncementMessage,
+                        eventEditTime.Value);
 
-                _lastSeenEditTime = _calendar.GetTestEventNoUpdate().LastEditTime.Value;
+                var lastEditTime = _calendar.GetTestEventNoUpdate().LastEditTime;
+                if (lastEditTime != null)
+                    _lastSeenEditTime = lastEditTime.Value;
             }
             catch
             {
-                _ = _log.LogMessage($"Attempted to post new announcement, but failed",false, color: logColor);
+                _ = _log.LogMessage($"Attempted to post new announcement, but failed",false, color: LogColor);
             }
         }
 
@@ -172,8 +178,8 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             //No message found in the DB, do nothing. Likely to happen when DB is new.
             if (_oldMessage == null)
             {
-                if (_data.RootSettings.program_settings.debug)
-                    _ = _log.LogMessage("No message found in DB to reattach to", false, color: logColor);
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("No message found in DB to reattach to", false, color: LogColor);
 
                 return;
             }
@@ -181,14 +187,14 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             //Make sure a test is valid
             if (!testEvent.IsValid)
             {
-                if (_data.RootSettings.program_settings.debug)
-                    _ = _log.LogMessage("No valid test found to post", false, color: logColor);
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("No valid test found to post", false, color: LogColor);
 
                 return;
             }
 
             _ = _log.LogMessage("Attempting to get old announcement message\n" +
-                                $"{_oldMessage.AnnouncementID} that was created at {_oldMessage.AnnouncementDateTime}", false, color: logColor);
+                                $"{_oldMessage.AnnouncementId} that was created at {_oldMessage.AnnouncementDateTime}", false, color: LogColor);
 
 
             var eventEditTime = _calendar.GetTestEventNoUpdate().EventEditTime;
@@ -197,30 +203,33 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                 try
                 {
                     PlaytestAnnouncementMessage =
-                        await _data.AnnouncementChannel.GetMessageAsync(_oldMessage.AnnouncementID) as IUserMessage;
+                        await _data.AnnouncementChannel.GetMessageAsync(_oldMessage.AnnouncementId) as IUserMessage;
 
-                    _ = _log.LogMessage($"Retrieved old announcement! ID: {PlaytestAnnouncementMessage.Id}", false,
-                        color: logColor);
+                    if (PlaytestAnnouncementMessage != null)
+                        _ = _log.LogMessage($"Retrieved old announcement! ID: {PlaytestAnnouncementMessage.Id}", false,
+                            color: LogColor);
 
-                    _lastSeenEditTime = _calendar.GetTestEventNoUpdate().LastEditTime.Value;
+                    var lastEditTime = _calendar.GetTestEventNoUpdate().LastEditTime;
+                    if (lastEditTime != null)
+                        _lastSeenEditTime = lastEditTime.Value;
                 }
                 catch
                 {
-                    _ = _log.LogMessage("Unable to retrieve old announcement message!", false, color: logColor);
+                    _ = _log.LogMessage("Unable to retrieve old announcement message!", false, color: LogColor);
                 }
             }
             else 
             {
-                _ = _log.LogMessage("Messages do not match, deleting old message", false, color: logColor);
+                _ = _log.LogMessage("Messages do not match, deleting old message", false, color: LogColor);
                 try
                 {
-                    await _data.AnnouncementChannel.DeleteMessageAsync(_oldMessage.AnnouncementID);
+                    await _data.AnnouncementChannel.DeleteMessageAsync(_oldMessage.AnnouncementId);
                     PlaytestAnnouncementMessage = null;
                 }
                 catch 
                 {
                         _ = _log.LogMessage("Could not delete old message - it was likely deleted manually",
-                            false, color: logColor);
+                            false, color: LogColor);
                 }
             }
         }

@@ -47,14 +47,14 @@ namespace BotHATTwaffle2.Commands
             if (string.IsNullOrWhiteSpace(roles))
             {
                 await ReplyAsync(
-                    $"Toggleable roles are:```\n{string.Join("\n", _dataService.RootSettings.lists.roles)}```" +
+                    $"Toggleable roles are:```\n{string.Join("\n", _dataService.RootSettings.Lists.Roles)}```" +
                     "\n`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.");
                 return;
             }
 
             var roleNames = new List<string>();
 
-            foreach (var role in _dataService.RootSettings.lists.roles)
+            foreach (var role in _dataService.RootSettings.Lists.Roles)
             {
                 var match = Regex.Match(roles, $@"\b{role}\b", RegexOptions.IgnoreCase);
 

@@ -6,8 +6,8 @@ namespace BotHATTwaffle2.src.Models.LiteDB
 {
     class UserJoinMessage
     {
-        public int id { get; set; }
-        public ulong UserID { get; set; }
+        public int Id { get; set; }
+        public ulong UserId { get; set; }
         public DateTime JoinTime { get; set; }
         public bool MessageSent { get; set;}
     }

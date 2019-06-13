@@ -2,10 +2,11 @@
 {
     public class RootSettings
     {
-        public program_settings program_settings { get; set; }
-        public general general { get; set; }
-        public lists lists { get; set; }
-        public autoReplies autoReplies { get; set; }
-        public userRoles userRoles { get; set; }
+        public ProgramSettings ProgramSettings { get; set; }
+        public General General { get; set; }
+        public Lists Lists { get; set; }
+        public AutoReplies AutoReplies { get; set; }
+        public UserRoles UserRoles { get; set; }
+        public DebugValues DebugValues { get; set; }
     }
 }

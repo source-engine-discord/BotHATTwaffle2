@@ -2,15 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
-using BotHATTwaffle2.src.Services.Calendar;
-using BotHATTwaffle2.src.Services.Playtesting;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using FluentScheduler;
 
-namespace BotHATTwaffle2.src.Commands
+namespace BotHATTwaffle2.Commands
 {
     public class ModerationModule : ModuleBase<SocketCommandContext>
     {
@@ -63,25 +62,34 @@ namespace BotHATTwaffle2.src.Commands
 
         [Command("Debug")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Summary("View or change the debug flag.")]
+        [Summary("View or change the debug flag." +
+                 "\n`>debug [true/false/reload]` to set the flag, or reload settings from the settings file.")]
         public async Task DebugAsync(string status = null)
         {
             if (status == null)
             {
                 await Context.Channel.SendMessageAsync(
-                    $"Current debug status is: `{_data.RootSettings.program_settings.debug}`");
+                    $"Current debug status is: `{_data.RootSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("t", StringComparison.OrdinalIgnoreCase))
             {
-                _data.RootSettings.program_settings.debug = true;
+                _data.RootSettings.ProgramSettings.Debug = true;
+                await _data.UpdateRolesAndUsers();
                 await Context.Channel.SendMessageAsync(
-                    $"Changed debug status to: `{_data.RootSettings.program_settings.debug}`");
+                    $"Changed debug status to: `{_data.RootSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("f", StringComparison.OrdinalIgnoreCase))
             {
-                _data.RootSettings.program_settings.debug = false;
+                _data.RootSettings.ProgramSettings.Debug = false;
+                await _data.UpdateRolesAndUsers();
                 await Context.Channel.SendMessageAsync(
-                    $"Changed debug status to: `{_data.RootSettings.program_settings.debug}`");
+                    $"Changed debug status to: `{_data.RootSettings.ProgramSettings.Debug}`");
+            }
+            else if (status.StartsWith("r", StringComparison.OrdinalIgnoreCase))
+            {
+                await _data.DeserializeConfig();
+                await Context.Channel.SendMessageAsync(
+                    $"Deserializing configuration...");
             }
         }
     }

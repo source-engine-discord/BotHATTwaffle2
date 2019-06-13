@@ -4,14 +4,14 @@ using Newtonsoft.Json;
 
 namespace BotHATTwaffle2
 {
-    public class lists
+    public class Lists
     {
         [DefaultValue("CHANGEME")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public List<string> roles { get; set; }
+        public List<string> Roles { get; set; }
 
         [DefaultValue("CHANGEME")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public List<string> playing { get; set; }
+        public List<string> Playing { get; set; }
     }
 }

@@ -10,7 +10,7 @@ namespace BotHATTwaffle2.src.Handlers
     {
         private const string Dbpath = @"MasterDB.db";
         private const string CollectionAnnouncement = "announcement";
-        private const ConsoleColor logColor = ConsoleColor.DarkYellow;
+        private const ConsoleColor LogColor = ConsoleColor.DarkYellow;
         private static LogHandler _log;
         private static DataService _data;
 
@@ -40,22 +40,22 @@ namespace BotHATTwaffle2.src.Handlers
                     //If not null, we need to remove the old record first.
                     if (foundMessage != null)
                     {
-                        if (_data.RootSettings.program_settings.debug)
-                            _ = _log.LogMessage("Old record found, deleting", false, color: logColor);
+                        if (_data.RootSettings.ProgramSettings.Debug)
+                            _ = _log.LogMessage("Old record found, deleting", false, color: LogColor);
 
                         announcement.Delete(1);
                     }
 
-                    if (_data.RootSettings.program_settings.debug)
+                    if (_data.RootSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
-                                            $"\n{message.Id} at {eventEditTime}", false, color: logColor);
+                                            $"\n{message.Id} at {eventEditTime}", false, color: LogColor);
 
                     //Insert new entry with ID of 1, and our values.
                     announcement.Insert(new AnnounceMessage
                     {
-                        id = 1,
+                        Id = 1,
                         AnnouncementDateTime = eventEditTime,
-                        AnnouncementID = message.Id
+                        AnnouncementId = message.Id
                     });
                 }
             }

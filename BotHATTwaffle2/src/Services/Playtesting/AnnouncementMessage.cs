@@ -1,15 +1,14 @@
 ﻿using System;
-using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
-using BotHATTwaffle2.src.Services.Calendar;
 using Discord;
 
-namespace BotHATTwaffle2.src.Services.Playtesting
+namespace BotHATTwaffle2.Services.Playtesting
 {
     public class AnnouncementMessage
     {
-        private const ConsoleColor logColor = ConsoleColor.Magenta;
-        private static int lastImageIndex;
+        private const ConsoleColor LogColor = ConsoleColor.Magenta;
+        private static int _lastImageIndex;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _data;
         private readonly LogHandler _log;
@@ -31,8 +30,8 @@ namespace BotHATTwaffle2.src.Services.Playtesting
         /// <returns>Prebuilt embed</returns>
         public Embed CreatePlaytestEmbed(bool isCasual = true)
         {
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage("Creating Playtest Embed", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Creating Playtest Embed", false, color: LogColor);
 
             var testEvent = _calendar.GetTestEventNoUpdate();
 
@@ -48,9 +47,9 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                 $"[{testEvent.Creators[0].Username}](https://discordapp.com/users/{testEvent.Creators[0].Id})";
             if (testEvent.Creators.Count > 1)
             {
-                if (_data.RootSettings.program_settings.debug)
+                if (_data.RootSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
-                        false, color: logColor);
+                        false, color: LogColor);
 
                 creatorIndex = _random.Next(0, testEvent.Creators.Count);
                 creatorSpelling = "Creators";
@@ -60,10 +59,10 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                         $"\n[{testEvent.Creators[i].Username}](https://discordapp.com/users/{testEvent.Creators[i].Id})";
             }
 
-            if (_data.RootSettings.program_settings.debug)
+            if (_data.RootSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage(
                     $"Creators string\n{creatorProfile}\nUsing creator index {creatorIndex} of {testEvent.Creators.Count - 1} (0 Index!)",
-                    false, color: logColor);
+                    false, color: LogColor);
 
             //Timezone information
             var utcTime = testEvent.StartDateTime.GetValueOrDefault().ToUniversalTime();
@@ -85,24 +84,24 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                 countdownString = countdown.ToString("d'D 'h'H 'm'M'").TrimStart(' ', 'D', 'H', '0');
 
             //What image should be displayed
-            var embedImageUrl = _data.RootSettings.general.fallbackTestImageURL;
+            var embedImageUrl = _data.RootSettings.General.FallbackTestImageUrl;
             if (testEvent.CanUseGallery)
             {
                 var randomIndex = _random.Next(testEvent.GalleryImages.Count);
-                while (lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count);
+                while (_lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count);
 
-                if (_data.RootSettings.program_settings.debug)
+                if (_data.RootSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
-                        false, color: logColor);
+                        false, color: LogColor);
 
-                lastImageIndex = randomIndex;
+                _lastImageIndex = randomIndex;
                 embedImageUrl = testEvent.GalleryImages[randomIndex];
             }
 
             //Display the correct password, or omit for comp
             string displayedPassword = "[HIDDEN]";
             if (isCasual)
-                displayedPassword = _data.RootSettings.general.casualPassword;
+                displayedPassword = _data.RootSettings.General.CasualPassword;
 
             string footer = "";
             if (!isCasual)

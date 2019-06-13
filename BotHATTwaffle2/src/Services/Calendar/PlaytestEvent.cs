@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using BotHATTwaffle2.Services;
 using BotHATTwaffle2.src.Handlers;
 using Discord.WebSocket;
 
-namespace BotHATTwaffle2.src.Services.Calendar
+namespace BotHATTwaffle2.Services.Calendar
 {
     public class PlaytestEvent
     {
-        private const ConsoleColor logColor = ConsoleColor.Magenta;
+        private const ConsoleColor LogColor = ConsoleColor.Magenta;
 
         private readonly DataService _data;
         private readonly LogHandler _log;
@@ -28,7 +27,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
         public List<string> GalleryImages { get; set; }
         public bool CanUseGallery { get; private set; }
         public DateTime? LastEditTime { get; set; }
-        public string compPassword { get; set; }
+        public string CompPassword { get; set; }
 
         public PlaytestEvent(DataService data, LogHandler log)
         {
@@ -39,15 +38,15 @@ namespace BotHATTwaffle2.src.Services.Calendar
             VoidEvent();
         }
 
-        public void SetGamemode(string input)
+        public void SetGameMode(string input)
         {
             if (input.Contains("comp", StringComparison.OrdinalIgnoreCase))
             {
                 IsCasual = false;
-                int i = new Random().Next(_data.RootSettings.general.compPasswords.Length);
-                compPassword = _data.RootSettings.general.compPasswords[i];
+                int i = new Random().Next(_data.RootSettings.General.CompPasswords.Length);
+                CompPassword = _data.RootSettings.General.CompPasswords[i];
 
-                _ = _log.LogMessage($"Competitive password for `{Title}` is: `{compPassword}`");
+                _ = _log.LogMessage($"Competitive password for `{Title}` is: `{CompPassword}`");
             }
             else
                 IsCasual = true;
@@ -68,20 +67,20 @@ namespace BotHATTwaffle2.src.Services.Calendar
                 {
                     CanUseGallery = true;
 
-                    if (_data.RootSettings.program_settings.debug)
-                        _ = _log.LogMessage("Can use image gallery for test event", false, color: logColor);
+                    if (_data.RootSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Can use image gallery for test event", false, color: LogColor);
                 }
 
-                if (_data.RootSettings.program_settings.debug)
-                    _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: logColor);
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LogColor);
 
                 IsValid = true;
 
                 return true;
             }
 
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: LogColor);
 
             IsValid = false;
 
@@ -94,8 +93,8 @@ namespace BotHATTwaffle2.src.Services.Calendar
         /// </summary>
         public void VoidEvent()
         {
-            if (_data.RootSettings.program_settings.debug)
-                _ = _log.LogMessage("Voiding test event", false, color: logColor);
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Voiding test event", false, color: LogColor);
 
             IsValid = false;
             CanUseGallery = false;
@@ -113,7 +112,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
             Moderator = null;
             Description = null;
             ServerLocation = null;
-            compPassword = null;
+            CompPassword = null;
         }
 
         public override string ToString()
@@ -129,7 +128,8 @@ namespace BotHATTwaffle2.src.Services.Calendar
                                   + "\nmoderator: " + Moderator
                                   + "\ndescription: " + Description
                                   + "\nserverLocation: " + ServerLocation
-                                  + "\ncreators: " + string.Join(", ", Creators);
+                                  + "\ncreators: " + string.Join(", ", Creators)
+                                + "\ncompPassword: " + CompPassword;
         }
     }
 }

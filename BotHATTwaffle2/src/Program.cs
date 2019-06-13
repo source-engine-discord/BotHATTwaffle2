@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
-using BotHATTwaffle2.src.Services.Calendar;
-using BotHATTwaffle2.src.Services.Playtesting;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -14,7 +14,7 @@ namespace BotHATTwaffle2
 {
     internal class Program
     {
-        private const ConsoleColor logColor = ConsoleColor.Red;
+        private const ConsoleColor LogColor = ConsoleColor.Red;
         private DiscordSocketClient _client;
         private CommandService _commands;
         private DataService _data;
@@ -64,7 +64,7 @@ namespace BotHATTwaffle2
             // a configuration.
 
             await _client.LoginAsync(TokenType.Bot,
-                _services.GetRequiredService<DataService>().RootSettings.program_settings.botToken);
+                _services.GetRequiredService<DataService>().RootSettings.ProgramSettings.BotToken);
             _data.SetLogHandler(_services.GetRequiredService<LogHandler>());
             DatabaseHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             await _client.StartAsync();

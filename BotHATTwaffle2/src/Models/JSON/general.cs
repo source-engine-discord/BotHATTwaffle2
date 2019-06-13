@@ -3,35 +3,17 @@ using Newtonsoft.Json;
 
 namespace BotHATTwaffle2
 {
-    public class general
+    public class General
     {
-        [DefaultValue("CHANGEME")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string welcomeMessage { get; set; }
 
-        [DefaultValue("General")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string generalChannel { get; set; }
-
-        [DefaultValue("welcome")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string welcomeChannel { get; set; }
-
-        [DefaultValue("announcements")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string announcementChannel { get; set; }
-
-        [DefaultValue("testing")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string testingChannel { get; set; }
-
-        [DefaultValue("competitive_level_testing")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string competitiveTestingChannel { get; set; }
-
-        public string fallbackTestImageURL { get; set; }
-
-        public string casualPassword { get; set; }
-        public string[] compPasswords { get; set; }
+        public string WelcomeMessage { get; set; }
+        public string GeneralChannel { get; set; }
+        public string WelcomeChannel { get; set; }
+        public string AnnouncementChannel { get; set; }
+        public string TestingChannel { get; set; }
+        public string CompetitiveTestingChannel { get; set; }
+        public string FallbackTestImageUrl { get; set; }
+        public string CasualPassword { get; set; }
+        public string[] CompPasswords { get; set; }
     }
 }

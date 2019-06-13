@@ -4,14 +4,9 @@ using Newtonsoft.Json;
 
 namespace BotHATTwaffle2
 {
-    public class autoReplies
+    public class AutoReplies
     {
-        [DefaultValue("CHANGEME")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public List<string> firmware { get; set; }
-
-        [DefaultValue("CHANGEME")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public List<string> bootLoader { get; set; }
+        public List<string> Firmware { get; set; }
+        public List<string> BootLoader { get; set; }
     }
 }

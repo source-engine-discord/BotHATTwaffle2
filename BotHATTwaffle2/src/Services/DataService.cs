@@ -14,7 +14,7 @@ namespace BotHATTwaffle2.Services
 {
     public class DataService
     {
-        private const ConsoleColor logColor = ConsoleColor.Cyan;
+        private const ConsoleColor LogColor = ConsoleColor.Cyan;
         private readonly DiscordSocketClient _client;
         private LogHandler _log;
 
@@ -47,20 +47,27 @@ namespace BotHATTwaffle2.Services
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
 
-        public async Task DeserialiseConfig()
+        public async Task DeserializeConfig()
         {
             ReadConfig();
-            await DeserialiseChannels();
+            await DeserializeChannels();
             GetRoles();
 
-            AlertUser = _client.GetUser(RootSettings.program_settings.alertUser);
+            AlertUser = _client.GetUser(RootSettings.ProgramSettings.AlertUser);
 
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("SETTINGS HAVE BEEN LOADED");
             Console.ForegroundColor = ConsoleColor.Red;
-            if (RootSettings.program_settings.debug)
-                Console.WriteLine("  _____  ______ ____  _    _  _____    ____  _   _ \r\n |  __ \\|  ____|  _ \\| |  | |/ ____|  / __ \\| \\ | |\r\n | |  | | |__  | |_) | |  | | |  __  | |  | |  \\| |\r\n | |  | |  __| |  _ <| |  | | | |_ | | |  | | . ` |\r\n | |__| | |____| |_) | |__| | |__| | | |__| | |\\  |\r\n |_____/|______|____/ \\____/ \\_____|  \\____/|_| \\_|\r\n                                                   \r\n                                                   ");
+            if (RootSettings.ProgramSettings.Debug)
+                Console.WriteLine(
+                    "  _____  ______ ____  _    _  _____    ____  _   _ \r\n |  __ \\|  ____|  _ \\| |  | |/ ____|  / __ \\| \\ | |\r\n | |  | | |__  | |_) | |  | | |  __  | |  | |  \\| |\r\n | |  | |  __| |  _ <| |  | | | |_ | | |  | | . ` |\r\n | |__| | |____| |_) | |__| | |__| | | |__| | |\\  |\r\n |_____/|______|____/ \\____/ \\_____|  \\____/|_| \\_|\r\n                                                   \r\n                                                   ");
             Console.ResetColor();
+        }
+
+        public async Task UpdateRolesAndUsers()
+        {
+            await DeserializeChannels();
+            GetRoles();
         }
 
         public void SetLogHandler(LogHandler log)
@@ -70,9 +77,9 @@ namespace BotHATTwaffle2.Services
 
         private void ReadConfig()
         {
-            const string CONFIG_PATH = "settings.json";
+            const string configPath = "settings.json";
 
-            if (!File.Exists(CONFIG_PATH))
+            if (!File.Exists(configPath))
             {
                 Console.WriteLine("Settings file not found. Create settings file and try again.");
                 Console.ReadLine();
@@ -81,42 +88,66 @@ namespace BotHATTwaffle2.Services
                 Environment.Exit(1);
             }
 
-            RootSettings = JsonConvert.DeserializeObject<RootSettings>(File.ReadAllText(CONFIG_PATH));
+            RootSettings = JsonConvert.DeserializeObject<RootSettings>(File.ReadAllText(configPath));
         }
 
 
         /// <summary>
-        ///     Deserialises channels from the configuration file.
+        ///     Deserialize channels from the configuration file.
         /// </summary>
         /// <exception cref="InvalidOperationException">Thrown when a channel can't be found.</exception>
         /// <returns>No object or value is returned by this method when it completes.</returns>
-        private async Task DeserialiseChannels()
+        private async Task DeserializeChannels()
         {
             var guild = _client.Guilds.FirstOrDefault();
 
-            Console.ForegroundColor = logColor;
+            Console.ForegroundColor = LogColor;
 
-            Console.WriteLine($"Active Guild: {guild.Name}");
+            Console.WriteLine($"Active Guild: {guild?.Name}\n");
 
-            LogChannel = await ParseChannel(RootSettings.program_settings.logChannel);
+            LogChannel = await ParseChannel(RootSettings.ProgramSettings.LogChannel);
             Console.WriteLine($"LogChannel ID:{LogChannel.Id} Discovered Name:{LogChannel.Name}");
 
-            GeneralChannel = await ParseChannel(RootSettings.general.generalChannel);
-            Console.WriteLine($"GeneralChannel ID:{GeneralChannel.Id} Discovered Name:{GeneralChannel.Name}");
+            if (RootSettings.ProgramSettings.Debug)
+            {
+                Console.WriteLine("Setting channels based on debug values!!!");
 
-            WelcomeChannel = await ParseChannel(RootSettings.general.welcomeChannel);
-            Console.WriteLine($"WelcomeChannel ID:{WelcomeChannel.Id} Discovered Name:{WelcomeChannel.Name}");
+                GeneralChannel = await ParseChannel(RootSettings.DebugValues.GeneralChannel);
+                Console.WriteLine($"GeneralChannel ID:{GeneralChannel.Id} Discovered Name:{GeneralChannel.Name}");
 
-            AnnouncementChannel = await ParseChannel(RootSettings.general.announcementChannel);
-            Console.WriteLine(
-                $"AnnouncementChannel ID:{AnnouncementChannel.Id} Discovered Name:{AnnouncementChannel.Name}");
+                WelcomeChannel = await ParseChannel(RootSettings.DebugValues.WelcomeChannel);
+                Console.WriteLine($"WelcomeChannel ID:{WelcomeChannel.Id} Discovered Name:{WelcomeChannel.Name}");
 
-            TestingChannel = await ParseChannel(RootSettings.general.testingChannel);
-            Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
+                AnnouncementChannel = await ParseChannel(RootSettings.DebugValues.AnnouncementChannel);
+                Console.WriteLine(
+                    $"AnnouncementChannel ID:{AnnouncementChannel.Id} Discovered Name:{AnnouncementChannel.Name}");
 
-            CompetitiveTestingChannel = await ParseChannel(RootSettings.general.competitiveTestingChannel);
-            Console.WriteLine(
-                $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
+                TestingChannel = await ParseChannel(RootSettings.DebugValues.TestingChannel);
+                Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
+
+                CompetitiveTestingChannel = await ParseChannel(RootSettings.DebugValues.CompetitiveTestingChannel);
+                Console.WriteLine(
+                    $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
+            }
+            else
+            {
+                GeneralChannel = await ParseChannel(RootSettings.General.GeneralChannel);
+                Console.WriteLine($"GeneralChannel ID:{GeneralChannel.Id} Discovered Name:{GeneralChannel.Name}");
+
+                WelcomeChannel = await ParseChannel(RootSettings.General.WelcomeChannel);
+                Console.WriteLine($"WelcomeChannel ID:{WelcomeChannel.Id} Discovered Name:{WelcomeChannel.Name}");
+
+                AnnouncementChannel = await ParseChannel(RootSettings.General.AnnouncementChannel);
+                Console.WriteLine(
+                    $"AnnouncementChannel ID:{AnnouncementChannel.Id} Discovered Name:{AnnouncementChannel.Name}");
+
+                TestingChannel = await ParseChannel(RootSettings.General.TestingChannel);
+                Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
+
+                CompetitiveTestingChannel = await ParseChannel(RootSettings.General.CompetitiveTestingChannel);
+                Console.WriteLine(
+                    $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
+            }
 
             Console.ResetColor();
 
@@ -132,43 +163,82 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        ///     Retrieves role socket entities from the IDs in the <see cref="Role" /> enum.
+        ///     Retrieves role socket entities from the IDs in the <see>
+        ///         <cref>Role</cref>
+        ///     </see>
+        ///     enum.
         /// </summary>
         /// <exception cref="InvalidOperationException">Thrown when a role can't be found.</exception>
         private void GetRoles()
         {
             var guild = _client.Guilds.FirstOrDefault();
 
-            Console.ForegroundColor = logColor;
+            Console.ForegroundColor = LogColor;
 
-            ModeratorRole = guild.GetRole(RootSettings.userRoles.moderator);
-            Console.WriteLine($"\nModerator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
+            if (RootSettings.ProgramSettings.Debug)
+            {
+                Console.WriteLine("\nSetting roles based on debug values!!!");
 
-            PlayTesterRole = guild.GetRole(RootSettings.userRoles.playtester);
-            Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
+                ModeratorRole = guild.GetRole(RootSettings.DebugValues.Moderator);
+                Console.WriteLine($"Moderator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
 
-            MuteRole = guild.GetRole(RootSettings.userRoles.muted);
-            Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
+                PlayTesterRole = guild.GetRole(RootSettings.DebugValues.Playtester);
+                Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
 
-            ActiveRole = guild.GetRole(RootSettings.userRoles.active);
-            Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
+                MuteRole = guild.GetRole(RootSettings.DebugValues.Muted);
+                Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
 
-            PatreonsRole = guild.GetRole(RootSettings.userRoles.patreons);
-            Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
+                ActiveRole = guild.GetRole(RootSettings.DebugValues.Active);
+                Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
 
-            CommunityTesterRole = guild.GetRole(RootSettings.userRoles.communityTester);
-            Console.WriteLine(
-                $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
+                PatreonsRole = guild.GetRole(RootSettings.DebugValues.Patreons);
+                Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
 
-            BotsRole = guild.GetRole(RootSettings.userRoles.bots);
-            Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
+                CommunityTesterRole = guild.GetRole(RootSettings.DebugValues.CommunityTester);
+                Console.WriteLine(
+                    $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
 
-            AdminRole = guild.GetRole(RootSettings.userRoles.admin);
-            Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
+                BotsRole = guild.GetRole(RootSettings.DebugValues.Bots);
+                Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
 
-            CompetitiveTesterRole = guild.GetRole(RootSettings.userRoles.competitiveTester);
-            Console.WriteLine(
-                $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
+                AdminRole = guild.GetRole(RootSettings.DebugValues.Admin);
+                Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
+
+                CompetitiveTesterRole = guild.GetRole(RootSettings.DebugValues.CompetitiveTester);
+                Console.WriteLine(
+                    $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
+            }
+            else
+            {
+                ModeratorRole = guild.GetRole(RootSettings.UserRoles.Moderator);
+                Console.WriteLine($"\nModerator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
+
+                PlayTesterRole = guild.GetRole(RootSettings.UserRoles.Playtester);
+                Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
+
+                MuteRole = guild.GetRole(RootSettings.UserRoles.Muted);
+                Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
+
+                ActiveRole = guild.GetRole(RootSettings.UserRoles.Active);
+                Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
+
+                PatreonsRole = guild.GetRole(RootSettings.UserRoles.Patreons);
+                Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
+
+                CommunityTesterRole = guild.GetRole(RootSettings.UserRoles.CommunityTester);
+                Console.WriteLine(
+                    $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
+
+                BotsRole = guild.GetRole(RootSettings.UserRoles.Bots);
+                Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
+
+                AdminRole = guild.GetRole(RootSettings.UserRoles.Admin);
+                Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
+
+                CompetitiveTesterRole = guild.GetRole(RootSettings.UserRoles.CompetitiveTester);
+                Console.WriteLine(
+                    $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
+            }
 
             Console.ResetColor();
         }
@@ -201,7 +271,7 @@ namespace BotHATTwaffle2.Services
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: logColor);
+                _ = _log.LogMessage(e.ToString(), alert: true, color: LogColor);
             }
 
             return user;
@@ -233,7 +303,7 @@ namespace BotHATTwaffle2.Services
             }
             catch (UriFormatException e)
             {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: logColor);
+                _ = _log.LogMessage(e.ToString(), alert: true, color: LogColor);
             }
 
             return null;
@@ -246,22 +316,19 @@ namespace BotHATTwaffle2.Services
         /// <returns>List or URLs, or null</returns>
         public List<string> GetImgurAlbum(string albumUrl)
         {
-            var images = new List<string>();
             try
             {
-                albumUrl = "https://imgur.com/a/Ol6lhld";
-
-                var albumId = albumUrl.Replace(@"/gallery/", @"/a/").Substring(albumUrl.IndexOf(@"/a/") + 3);
-                var client = new ImgurClient(RootSettings.program_settings.imgurAPI);
+                var albumId = albumUrl.Replace(@"/gallery/", @"/a/").Substring(albumUrl.IndexOf(@"/a/", StringComparison.Ordinal) + 3);
+                var client = new ImgurClient(RootSettings.ProgramSettings.ImgurApi);
                 var endpoint = new AlbumEndpoint(client);
 
-                images = endpoint.GetAlbumAsync(albumId).Result.Images.Select(i => i.Link).ToList();
+                var images = endpoint.GetAlbumAsync(albumId).Result.Images.Select(i => i.Link).ToList();
 
                 _ = _log.LogMessage("Getting Imgur Info from Imgur API" +
                                     $"\nAlbum URL: {albumUrl}" +
                                     $"\nAlbum ID: {albumId}" +
                                     $"\nClient Credits Remaining: {client.RateLimit.ClientRemaining} of {client.RateLimit.ClientLimit}" +
-                                    $"\nImages Found:\n{string.Join("\n", images)}", false, color: logColor);
+                                    $"\nImages Found:\n{string.Join("\n", images)}", false, color: LogColor);
 
                 return images;
             }

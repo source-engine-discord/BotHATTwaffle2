@@ -66,7 +66,7 @@ namespace BotHATTwaffle2.Services
 
             foreach (var p in parameters)
             {
-                param.Append(p.IsOptional ? $"___{p.Name}___" : $"__{p.Name}__"); // Italicises optional parameters.
+                param.Append(p.IsOptional ? $"___{p.Name}___" : $"__{p.Name}__"); // Italicizes optional parameters.
 
                 if (!string.IsNullOrWhiteSpace(p.Summary))
                     param.Append($" - {p.Summary}");
@@ -99,7 +99,10 @@ namespace BotHATTwaffle2.Services
         /// <inheritdoc />
         /// <remarks>
         ///     Attempts to fetch role names from the attribute if the string constructor was used. Otherwise, if the context is a
-        ///     guild, converts IDs to names. If not in a guild, the name in <see cref="Role" /> is used. If it's not in the enum,
+        ///     guild, converts IDs to names. If not in a guild, the name in <see>
+        ///         <cref>Role</cref>
+        ///     </see>
+        ///     is used. If it's not in the enum,
         ///     the raw ID is displayed.
         /// </remarks>
         public string GetRoles(IEnumerable<PreconditionAttribute> preconditions, ICommandContext context)
@@ -128,7 +131,7 @@ namespace BotHATTwaffle2.Services
         /// </remarks>
         public string GetUsage(CommandInfo command)
         {
-            return _dataService.RootSettings.program_settings.commandPrefix[0] +
+            return _dataService.RootSettings.ProgramSettings.CommandPrefix[0] +
                    command.Name +
                    " " +
                    string.Join(" ", command.Parameters.Select(p => p.IsOptional ? $"<{p.Name}>" : $"[{p.Name}]"));

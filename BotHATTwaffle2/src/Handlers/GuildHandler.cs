@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.src.Handlers;
 using Discord.WebSocket;
 
-namespace BotHATTwaffle2.src.Handlers
+namespace BotHATTwaffle2.Handlers
 {
     internal class GuildHandler
     {
-        private const ConsoleColor logColor = ConsoleColor.DarkGreen;
+        private const ConsoleColor LogColor = ConsoleColor.DarkGreen;
         private readonly DiscordSocketClient _client;
         private readonly DataService _data;
         private readonly LogHandler _log;
@@ -29,8 +30,8 @@ namespace BotHATTwaffle2.src.Handlers
 
         private async Task GuildAvailableEventHandler(SocketGuild guild)
         {
-            await _log.LogMessage($"Guild Available: {guild.Name}", false, color: logColor);
-            await _data.DeserialiseConfig();
+            await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LogColor);
+            await _data.DeserializeConfig();
 
             _schedule.AddRequiredJobs();
         }
@@ -45,7 +46,7 @@ namespace BotHATTwaffle2.src.Handlers
 
         private Task ReadyEventHandler()
         {
-            _ = _log.LogMessage("Guild ready!", false, color: logColor);
+            _ = _log.LogMessage("Guild ready!", false, color: LogColor);
             return Task.CompletedTask;
         }
     }
