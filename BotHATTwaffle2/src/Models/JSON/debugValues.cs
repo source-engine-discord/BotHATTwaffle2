@@ -3,11 +3,17 @@ using Newtonsoft.Json;
 
 namespace BotHATTwaffle2
 {
-    public class general
+    public class debugValues
     {
-        [DefaultValue("CHANGEME")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string welcomeMessage { get; set; }
+        public ulong moderator { get; set; }
+        public ulong admin { get; set; }
+        public ulong playtester { get; set; }
+        public ulong muted { get; set; }
+        public ulong active { get; set; }
+        public ulong patreons { get; set; }
+        public ulong communityTester { get; set; }
+        public ulong competitiveTester { get; set; }
+        public ulong bots { get; set; }
 
         [DefaultValue("General")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -27,11 +33,6 @@ namespace BotHATTwaffle2
 
         [DefaultValue("competitive_level_testing")]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string competitiveTestingChannel { get; set; }
-
-        public string fallbackTestImageURL { get; set; }
-
-        public string casualPassword { get; set; }
-        public string[] compPasswords { get; set; }
+        public string compeitiveTestingChannel { get; set; }
     }
 }

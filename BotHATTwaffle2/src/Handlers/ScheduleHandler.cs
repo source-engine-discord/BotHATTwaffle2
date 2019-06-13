@@ -1,5 +1,6 @@
 ﻿using System;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.src.Services.Playtesting;
 using Discord.WebSocket;
 using FluentScheduler;
 
@@ -11,11 +12,12 @@ namespace BotHATTwaffle2.src.Handlers
         private readonly DiscordSocketClient _client;
         private readonly DataService _data;
         private readonly LogHandler _log;
+        private readonly PlaytestService _playtestService;
 
-        public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log)
+        public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService)
         {
             Console.WriteLine("Setting up ScheduleHandler...");
-
+            _playtestService = playtestService;
             _log = log;
             _data = data;
             _client = client;
@@ -37,7 +39,21 @@ namespace BotHATTwaffle2.src.Handlers
         public void AddRequiredJobs()
         {
             _ = _log.LogMessage("Adding required scheduled jobs...", false, color: logColor);
-            //TODO: Some jobs, like user joins, or server reservations may need to be re-read from the DB on startup here.
+
+            //Add schedule for playtest information
+            JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement(), s => s
+                .WithName("[PostOrUpdateAnnouncement]").ToRunEvery(60).Seconds());
+
+            //Reattach to the old announcement message quickly
+            JobManager.AddJob(async () => await _playtestService.TryAttachPreviousAnnounceMessage(), s => s
+                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(5).Seconds());
+
+            //Display what jobs we have scheduled
+            foreach (var allSchedule in JobManager.AllSchedules)
+            {
+                _ = _log.LogMessage($"{allSchedule.Name} runs at: {allSchedule.NextRun}", 
+                    false, color: logColor);
+            }
         }
 
         private void FluentJobStart(JobStartInfo info)

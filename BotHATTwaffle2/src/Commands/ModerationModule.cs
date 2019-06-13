@@ -55,9 +55,34 @@ namespace BotHATTwaffle2.src.Commands
         [Command("cal")]
         public async Task CalAsync()
         {
-            Console.WriteLine("ABOUT TO SCHEDULE");
-            JobManager.AddJob(() => Console.WriteLine("I was scheduled!"), s => s.ToRunOnceIn(5).Seconds());
+            await _playtestService.PostOrUpdateAnnouncement();
+            //Console.WriteLine("ABOUT TO SCHEDULE");
+            //JobManager.AddJob(() => Console.WriteLine("I was scheduled!"), s => s.ToRunOnceIn(5).Seconds());
             //await _playtestService.PostAnnouncement();
+        }
+
+        [Command("Debug")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        [Summary("View or change the debug flag.")]
+        public async Task DebugAsync(string status = null)
+        {
+            if (status == null)
+            {
+                await Context.Channel.SendMessageAsync(
+                    $"Current debug status is: `{_data.RootSettings.program_settings.debug}`");
+            }
+            else if (status.StartsWith("t", StringComparison.OrdinalIgnoreCase))
+            {
+                _data.RootSettings.program_settings.debug = true;
+                await Context.Channel.SendMessageAsync(
+                    $"Changed debug status to: `{_data.RootSettings.program_settings.debug}`");
+            }
+            else if (status.StartsWith("f", StringComparison.OrdinalIgnoreCase))
+            {
+                _data.RootSettings.program_settings.debug = false;
+                await Context.Channel.SendMessageAsync(
+                    $"Changed debug status to: `{_data.RootSettings.program_settings.debug}`");
+            }
         }
     }
 }

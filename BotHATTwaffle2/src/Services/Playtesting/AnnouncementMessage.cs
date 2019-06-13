@@ -23,12 +23,18 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             _random = random;
         }
 
-        public Embed CreatePlaytestEmbed(string password = null)
+        /// <summary>
+        /// Creates a playtest embed with all information setup as needed.
+        /// This expects the calendar to have the latest even cached.
+        /// </summary>
+        /// <param name="isCasual">If true, shows password. Otherwise password will be hidden</param>
+        /// <returns>Prebuilt embed</returns>
+        public Embed CreatePlaytestEmbed(bool isCasual = true)
         {
             if (_data.RootSettings.program_settings.debug)
                 _ = _log.LogMessage("Creating Playtest Embed", false, color: logColor);
 
-            var testEvent = _calendar.GetTestEvent();
+            var testEvent = _calendar.GetTestEventNoUpdate();
 
             //What type of test
             var testType = "Casual";
@@ -43,9 +49,10 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             if (testEvent.Creators.Count > 1)
             {
                 if (_data.RootSettings.program_settings.debug)
-                    _ = _log.LogMessage("Multiple Test Creators found for embed", false, color: logColor);
+                    _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
+                        false, color: logColor);
 
-                creatorIndex = _random.Next(0, testEvent.Creators.Count + 1);
+                creatorIndex = _random.Next(0, testEvent.Creators.Count);
                 creatorSpelling = "Creators";
 
                 for (var i = 1; i < testEvent.Creators.Count; i++)
@@ -55,7 +62,7 @@ namespace BotHATTwaffle2.src.Services.Playtesting
 
             if (_data.RootSettings.program_settings.debug)
                 _ = _log.LogMessage(
-                    $"Creators string\n{creatorProfile}\nUsing creator index {creatorIndex} of {testEvent.Creators.Count}",
+                    $"Creators string\n{creatorProfile}\nUsing creator index {creatorIndex} of {testEvent.Creators.Count - 1} (0 Index!)",
                     false, color: logColor);
 
             //Timezone information
@@ -81,16 +88,25 @@ namespace BotHATTwaffle2.src.Services.Playtesting
             var embedImageUrl = _data.RootSettings.general.fallbackTestImageURL;
             if (testEvent.CanUseGallery)
             {
-                var randomIndex = _random.Next(testEvent.GalleryImages.Count + 1);
-                while (lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count + 1);
+                var randomIndex = _random.Next(testEvent.GalleryImages.Count);
+                while (lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count);
 
                 if (_data.RootSettings.program_settings.debug)
-                    _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count}",
+                    _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
                         false, color: logColor);
 
                 lastImageIndex = randomIndex;
                 embedImageUrl = testEvent.GalleryImages[randomIndex];
             }
+
+            //Display the correct password, or omit for comp
+            string displayedPassword = "[HIDDEN]";
+            if (isCasual)
+                displayedPassword = _data.RootSettings.general.casualPassword;
+
+            string footer = "";
+            if (!isCasual)
+                footer = "Password is hidden due to competitive test";
 
             //Setup the basic embed
             var playtestEmbed = new EmbedBuilder()
@@ -100,14 +116,15 @@ namespace BotHATTwaffle2.src.Services.Playtesting
                 .WithImageUrl(embedImageUrl)
                 .WithThumbnailUrl(testEvent.Creators[creatorIndex].GetAvatarUrl())
                 .WithDescription(testEvent.Description)
-                .WithColor(new Color(243, 128, 72));
+                .WithColor(new Color(243, 128, 72))
+                .WithFooter(footer);
 
             playtestEmbed.AddField("Test Starts In", countdownString, true);
             playtestEmbed.AddField(creatorSpelling, creatorProfile, true);
             playtestEmbed.AddField("Moderator",
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
             playtestEmbed.AddField("Connect to",
-                $"`{testEvent.ServerLocation}; password {_data.RootSettings.general.casualPassword}`");
+                $"`{testEvent.ServerLocation}; password {displayedPassword}`");
             playtestEmbed.AddField("Information", $"[Screenshots]({testEvent.ImageGallery}) | " +
                                                   "[Testing Information](https://www.tophattwaffle.com/playtesting)");
             playtestEmbed.AddField("When",

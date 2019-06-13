@@ -13,17 +13,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
         private readonly DataService _data;
         private readonly LogHandler _log;
         public bool IsCasual;
-
-
-        public PlaytestEvent(DataService data, LogHandler log)
-        {
-            _log = log;
-            _data = data;
-            Creators = new List<SocketUser>();
-            GalleryImages = new List<string>();
-            VoidEvent();
-        }
-
+        
         public bool IsValid { get; private set; }
         public DateTime? EventEditTime { get; set; } //What is the last time the event was edited?
         public DateTime? StartDateTime { get; set; }
@@ -37,16 +27,36 @@ namespace BotHATTwaffle2.src.Services.Calendar
         public string ServerLocation { get; set; }
         public List<string> GalleryImages { get; set; }
         public bool CanUseGallery { get; private set; }
+        public DateTime? LastEditTime { get; set; }
+        public string compPassword { get; set; }
+
+        public PlaytestEvent(DataService data, LogHandler log)
+        {
+            _log = log;
+            _data = data;
+            Creators = new List<SocketUser>();
+            GalleryImages = new List<string>();
+            VoidEvent();
+        }
 
         public void SetGamemode(string input)
         {
             if (input.Contains("comp", StringComparison.OrdinalIgnoreCase))
+            {
                 IsCasual = false;
+                int i = new Random().Next(_data.RootSettings.general.compPasswords.Length);
+                compPassword = _data.RootSettings.general.compPasswords[i];
 
-            IsCasual = true;
+                _ = _log.LogMessage($"Competitive password for `{Title}` is: `{compPassword}`");
+            }
+            else
+                IsCasual = true;
         }
 
-
+        /// <summary>
+        /// Checks the required values on the test event to see if it can be used
+        /// </summary>
+        /// <returns>True if valid, false otherwise.</returns>
         public bool TestValid()
         {
             if (EventEditTime != null && StartDateTime != null && EndDateTime != null && Title != null &&
@@ -65,16 +75,23 @@ namespace BotHATTwaffle2.src.Services.Calendar
                 if (_data.RootSettings.program_settings.debug)
                     _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: logColor);
 
+                IsValid = true;
+
                 return true;
             }
 
             if (_data.RootSettings.program_settings.debug)
                 _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: logColor);
 
+            IsValid = false;
+
             return false;
         }
 
-        //Voids event
+        /// <summary>
+        /// Essentially resets this object for next use. Could dispose and make a new one
+        /// but where is the fun in that?
+        /// </summary>
         public void VoidEvent()
         {
             if (_data.RootSettings.program_settings.debug)
@@ -96,6 +113,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
             Moderator = null;
             Description = null;
             ServerLocation = null;
+            compPassword = null;
         }
 
         public override string ToString()

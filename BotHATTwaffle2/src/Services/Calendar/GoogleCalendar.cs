@@ -17,7 +17,6 @@ namespace BotHATTwaffle2.src.Services.Calendar
     public class GoogleCalendar
     {
         private const ConsoleColor logColor = ConsoleColor.DarkCyan;
-        private static DateTime? _lastEditTime;
         private static PlaytestEvent _testEvent;
         private readonly CalendarService _calendar;
         private readonly DataService _dataService;
@@ -51,7 +50,6 @@ namespace BotHATTwaffle2.src.Services.Calendar
         {
             using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
             {
-                // TODO: Chage this to the executable's directory or make it configurable.
                 var credPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
                 credPath = Path.Combine(credPath, ".credentials/calendar-dotnet-quickstart.json");
 
@@ -65,7 +63,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
             }
         }
 
-        public void GetEvents()
+        private void GetEvents()
         {
             if (_dataService.RootSettings.program_settings.debug)
                 _ = _log.LogMessage("Getting test event", false, color: logColor);
@@ -75,7 +73,6 @@ namespace BotHATTwaffle2.src.Services.Calendar
 
             request.Q = " TESTEVENT "; // This will limit all search requests to ONLY get playtest events.
             request.TimeMin = DateTime.Now;
-            request.TimeMax = DateTime.Now.AddHours(100);
             request.ShowDeleted = false;
             request.SingleEvents = true;
             request.MaxResults = 1;
@@ -91,7 +88,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
                 if (_dataService.RootSettings.program_settings.debug)
                     _ = _log.LogMessage("No event found", false, color: logColor);
                 //Scrap null out the event item so it can be ready for the next use.
-                _lastEditTime = null;
+                _testEvent.LastEditTime = null;
                 _testEvent.VoidEvent();
 
                 return;
@@ -100,12 +97,16 @@ namespace BotHATTwaffle2.src.Services.Calendar
             if (_dataService.RootSettings.program_settings.debug)
                 _ = _log.LogMessage("Test event found", false, color: logColor);
 
-            //Update the last time the even was changed
-            _lastEditTime = eventItem.Updated;
+            //Update the last time the event was changed
+            _testEvent.LastEditTime = eventItem.Updated;
 
             //An event exists and has not changed - do nothing.
-            if (_testEvent.EventEditTime == _lastEditTime && _testEvent.EventEditTime != null)
+            if (_testEvent.EventEditTime == _testEvent.LastEditTime && _testEvent.EventEditTime != null)
+            {
+                if (_dataService.RootSettings.program_settings.debug)
+                    _ = _log.LogMessage("Event was not changed, not rebuilding", false, color: logColor);
                 return;
+            }
 
             _testEvent.VoidEvent(); //Something changed - rebuild
 
@@ -165,9 +166,22 @@ namespace BotHATTwaffle2.src.Services.Calendar
                     color: logColor);
         }
 
+        /// <summary>
+        /// Gets the latest test event from Google
+        /// </summary>
+        /// <returns>Latest test event Google</returns>
         public PlaytestEvent GetTestEvent()
         {
             GetEvents();
+            return _testEvent;
+        }
+
+        /// <summary>
+        /// Gets the latest cached test event
+        /// </summary>
+        /// <returns>Latest cached test event</returns>
+        public PlaytestEvent GetTestEventNoUpdate()
+        {
             return _testEvent;
         }
     }

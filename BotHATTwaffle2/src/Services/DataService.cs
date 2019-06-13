@@ -57,6 +57,9 @@ namespace BotHATTwaffle2.Services
 
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("SETTINGS HAVE BEEN LOADED");
+            Console.ForegroundColor = ConsoleColor.Red;
+            if (RootSettings.program_settings.debug)
+                Console.WriteLine("  _____  ______ ____  _    _  _____    ____  _   _ \r\n |  __ \\|  ____|  _ \\| |  | |/ ____|  / __ \\| \\ | |\r\n | |  | | |__  | |_) | |  | | |  __  | |  | |  \\| |\r\n | |  | |  __| |  _ <| |  | | | |_ | | |  | | . ` |\r\n | |__| | |____| |_) | |__| | |__| | | |__| | |\\  |\r\n |_____/|______|____/ \\____/ \\_____|  \\____/|_| \\_|\r\n                                                   \r\n                                                   ");
             Console.ResetColor();
         }
 
@@ -111,7 +114,7 @@ namespace BotHATTwaffle2.Services
             TestingChannel = await ParseChannel(RootSettings.general.testingChannel);
             Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
 
-            CompetitiveTestingChannel = await ParseChannel(RootSettings.general.compeitiveTestingChannel);
+            CompetitiveTestingChannel = await ParseChannel(RootSettings.general.competitiveTestingChannel);
             Console.WriteLine(
                 $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
 
