@@ -36,7 +36,7 @@ namespace BotHATTwaffle2.Commands
         [Command("RoleMe")]
         [Summary("Toggles the invoking user's roles.")]
         [Remarks(
-            "Toggleable roles typically display possession of a skill, such as 3D modelling or level design. To send multiple " +
+            "Toggleable roles typically display possession of a skill, such as 3D modeling or level design. To send multiple " +
             "roles in one invocation, separate the names with a space. Invoking without any parameters displays a list of " +
             "all toggleable roles.")]
         [RequireContext(ContextType.Guild)]
