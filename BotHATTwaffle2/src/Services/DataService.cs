@@ -368,27 +368,25 @@ namespace BotHATTwaffle2.Services
             client.Connect(iPHostEntry.AddressList.FirstOrDefault().ToString(), 27015);
 
             client.Authenticate(server.RconPassword);
+            await Task.Delay(50);
 
-            while (retryCount <= 30)
-            {
-                if (client.Authenticated && client.Connected)
-                {
-                    client.SendCommand(command, result => FormatRcon(result));
-                    
-                    break;
-                }
-
+            while (!client.Authenticated) {
                 await Task.Delay(50);
                 Console.WriteLine($"Waiting until connected: {retryCount}");
-                retryCount++;
+            }
+
+            if (client.Connected)
+            {
+                client.SendCommand(command, result => { reply = result; });
+
+                while (reply == null)
+                {
+                    await Task.Delay(50);
+                    Console.WriteLine($"Waiting until reply has value");
+                }
             }
 
             return reply;
-        }
-
-        private string FormatRcon(string input)
-        {
-
         }
     }
 }
