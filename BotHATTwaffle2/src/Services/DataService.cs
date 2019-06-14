@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
-using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.src.Handlers;
+using Discord.Commands;
 using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Newtonsoft.Json;
+using RCONServerLib;
 
 namespace BotHATTwaffle2.Services
 {
@@ -155,7 +157,7 @@ namespace BotHATTwaffle2.Services
 
             async Task<SocketTextChannel> ParseChannel(string key)
             {
-                var channel = await ChannelTypeReader<SocketTextChannel>.GetBestResultAsync(Guild, key);
+                var channel = await Commands.Readers.ChannelTypeReader<SocketTextChannel>.GetBestResultAsync(Guild, key);
 
                 if (channel == null)
                     throw new InvalidOperationException($"The value of key '{key}' could not be parsed as a channel.");
@@ -338,6 +340,55 @@ namespace BotHATTwaffle2.Services
             {
                 return null;
             }
+        }
+
+        public async Task<string> RconCommand(string serverId, string command)
+        {
+            string reply = null;
+
+            var server = DatabaseHandler.GetTestServer(serverId);
+
+            IPHostEntry iPHostEntry = null;
+            try
+            {
+                iPHostEntry = Dns.GetHostEntry(server.Address);
+
+                if (RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage($"Server Address: {iPHostEntry.AddressList.FirstOrDefault()}", false, color: LogColor);
+            }
+            catch
+            {
+                //No address
+            }
+
+            int retryCount = 0;
+
+            var client = new RemoteConClient();
+
+            client.Connect(iPHostEntry.AddressList.FirstOrDefault().ToString(), 27015);
+
+            client.Authenticate(server.RconPassword);
+
+            while (retryCount <= 30)
+            {
+                if (client.Authenticated && client.Connected)
+                {
+                    client.SendCommand(command, result => FormatRcon(result));
+                    
+                    break;
+                }
+
+                await Task.Delay(50);
+                Console.WriteLine($"Waiting until connected: {retryCount}");
+                retryCount++;
+            }
+
+            return reply;
+        }
+
+        private string FormatRcon(string input)
+        {
+
         }
     }
 }

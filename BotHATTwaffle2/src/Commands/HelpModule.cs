@@ -179,7 +179,8 @@ namespace BotHATTwaffle2.Commands
                 "[Newtonsoft Json.NET](https://www.newtonsoft.com/json)\n" +
                 "[LiteDB](https://www.litedb.org/)\n" +
                 "[Imgur.API](https://github.com/DamienDennehy/Imgur.API)\n" +
-                "[FluentScheduler](https://github.com/fluentscheduler/FluentScheduler)", true);
+                "[FluentScheduler](https://github.com/fluentscheduler/FluentScheduler)\n" +
+                "[Source RCON Library](https://github.com/Subtixx/source-rcon-library)", true);
 
             embed.WithFooter("Build date");
             embed.WithTimestamp(buildDate);

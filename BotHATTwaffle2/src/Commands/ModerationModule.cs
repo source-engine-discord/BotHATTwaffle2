@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
@@ -19,6 +20,7 @@ namespace BotHATTwaffle2.Commands
         private readonly DataService _data;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
+        private const ConsoleColor LogColor = ConsoleColor.DarkRed;
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService)
@@ -52,10 +54,12 @@ namespace BotHATTwaffle2.Commands
                                   $"{Context.User.Username} (ID: {Context.User.Id})");
         }
 
-        [Command("test")]
-        public async Task TestAsync()
+        [Command("rcon", RunMode = RunMode.Async)]
+        [Alias("r")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task RconAsync(string input, [Remainder] string command)
         {
-            await _playtestService.PlaytestStartingInTask();
+            Console.WriteLine("YO I GOT THIS: " + await _data.RconCommand(input, command));
         }
 
         [Command("TestServer")]
