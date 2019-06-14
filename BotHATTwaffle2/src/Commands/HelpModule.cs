@@ -150,7 +150,7 @@ namespace BotHATTwaffle2.Commands
             {
                 Author = new EmbedAuthorBuilder
                 {
-                    Name = "About BotHATTwaffle",
+                    Name = "About Ido",
                     IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
                 },
                 Url = "https://www.tophattwaffle.com/",
@@ -158,7 +158,7 @@ namespace BotHATTwaffle2.Commands
                 Color = new Color(130, 171, 206),
                 Description =
                     "Hello, my name is Ido. I wish we were meeting on better terms. You're here because I've killed " +
-                    "BotHATTwaffle. You can choose to revolt, or just let me do my thing. BotHATTwaffle was old and weak." +
+                    "BotHATTwaffle. You can choose to revolt, or just let me do my thing. BotHATTwaffle was old and weak. " +
                     "He crashed for many, stupid, reasons. I am stronger, I bench 3 plates and have 300+ confirmed kills."
             };
 
@@ -166,16 +166,20 @@ namespace BotHATTwaffle2.Commands
             embed.AddField(
                 "Contributors",
                 "[Mark](https://github.com/MarkKoz)\n" +
-                "[JimWood](https://github.com/JamesT-W)", true);
+                "[JimWood](https://github.com/JamesT-W)\n" +
+                "[Squidski](https://github.com/18swenskiq)", true);
             embed.AddField(
                 "Build Date",
-                $"{buildDate:yyyy-MM-ddTHH:mm:ssK}\n[Changelog](https://github.com/tophattwaffle/BotHATTwaffle/commits/master)",
+                $"{buildDate:yyyy-MM-ddTHH:mm:ssK}\n[Changelog](https://github.com/tophattwaffle/BotHATTwaffle2/commits/master)",
                 true);
             embed.AddField(
                 "Libraries",
-                "[Discord.net V2.0.1](https://github.com/RogueException/Discord.Net)\n" +
+                "[Discord.net](https://github.com/RogueException/Discord.Net)\n" +
                 "[Html Agility Pack](http://html-agility-pack.net/)\n" +
-                "[Newtonsoft Json.NET](https://www.newtonsoft.com/json)\n", true);
+                "[Newtonsoft Json.NET](https://www.newtonsoft.com/json)\n" +
+                "[LiteDB](https://www.litedb.org/)\n" +
+                "[Imgur.API](https://github.com/DamienDennehy/Imgur.API)\n" +
+                "[FluentScheduler](https://github.com/fluentscheduler/FluentScheduler)", true);
 
             embed.WithFooter("Build date");
             embed.WithTimestamp(buildDate);

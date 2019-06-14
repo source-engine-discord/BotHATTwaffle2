@@ -5,6 +5,7 @@ using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
+using BotHATTwaffle2.src.Models.LiteDB;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -51,10 +52,155 @@ namespace BotHATTwaffle2.Commands
                                   $"{Context.User.Username} (ID: {Context.User.Id})");
         }
 
-        [Command("cal")]
-        public async Task CalAsync()
+        [Command("test")]
+        public async Task TestAsync()
         {
-            await ReplyAsync(embed: _playtestService.thing());
+            await _playtestService.PlaytestStartingInTask();
+        }
+
+        [Command("TestServer")]
+        [Alias("ts")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        [Summary("Command for manipulating test servers. See command help for more information.")]
+        [Remarks("`>TestServer get [ServerCode / all]`\n" +
+        "`>TestServer remove [ServerCode]`\n\n" +
+        "Adding a server requires the information provided with each variable on a new line after the invoking command." +
+        "`>TestServer add\n" +
+        "[ServerId]\n" +
+        "[Description]\n" +
+        "[Address]\n" +
+        "[RconPassword]\n" +
+        "[FtpUser]\n" +
+        "[FtpPassword]\n" +
+        "[FtpPath]\n" +
+        "[FtpType]\n`")]
+        public async Task TestServerAsync(string action, [Remainder]string values = null)
+        {
+            //Add server
+            if (action.StartsWith("a", StringComparison.OrdinalIgnoreCase))
+            {
+                //Need input values, abort if we don't have them.
+                if (values == null)
+                {
+                    await ReplyAsync("No input provided");
+                    return;
+                }
+
+                string[] serverValues = values.Split("\n");
+
+                //Make sure all the data is present, as all values are required
+                if (serverValues.Length != 8)
+                {
+                    await ReplyAsync("Adding a server requires all 8 server values.");
+                    await Context.Message.DeleteAsync();
+                    return;
+                }
+
+                //Validate FTP type before entry
+                switch (serverValues[7])
+                {
+                    case "ftp":
+                        break;
+                    case "sftp":
+                        break;
+                    case "ftps":
+                        break;
+                    default:
+                        await ReplyAsync("Invalid FTP type. Please provide `ftp`, `ftps`, or `sftp` and try again." +
+                                         "\nYour message was deleted as it may have contained a password.");
+                        await Context.Message.DeleteAsync();
+                        return;
+                }
+
+                if (DatabaseHandler.AddTestServer(new Server()
+                {
+                    ServerId = serverValues[0],
+                    Description = serverValues[1],
+                    Address = serverValues[2],
+                    RconPassword = serverValues[3],
+                    FtpUser = serverValues[4],
+                    FtpPassword = serverValues[5],
+                    FtpPath = serverValues[6],
+                    FtpType = serverValues[7]
+                }))
+                {
+                    await ReplyAsync("Server added!\nI deleted your message since it had passwords in it.");
+                    await Context.Message.DeleteAsync();
+                    return;
+                }
+
+                await ReplyAsync("Issue adding server, does it already exist?\nI deleted your message since it had passwords in it.");
+                await Context.Message.DeleteAsync();
+            }
+            //Get server
+            else if (action.StartsWith("g"))
+            {
+                string reply = $"No server found with server code {values}";
+                if (values != null && !values.Equals("all", StringComparison.OrdinalIgnoreCase))
+                {
+                    var testServer = DatabaseHandler.GetTestServer(values);
+
+                    if (testServer != null)
+                        reply = $"Found the following server:\n{testServer.ToString()}\n\n" +
+                                $"Use the following command to re-add this server to the database.\n" +
+                                $"```" +
+                                $">TestServer add" +
+                                $"\n{testServer.ServerId}" +
+                                $"\n{testServer.Description}" +
+                                $"\n{testServer.Address}" +
+                                $"\n{testServer.RconPassword}" +
+                                $"\n{testServer.FtpUser}" +
+                                $"\n{testServer.FtpPassword}" +
+                                $"\n{testServer.FtpPath}" +
+                                $"\n{testServer.FtpType}" +
+                                $"```";
+
+                    await _data.AlertUser.SendMessageAsync(reply);
+                    
+                }
+                //Get all servers instead
+                else
+                {
+                    var testServers = DatabaseHandler.GetAllTestServers();
+
+                    if (testServers != null)
+                    {
+                        reply = null;
+                        foreach (var testServer in testServers)
+                        {
+                            reply += "```" + testServer + "```";
+                        }
+                    }
+                    else
+                        reply = "Could not get all servers because the request returned null.";
+
+                    await _data.AlertUser.SendMessageAsync(reply);
+                }
+
+                await ReplyAsync("Server information contains passwords, as a result I have DM'd whoever is set " +
+                                 "as the `Alert User` in my configuration.");
+            }
+            //Remove server
+            else if (action.StartsWith("r"))
+            {
+                if (DatabaseHandler.RemoveTestServer(values))
+                {
+                    await ReplyAsync($"Server with the ID: `{values}` was removed.");
+                }
+                else
+                {
+                    await ReplyAsync($"Could not remove a server with the ID of: `{values}`. It likely does not exist in the DB.");
+                }
+            }
+        }
+
+        [Command("ForceAnnounce")]
+        [Alias("fa")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Allows manual announcing of a playtest. This command mentions the playtester role.")]
+        public async Task ForceAnnounceAsync()
+        {
+            await _playtestService.PlaytestStartingInTask();
         }
 
         [Command("Debug")]

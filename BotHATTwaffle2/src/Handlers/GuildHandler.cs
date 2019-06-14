@@ -33,7 +33,7 @@ namespace BotHATTwaffle2.Handlers
             await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LogColor);
             await _data.DeserializeConfig();
 
-            _schedule.AddRequiredJobs();
+            //_schedule.AddRequiredJobs();
         }
 
 

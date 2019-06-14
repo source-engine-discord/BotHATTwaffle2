@@ -15,5 +15,18 @@ namespace BotHATTwaffle2.src.Models.LiteDB
         public string FtpPassword { get; set; }
         public string FtpPath { get; set; }
         public string FtpType { get; set; }
+
+        public override string ToString()
+        {
+            return $"\nDatabase ID: {Id}" +
+                   $"\nServerID: {ServerId}" +
+                   $"\nDescription: {Description}" +
+                   $"\nAddress: {Address}" +
+                   $"\nRconPassword: {RconPassword}" +
+                   $"\nFtpUser: {FtpUser}" +
+                   $"\nFtpPassword: {FtpPassword}" +
+                   $"\nFtpPath: {FtpPath}" +
+                   $"\nFtpType: {FtpType}";
+        }
     }
 }

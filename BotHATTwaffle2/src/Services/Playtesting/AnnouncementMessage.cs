@@ -125,8 +125,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             playtestEmbed.AddField("Connect to",
                 $"`{testEvent.ServerLocation}; password {displayedPassword}`");
 
-            string information = null;
 
+            //Small VS large embed differences
+            string information;
             if (smallEmbed)
             {
                 playtestEmbed.ThumbnailUrl = embedImageUrl;
@@ -136,6 +137,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
+                playtestEmbed.AddField("Test Starts In", countdownString, true);
+
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
                               $"[Testing Information](https://www.tophattwaffle.com/playtesting)";
                 playtestEmbed.ImageUrl = embedImageUrl;

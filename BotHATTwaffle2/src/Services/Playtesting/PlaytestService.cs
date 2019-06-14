@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
@@ -16,11 +15,10 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly GoogleCalendar _calendar;
         private readonly DataService _data;
         private readonly LogHandler _log;
-        private IUserMessage PlaytestAnnouncementMessage { get; set; }
-        private int _failedToFetch = 0;
-        private int _failedRetryCount = 60;
-        private AnnounceMessage _oldMessage;
+        private readonly int _failedRetryCount = 60;
+        private int _failedToFetch;
         private DateTime _lastSeenEditTime;
+        private AnnounceMessage _oldMessage;
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random)
         {
@@ -34,9 +32,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             _announcementMessage = new AnnouncementMessage(_calendar, _data, random, _log);
         }
 
+        private IUserMessage PlaytestAnnouncementMessage { get; set; }
+
         /// <summary>
-        /// Starts the chain of events to post a new announcement message.
-        /// If a valid existing message can be used, it will be used instead.
+        ///     Starts the chain of events to post a new announcement message.
+        ///     If a valid existing message can be used, it will be used instead.
         /// </summary>
         /// <returns></returns>
         public async Task PostOrUpdateAnnouncement()
@@ -77,18 +77,18 @@ namespace BotHATTwaffle2.Services.Playtesting
 
 
             if (PlaytestAnnouncementMessage == null)
-            {
                 await PostNewAnnouncement();
-            }
             else
                 await UpdateAnnouncementMessage();
         }
 
         /// <summary>
-        /// Attempts to update the existing announcement message.
-        /// If failure to update after <value>_failedRetryCount</value> (default 60) tries, the message is
-        /// assumed to be lost, and will be recreated. This may result in double announcement messages that require
-        /// manual cleanup.
+        ///     Attempts to update the existing announcement message.
+        ///     If failure to update after
+        ///     <value>_failedRetryCount</value>
+        ///     (default 60) tries, the message is
+        ///     assumed to be lost, and will be recreated. This may result in double announcement messages that require
+        ///     manual cleanup.
         /// </summary>
         /// <returns></returns>
         private async Task UpdateAnnouncementMessage()
@@ -124,7 +124,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_failedToFetch >= _failedRetryCount)
                 {
                     _ = _log.LogMessage($"Tried to update announcement messages {_failedToFetch}, but failed." +
-                                        $"\nCreated a new message next time.", false, color: LogColor);
+                                        "\nCreated a new message next time.", false, color: LogColor);
                     PlaytestAnnouncementMessage = null;
                 }
                 else
@@ -138,13 +138,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
         }
 
-        public Embed thing()
-        {
-            return _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual, true, PlaytestAnnouncementMessage.Id);
-        }
-
         /// <summary>
-        /// Posts a new playtest announcement
+        ///     Posts a new playtest announcement
         /// </summary>
         /// <returns></returns>
         private async Task PostNewAnnouncement()
@@ -172,14 +167,14 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             catch
             {
-                _ = _log.LogMessage($"Attempted to post new announcement, but failed", false, color: LogColor);
+                _ = _log.LogMessage("Attempted to post new announcement, but failed", false, color: LogColor);
             }
         }
 
         /// <summary>
-        /// Attempts to get a previously created announcement message based on values that were stored in the DB.
-        /// If the located message does not match the current event it will be deleted.
-        /// If nothing can be located, it does nothing.
+        ///     Attempts to get a previously created announcement message based on values that were stored in the DB.
+        ///     If the located message does not match the current event it will be deleted.
+        ///     If nothing can be located, it does nothing.
         /// </summary>
         /// <returns></returns>
         public async Task TryAttachPreviousAnnounceMessage()
@@ -263,56 +258,99 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (PlaytestAnnouncementMessage != null && _calendar.GetTestEventNoUpdate().TestValid())
             {
-                TimeSpan singleHour = new TimeSpan(1, 0, 0);
-                TimeSpan fifteenMinutes = new TimeSpan(0, 15, 0);
+                var singleHour = new TimeSpan(1, 0, 0);
+                var fifteenMinutes = new TimeSpan(0, 15, 0);
 
-                DateTime adjusted = DateTime.Now.Add(singleHour);
+                var adjusted = DateTime.Now.Add(singleHour);
                 var startDateTime = _calendar.GetTestEventNoUpdate().StartDateTime;
                 _ = _log.LogMessage($"Playtest scheduled for: {startDateTime}", false, color: LogColor);
 
                 if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
                 {
-                    JobManager.AddJob((async () => await PlaytestStartingInTask()), s => s
-                        .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-60)));
+                    //Have to set the alert to be -61 minutes from start time, otherwise the announcement says
+                    //that the test starts in 59 minutes.
+                    JobManager.AddJob(async () => await PlaytestStartingInTask(), s => s
+                        .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-61)));
 
-                    _ = _log.LogMessage($"1 hour playtest announcement scheduled for:" +
-                                        $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false, color: LogColor);
+                    _ = _log.LogMessage("1 hour playtest announcement scheduled for:" +
+                                        $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false,
+                        color: LogColor);
                 }
 
                 adjusted = DateTime.Now.Add(fifteenMinutes);
                 if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
                 {
-                    JobManager.AddJob((async () => await PlaytestFifteenMinuteTask()), s => s
+                    JobManager.AddJob(async () => await PlaytestFifteenMinuteTask(), s => s
                         .WithName("[Playtest15Minute]").ToRunOnceAt(startDateTime.Value.AddMinutes(-15)));
 
-                    _ = _log.LogMessage($"15 minute playtest announcement scheduled for:" +
-                                        $"\n{JobManager.GetSchedule("[Playtest15Minute]").NextRun}", false, color: LogColor);
+                    _ = _log.LogMessage("15 minute playtest announcement scheduled for:" +
+                                        $"\n{JobManager.GetSchedule("[Playtest15Minute]").NextRun}", false,
+                        color: LogColor);
                 }
 
                 if (startDateTime != null && DateTime.Compare(DateTime.Now, startDateTime.Value) < 0)
                 {
-                    JobManager.AddJob((async () => await PlaytestStartingTask()), s => s
+                    JobManager.AddJob(async () => await PlaytestStartingTask(), s => s
                         .WithName("[PlaytestStarting]").ToRunOnceAt(startDateTime.Value));
 
-                    _ = _log.LogMessage($"Starting playtest announcement scheduled for:" +
-                                        $"\n{JobManager.GetSchedule("[PlaytestStarting]").NextRun}", false, color: LogColor);
+                    _ = _log.LogMessage("Starting playtest announcement scheduled for:" +
+                                        $"\n{JobManager.GetSchedule("[PlaytestStarting]").NextRun}", false,
+                        color: LogColor);
                 }
             }
         }
 
-        private async Task PlaytestStartingInTask()
+        /// <summary>
+        /// Posts a new announcement message and alerts playtester role
+        /// </summary>
+        /// <returns></returns>
+        public async Task PlaytestStartingInTask()
         {
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Posting playtest announcement", false, color: LogColor);
 
+            await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
+
+            //Figure out how long until the event starts
+            var countdown = _calendar.GetTestEventNoUpdate().StartDateTime.GetValueOrDefault().Subtract(DateTime.Now);
+            var countdownString =
+                countdown.ToString("d'D 'h' Hour 'm' Minutes'").TrimStart(' ', 'D', 'H','o','u','r', '0').Replace(" 0 Minutes","");
+            await _data.TestingChannel.SendMessageAsync($"Heads up {_data.PlayTesterRole.Mention}! " +
+                                                        // ReSharper disable once PossibleInvalidOperationException
+                                                        $"There is a playtest starting in {countdownString}.\nType `>playtester` to stop getting these notifications.",
+                embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
+                    true, PlaytestAnnouncementMessage.Id));
+
+            await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = false; });
         }
 
+        /// <summary>
+        /// Server setup tasks for 15 minutes before a test
+        /// </summary>
+        /// <returns></returns>
         private async Task PlaytestFifteenMinuteTask()
         {
-
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LogColor);
         }
 
+        /// <summary>
+        /// Announcement for playtest starting
+        /// </summary>
+        /// <returns></returns>
         private async Task PlaytestStartingTask()
         {
+            if (_data.RootSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Posting playtest start announcement", false, color: LogColor);
 
+            await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
+
+            await _data.TestingChannel.SendMessageAsync($"Heads up {_data.PlayTesterRole.Mention}! " +
+                                                        $"There is a playtest starting __now__!\nType `>playtester` to stop getting these notifications.",
+                embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
+                    true, PlaytestAnnouncementMessage.Id));
+
+            await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = false; });
         }
     }
 }

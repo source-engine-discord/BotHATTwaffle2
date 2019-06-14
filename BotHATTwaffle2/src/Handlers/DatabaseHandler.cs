@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.src.Models.LiteDB;
 using Discord;
@@ -10,6 +12,7 @@ namespace BotHATTwaffle2.src.Handlers
     {
         private const string Dbpath = @"MasterDB.db";
         private const string CollectionAnnouncement = "announcement";
+        private const string CollectionServers = "servers";
         private const ConsoleColor LogColor = ConsoleColor.DarkYellow;
         private static LogHandler _log;
         private static DataService _data;
@@ -95,6 +98,142 @@ namespace BotHATTwaffle2.src.Handlers
             }
 
             return foundMessage;
+        }
+
+        /// <summary>
+        /// Gets a specific test server from the database based on the ID.
+        /// </summary>
+        /// <param name="serverId">Server ID to get</param>
+        /// <returns>Server object if found, null otherwise</returns>
+        public static Server GetTestServer(string serverId)
+        {
+            Server foundServer = null;
+            try
+            {
+                using (var db = new LiteDatabase(Dbpath))
+                {
+                    //Grab our collection
+                    var servers = db.GetCollection<Server>(CollectionServers);
+
+                    foundServer = servers.FindOne(Query.EQ("ServerId",serverId));
+                }
+                if (_data.RootSettings.ProgramSettings.Debug && foundServer != null)
+                    _ = _log.LogMessage(foundServer.ToString(), false, color: LogColor);
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting announcement message\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundServer;
+            }
+
+            return foundServer;
+        }
+
+        /// <summary>
+        /// Removes a server object from the database based on the ID.
+        /// </summary>
+        /// <param name="serverId">Server ID to remove</param>
+        /// <returns>True if the server was removed, false otherwise.</returns>
+        public static bool RemoveTestServer(string serverId)
+        {
+            var foundServer = GetTestServer(serverId);
+
+            if (foundServer == null)
+            {
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("No server found, so cannot remove anything", false, color: LogColor);
+                return false;
+            }
+
+            try
+            {
+                using (var db = new LiteDatabase(Dbpath))
+                {
+                    //Grab our collection
+                    var servers = db.GetCollection<Server>(CollectionServers);
+
+                    servers.Delete(foundServer.Id);
+                }
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage(foundServer.ToString(), false, color: LogColor);
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting announcement message\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns a IEnumerable of server objects containing all test servers in the database.
+        /// </summary>
+        /// <returns>IEnumerable of servers</returns>
+        public static IEnumerable<Server> GetAllTestServers()
+        {
+            IEnumerable<Server> foundServers = null;
+            try
+            {
+                using (var db = new LiteDatabase(Dbpath))
+                {
+                    //Grab our collection
+                    var serverCol = db.GetCollection<Server>(CollectionServers);
+
+                    foundServers = serverCol.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting announcement message\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundServers;
+            }
+            return foundServers;
+        }
+
+        /// <summary>
+        /// Adds a server object to the database.
+        /// </summary>
+        /// <param name="server">Server to add to the database</param>
+        /// <returns>True if server was added, false otherwise</returns>
+        public static bool AddTestServer(Server server)
+        {
+            if (GetTestServer(server.ServerId) != null)
+            {
+                if (_data.RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("Unable to add test server since one was found.", false, color: LogColor);
+                //We found an entry under the same name as this server.
+                return false;
+            }
+
+            try
+            {
+                using (var db = new LiteDatabase(Dbpath))
+                {
+                    
+                    //Grab our collection
+                    var servers = db.GetCollection<Server>(CollectionServers);
+
+                    if (_data.RootSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Inserting new server into DB", false, color: LogColor);
+                    servers.Insert(server);
+                    servers.EnsureIndex(x => x.ServerId);
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting announcement message\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+            }
+
+            return true;
         }
     }
 }
