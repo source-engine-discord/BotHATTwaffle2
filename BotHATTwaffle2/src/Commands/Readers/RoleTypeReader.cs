@@ -16,7 +16,7 @@ namespace BotHATTwaffle2.Commands.Readers
     public static class RoleTypeReader<T> where T : class, IRole
     {
         /// <summary>
-        ///     Tries to parses a given string as a role.
+        ///     Tries to parse a given string as a role.
         /// </summary>
         /// <param name="guild">The guild in which to search for the role.</param>
         /// <param name="input">A string representing a role by mention, id, or name.</param>
