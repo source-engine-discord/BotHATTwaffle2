@@ -27,8 +27,10 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// This expects the calendar to have the latest even cached.
         /// </summary>
         /// <param name="isCasual">If true, shows password. Otherwise password will be hidden</param>
+        /// <param name="smallEmbed">Should the message be formatted in small style</param>
+        /// <param name="fullMessage">ID of full message, used in small embeds</param>
         /// <returns>Prebuilt embed</returns>
-        public Embed CreatePlaytestEmbed(bool isCasual = true)
+        public Embed CreatePlaytestEmbed(bool isCasual = true, bool smallEmbed = false, ulong fullMessage = 0)
         {
             if (_data.RootSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Creating Playtest Embed", false, color: LogColor);
@@ -112,8 +114,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                 .WithAuthor($"{testEvent.Title} | {testType}")
                 .WithTitle("Workshop Link")
                 .WithUrl(testEvent.WorkshopLink.ToString())
-                .WithImageUrl(embedImageUrl)
-                .WithThumbnailUrl(testEvent.Creators[creatorIndex].GetAvatarUrl())
                 .WithDescription(testEvent.Description)
                 .WithColor(new Color(243, 128, 72))
                 .WithFooter(footer);
@@ -124,10 +124,27 @@ namespace BotHATTwaffle2.Services.Playtesting
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
             playtestEmbed.AddField("Connect to",
                 $"`{testEvent.ServerLocation}; password {displayedPassword}`");
-            playtestEmbed.AddField("Information", $"[Screenshots]({testEvent.ImageGallery}) | " +
-                                                  "[Testing Information](https://www.tophattwaffle.com/playtesting)");
-            playtestEmbed.AddField("When",
-                $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {gmt} GMT");
+
+            string information = null;
+
+            if (smallEmbed)
+            {
+                playtestEmbed.ThumbnailUrl = embedImageUrl;
+                information = $"[Screenshots]({testEvent.ImageGallery}) | " +
+                              $"[Testing Information](https://www.tophattwaffle.com/playtesting) | " +
+                              $"[More Information](https://discordapp.com/channels/{_data.Guild.Id}/{_data.AnnouncementChannel.Id}/{fullMessage})";
+            }
+            else
+            {
+                information = $"[Screenshots]({testEvent.ImageGallery}) | " +
+                              $"[Testing Information](https://www.tophattwaffle.com/playtesting)";
+                playtestEmbed.ImageUrl = embedImageUrl;
+                playtestEmbed.ThumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
+                playtestEmbed.AddField("When",
+                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {gmt} GMT");
+            }
+
+            playtestEmbed.AddField("Information",information);
 
             return playtestEmbed.Build();
         }

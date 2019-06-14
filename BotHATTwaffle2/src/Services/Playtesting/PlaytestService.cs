@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Data;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.src.Models.LiteDB;
 using Discord;
+using FluentScheduler;
 
 namespace BotHATTwaffle2.Services.Playtesting
 {
@@ -58,10 +60,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                     }
                     catch
                     {
-                        _ = _log.LogMessage("Failed to delete outdated playtest message. It may have been deleted",
+                        _ = _log.LogMessage(
+                            "Failed to delete outdated playtest message. It may have been deleted manually",
                             false, color: LogColor);
                     }
                 }
+
                 PlaytestAnnouncementMessage = null;
 
                 return;
@@ -98,7 +102,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     await PlaytestAnnouncementMessage.ModifyAsync(x =>
                     {
-                        x.Embed = _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual);
+                        x.Embed = _announcementMessage.CreatePlaytestEmbed(
+                            _calendar.GetTestEventNoUpdate().IsCasual);
                     });
                     _failedToFetch = 0;
                 }
@@ -127,9 +132,15 @@ namespace BotHATTwaffle2.Services.Playtesting
                     //Have not failed enough, lets keep trying.
                     _failedToFetch++;
                     if (_data.RootSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Failed to update playtest announcement {_failedToFetch} times", false, color: LogColor);
+                        _ = _log.LogMessage($"Failed to update playtest announcement {_failedToFetch} times", false,
+                            color: LogColor);
                 }
             }
+        }
+
+        public Embed thing()
+        {
+            return _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual, true, PlaytestAnnouncementMessage.Id);
         }
 
         /// <summary>
@@ -144,7 +155,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             try
             {
                 //Make the announcement and store to a variable
-                PlaytestAnnouncementMessage = await _data.AnnouncementChannel.SendMessageAsync(embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual));
+                PlaytestAnnouncementMessage = await _data.AnnouncementChannel.SendMessageAsync(
+                    embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual));
 
                 //Hand off the message and time to be stored in the DB for use on restarts
                 var eventEditTime = _calendar.GetTestEventNoUpdate().EventEditTime;
@@ -155,10 +167,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                 var lastEditTime = _calendar.GetTestEventNoUpdate().LastEditTime;
                 if (lastEditTime != null)
                     _lastSeenEditTime = lastEditTime.Value;
+
+                SchedulePlaytestAnnouncements();
             }
             catch
             {
-                _ = _log.LogMessage($"Attempted to post new announcement, but failed",false, color: LogColor);
+                _ = _log.LogMessage($"Attempted to post new announcement, but failed", false, color: LogColor);
             }
         }
 
@@ -194,7 +208,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             _ = _log.LogMessage("Attempting to get old announcement message\n" +
-                                $"{_oldMessage.AnnouncementId} that was created at {_oldMessage.AnnouncementDateTime}", false, color: LogColor);
+                                $"{_oldMessage.AnnouncementId} that was created at {_oldMessage.AnnouncementDateTime}",
+                false, color: LogColor);
 
 
             var eventEditTime = _calendar.GetTestEventNoUpdate().EventEditTime;
@@ -218,7 +233,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     _ = _log.LogMessage("Unable to retrieve old announcement message!", false, color: LogColor);
                 }
             }
-            else 
+            else
             {
                 _ = _log.LogMessage("Messages do not match, deleting old message", false, color: LogColor);
                 try
@@ -226,12 +241,78 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await _data.AnnouncementChannel.DeleteMessageAsync(_oldMessage.AnnouncementId);
                     PlaytestAnnouncementMessage = null;
                 }
-                catch 
+                catch
                 {
-                        _ = _log.LogMessage("Could not delete old message - it was likely deleted manually",
-                            false, color: LogColor);
+                    _ = _log.LogMessage("Could not delete old message - it was likely deleted manually",
+                        false, color: LogColor);
                 }
             }
+        }
+
+        public void ClearScheduledAnnouncements()
+        {
+            JobManager.RemoveJob("[Playtest1Hour]");
+            JobManager.RemoveJob("[Playtest15Minute]");
+            JobManager.RemoveJob("[PlaytestStarting]");
+        }
+
+        public void SchedulePlaytestAnnouncements()
+        {
+            //Clear old jobs, if any.
+            ClearScheduledAnnouncements();
+
+            if (PlaytestAnnouncementMessage != null && _calendar.GetTestEventNoUpdate().TestValid())
+            {
+                TimeSpan singleHour = new TimeSpan(1, 0, 0);
+                TimeSpan fifteenMinutes = new TimeSpan(0, 15, 0);
+
+                DateTime adjusted = DateTime.Now.Add(singleHour);
+                var startDateTime = _calendar.GetTestEventNoUpdate().StartDateTime;
+                _ = _log.LogMessage($"Playtest scheduled for: {startDateTime}", false, color: LogColor);
+
+                if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
+                {
+                    JobManager.AddJob((async () => await PlaytestStartingInTask()), s => s
+                        .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-60)));
+
+                    _ = _log.LogMessage($"1 hour playtest announcement scheduled for:" +
+                                        $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false, color: LogColor);
+                }
+
+                adjusted = DateTime.Now.Add(fifteenMinutes);
+                if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
+                {
+                    JobManager.AddJob((async () => await PlaytestFifteenMinuteTask()), s => s
+                        .WithName("[Playtest15Minute]").ToRunOnceAt(startDateTime.Value.AddMinutes(-15)));
+
+                    _ = _log.LogMessage($"15 minute playtest announcement scheduled for:" +
+                                        $"\n{JobManager.GetSchedule("[Playtest15Minute]").NextRun}", false, color: LogColor);
+                }
+
+                if (startDateTime != null && DateTime.Compare(DateTime.Now, startDateTime.Value) < 0)
+                {
+                    JobManager.AddJob((async () => await PlaytestStartingTask()), s => s
+                        .WithName("[PlaytestStarting]").ToRunOnceAt(startDateTime.Value));
+
+                    _ = _log.LogMessage($"Starting playtest announcement scheduled for:" +
+                                        $"\n{JobManager.GetSchedule("[PlaytestStarting]").NextRun}", false, color: LogColor);
+                }
+            }
+        }
+
+        private async Task PlaytestStartingInTask()
+        {
+
+        }
+
+        private async Task PlaytestFifteenMinuteTask()
+        {
+
+        }
+
+        private async Task PlaytestStartingTask()
+        {
+
         }
     }
 }

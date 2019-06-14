@@ -54,10 +54,7 @@ namespace BotHATTwaffle2.Commands
         [Command("cal")]
         public async Task CalAsync()
         {
-            await _playtestService.PostOrUpdateAnnouncement();
-            //Console.WriteLine("ABOUT TO SCHEDULE");
-            //JobManager.AddJob(() => Console.WriteLine("I was scheduled!"), s => s.ToRunOnceIn(5).Seconds());
-            //await _playtestService.PostAnnouncement();
+            await ReplyAsync(embed: _playtestService.thing());
         }
 
         [Command("Debug")]

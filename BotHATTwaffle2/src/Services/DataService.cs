@@ -27,6 +27,8 @@ namespace BotHATTwaffle2.Services
 
         public RootSettings RootSettings { get; set; }
 
+        public SocketGuild Guild { get; set; }
+
         // Channels
         public SocketTextChannel GeneralChannel { get; private set; }
         public SocketTextChannel LogChannel { get; private set; }
@@ -99,11 +101,11 @@ namespace BotHATTwaffle2.Services
         /// <returns>No object or value is returned by this method when it completes.</returns>
         private async Task DeserializeChannels()
         {
-            var guild = _client.Guilds.FirstOrDefault();
+            Guild = _client.Guilds.FirstOrDefault();
 
             Console.ForegroundColor = LogColor;
 
-            Console.WriteLine($"Active Guild: {guild?.Name}\n");
+            Console.WriteLine($"Active Guild: {Guild?.Name}\n");
 
             LogChannel = await ParseChannel(RootSettings.ProgramSettings.LogChannel);
             Console.WriteLine($"LogChannel ID:{LogChannel.Id} Discovered Name:{LogChannel.Name}");
@@ -153,7 +155,7 @@ namespace BotHATTwaffle2.Services
 
             async Task<SocketTextChannel> ParseChannel(string key)
             {
-                var channel = await ChannelTypeReader<SocketTextChannel>.GetBestResultAsync(guild, key);
+                var channel = await ChannelTypeReader<SocketTextChannel>.GetBestResultAsync(Guild, key);
 
                 if (channel == null)
                     throw new InvalidOperationException($"The value of key '{key}' could not be parsed as a channel.");

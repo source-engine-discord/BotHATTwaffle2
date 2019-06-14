@@ -37,18 +37,25 @@ namespace BotHATTwaffle2.Handlers
             JobManager.RemoveAllJobs();
         }
 
+        /// <summary>
+        /// Adds required jobs on startup
+        /// </summary>
         public void AddRequiredJobs()
         {
             _ = _log.LogMessage("Adding required scheduled jobs...", false, color: LogColor);
 
             //Add schedule for playtest information
             JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement(), s => s
-                .WithName("[PostOrUpdateAnnouncement]").ToRunEvery(60).Seconds());
+                .WithName("[PostOrUpdateAnnouncement]").ToRunEvery(10).Seconds());
 
             //Reattach to the old announcement message quickly
             JobManager.AddJob(async () => await _playtestService.TryAttachPreviousAnnounceMessage(), s => s
-                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(5).Seconds());
+                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(3).Seconds());
 
+            //On start up schedule of playtest announcements
+            JobManager.AddJob(() => _playtestService.SchedulePlaytestAnnouncements(), s => s
+                .WithName("[SchedulePlaytestAnnouncementsBoot]").ToRunOnceIn(5).Seconds());
+            
             //Display what jobs we have scheduled
             foreach (var allSchedule in JobManager.AllSchedules)
             {
