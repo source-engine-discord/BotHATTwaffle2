@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.src.Handlers;
 using Discord.Commands;
@@ -51,11 +52,17 @@ namespace BotHATTwaffle2.Services
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
 
+        public bool includePlayerCount { get; set; }
+        public string playerCount { get; set; }
+
         public async Task DeserializeConfig()
         {
             ReadConfig();
             await DeserializeChannels();
             GetRoles();
+
+            includePlayerCount = false;
+            playerCount = "0";
 
             AlertUser = _client.GetUser(RootSettings.ProgramSettings.AlertUser);
 
@@ -366,27 +373,72 @@ namespace BotHATTwaffle2.Services
             var client = new RemoteConClient();
 
             client.Connect(iPHostEntry.AddressList.FirstOrDefault().ToString(), 27015);
-
             client.Authenticate(server.RconPassword);
-            await Task.Delay(50);
 
-            while (!client.Authenticated) {
+            //Delay until the client is connected, time out after 20 tries
+            while (!client.Authenticated && retryCount < 20)
+            {
                 await Task.Delay(50);
-                Console.WriteLine($"Waiting until connected: {retryCount}");
+                retryCount++;
+
+                if (RootSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.", false, color: LogColor);
             }
 
-            if (client.Connected)
+            //Are we connected and authenticated?
+            if (client.Connected && client.Authenticated)
             {
+                //Send command and and store the server's response in reply.
+                //However for some reason it takes a while for the server to reply
+                //As a result we will wait for a proper reply below.
                 client.SendCommand(command, result => { reply = result; });
 
-                while (reply == null)
+                await _log.LogMessage($"Sending RCON command:\n{command}\nTo server: {server.Address}", color: LogColor);
+
+                retryCount = 0;
+
+                //Delay until we have a proper reply from the server.
+                while (reply == null && retryCount < 20)
                 {
                     await Task.Delay(50);
-                    Console.WriteLine($"Waiting until reply has value");
+                    retryCount++;
+
+                    if (RootSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Waiting for string from rcon server, tried: {retryCount} time.", false, color: LogColor);
                 }
             }
 
-            return reply;
+            return FormatRconServerReply(reply);
+        }
+
+        private string FormatRconServerReply(string input)
+        {
+            if (input == null)
+                return "No response from server, but the command may still have been sent.";
+
+            string[] replyArray = input.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            input = string.Join("\n", replyArray.Where(x => !x.Trim().StartsWith("L ")));
+
+            return input;
+        }
+
+        public async Task GetPlayCountFromServer(string serverId)
+        {
+            var returned = await RconCommand(serverId, "status");
+            string[] replyArray = returned.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+            //Only get the line with player count
+            IEnumerable<string> results = replyArray.Where(l => l.StartsWith("players"));
+
+            //Remove extra information from string
+            var formatted = results.FirstOrDefault()?.Substring(10);
+
+            playerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
+        }
+
+        public string GetServerCode(string fullServerAddress)
+        {
+            return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
         }
     }
 }

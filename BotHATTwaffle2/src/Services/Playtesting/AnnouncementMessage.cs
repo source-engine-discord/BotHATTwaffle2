@@ -122,10 +122,15 @@ namespace BotHATTwaffle2.Services.Playtesting
             playtestEmbed.AddField(creatorSpelling, creatorProfile, true);
             playtestEmbed.AddField("Moderator",
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
+
+            if (_data.includePlayerCount)
+            {
+                playtestEmbed.AddField("Players Connected", _data.playerCount, true);
+            }
+
             playtestEmbed.AddField("Connect to",
                 $"`{testEvent.ServerLocation}; password {displayedPassword}`");
-
-
+            
             //Small VS large embed differences
             string information;
             if (smallEmbed)
@@ -137,8 +142,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                playtestEmbed.AddField("Test Starts In", countdownString, true);
-
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
                               $"[Testing Information](https://www.tophattwaffle.com/playtesting)";
                 playtestEmbed.ImageUrl = embedImageUrl;

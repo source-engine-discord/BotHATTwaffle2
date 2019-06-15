@@ -54,12 +54,18 @@ namespace BotHATTwaffle2.Commands
                                   $"{Context.User.Username} (ID: {Context.User.Id})");
         }
 
+        [Command("test")]
+        public async Task TestAsync()
+        {
+
+        }
+
         [Command("rcon", RunMode = RunMode.Async)]
         [Alias("r")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task RconAsync(string input, [Remainder] string command)
         {
-            Console.WriteLine("YO I GOT THIS: " + await _data.RconCommand(input, command));
+            await ReplyAsync($"```{await _data.RconCommand(input, command)}```");
         }
 
         [Command("TestServer")]

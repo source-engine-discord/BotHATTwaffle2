@@ -147,6 +147,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_data.RootSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting new announcement", false, color: LogColor);
 
+            //Stop asking server for player counts
+            _data.includePlayerCount = false;
+            _data.playerCount = "0";
+
             try
             {
                 //Make the announcement and store to a variable
@@ -308,6 +312,13 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             if (_data.RootSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting playtest announcement", false, color: LogColor);
+
+            //Start asking the server for player counts.
+            _data.includePlayerCount = true;
+
+            //Start asing for player counts
+            JobManager.AddJob(async () => await _data.GetPlayCountFromServer(_data.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation)),
+                s => s.WithName("[QueryPlayerCount]").ToRunEvery(10).Seconds());
 
             await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
 
