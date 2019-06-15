@@ -46,7 +46,7 @@ namespace BotHATTwaffle2.Handlers
 
             //Add schedule for playtest information
             JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement(), s => s
-                .WithName("[PostOrUpdateAnnouncement]").ToRunEvery(10).Seconds());
+                .WithName("[PostOrUpdateAnnouncement]").ToRunEvery(60).Seconds());
 
             //Reattach to the old announcement message quickly
             JobManager.AddJob(async () => await _playtestService.TryAttachPreviousAnnounceMessage(), s => s

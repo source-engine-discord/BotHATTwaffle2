@@ -253,6 +253,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             JobManager.RemoveJob("[Playtest1Hour]");
             JobManager.RemoveJob("[Playtest15Minute]");
             JobManager.RemoveJob("[PlaytestStarting]");
+            JobManager.RemoveJob("[QueryPlayerCount]");
         }
 
         public void SchedulePlaytestAnnouncements()
@@ -318,7 +319,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             //Start asing for player counts
             JobManager.AddJob(async () => await _data.GetPlayCountFromServer(_data.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation)),
-                s => s.WithName("[QueryPlayerCount]").ToRunEvery(10).Seconds());
+                s => s.WithName("[QueryPlayerCount]").ToRunEvery(60).Seconds());
 
             await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
 
