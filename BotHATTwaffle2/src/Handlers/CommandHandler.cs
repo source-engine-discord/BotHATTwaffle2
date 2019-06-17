@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.src.Handlers;
 using Discord.Commands;
 using Discord.WebSocket;
 
@@ -12,16 +14,18 @@ namespace BotHATTwaffle2.Handlers
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
         private readonly DataService _data;
+        private readonly LogHandler _log;
         private readonly IServiceProvider _service;
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
-            DataService data)
+            DataService data, LogHandler log)
         {
             Console.WriteLine("Setting up CommandHandler...");
             _commands = commands;
             _client = client;
             _service = service;
             _data = data;
+            _log = log;
         }
 
         public async Task InstallCommandsAsync()
@@ -69,12 +73,50 @@ namespace BotHATTwaffle2.Handlers
                 argPos,
                 _service);
 
-            // Optionally, we may inform the user if the command fails
-            // to be executed; however, this may not always be desired,
-            // as it may clog up the request queue should a user spam a
-            // command.
-            // if (!result.IsSuccess)
-            // await context.Channel.SendMessageAsync(result.ErrorReason);
+            if (result.Error is null || result.Error == CommandError.UnknownCommand)
+                return; // Ignores successful executions and unknown commands.
+
+            var logMessage =
+                $"Invoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
+            var alert = false;
+
+            switch (result.Error)
+            {
+                case CommandError.BadArgCount:
+                    var determiner = result.ErrorReason == "The input text has too many parameters." ? "many" : "few";
+
+                    // Retrieves the command's name from the message by finding the first word after the prefix. The string will
+                    // be empty if somehow no match is found.
+                    var commandName =
+                        Regex.Match(context.Message.Content,
+                                _data.RootSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)", RegexOptions.IgnoreCase)
+                            .Groups[1].Value;
+
+                    await context.Channel.SendMessageAsync(
+                        $"You provided too {determiner} parameters! Please consult `{_data.RootSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
+
+                    break;
+                case CommandError.ParseFailed:
+                case CommandError.UnmetPrecondition:
+                case CommandError.ObjectNotFound:
+                    await context.Channel.SendMessageAsync(result.ErrorReason);
+                    break;
+                case CommandError.Exception:
+                    alert = true;
+                    await context.Channel.SendMessageAsync(
+                        $"Something bad happened, I told {_data.AlertUser.Username}.");
+
+                    var e = ((ExecuteResult) result).Exception;
+                    logMessage +=
+                        $"\nException: {e.GetType()}\nMethod: {e.TargetSite.Name}\n StackTrace: {e.StackTrace}";
+                    break;
+                default:
+                    await context.Channel.SendMessageAsync(
+                        $"Something bad happened, I told {_data.AlertUser.Username}.");
+                    break;
+            }
+
+            await _log.LogMessage(logMessage, alert: alert);
         }
     }
 }
