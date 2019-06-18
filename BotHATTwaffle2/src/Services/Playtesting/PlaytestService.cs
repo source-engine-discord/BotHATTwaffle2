@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.src.Models.LiteDB;
@@ -10,7 +12,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class PlaytestService
     {
-        private const ConsoleColor LogColor = ConsoleColor.DarkYellow;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private static AnnouncementMessage _announcementMessage;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _data;
@@ -48,12 +50,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (!_calendar.GetTestEvent().IsValid)
             {
                 if (_data.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("No test was found!", false, color: LogColor);
+                    _ = _log.LogMessage("No test was found!", false, color: LOG_COLOR);
 
                 if (PlaytestAnnouncementMessage != null)
                 {
                     if (_data.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage("Attempting to deleted outdated announcement", false, color: LogColor);
+                        _ = _log.LogMessage("Attempting to deleted outdated announcement", false, color: LOG_COLOR);
                     try
                     {
                         await _data.AnnouncementChannel.DeleteMessageAsync(PlaytestAnnouncementMessage);
@@ -62,7 +64,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     {
                         _ = _log.LogMessage(
                             "Failed to delete outdated playtest message. It may have been deleted manually",
-                            false, color: LogColor);
+                            false, color: LOG_COLOR);
                     }
                 }
 
@@ -73,7 +75,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
 
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting or updating playtest announcement", false, color: LogColor);
+                _ = _log.LogMessage("Posting or updating playtest announcement", false, color: LOG_COLOR);
 
 
             if (PlaytestAnnouncementMessage == null)
@@ -124,7 +126,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_failedToFetch >= _failedRetryCount)
                 {
                     _ = _log.LogMessage($"Tried to update announcement messages {_failedToFetch}, but failed." +
-                                        "\nCreated a new message next time.", false, color: LogColor);
+                                        "\nCreated a new message next time.", false, color: LOG_COLOR);
                     PlaytestAnnouncementMessage = null;
                 }
                 else
@@ -133,7 +135,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     _failedToFetch++;
                     if (_data.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Failed to update playtest announcement {_failedToFetch} times", false,
-                            color: LogColor);
+                            color: LOG_COLOR);
                 }
             }
         }
@@ -145,11 +147,11 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task PostNewAnnouncement()
         {
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting new announcement", false, color: LogColor);
+                _ = _log.LogMessage("Posting new announcement", false, color: LOG_COLOR);
 
             //Stop asking server for player counts
-            _data.includePlayerCount = false;
-            _data.playerCount = "0";
+            _data.IncludePlayerCount = false;
+            _data.PlayerCount = "0";
 
             try
             {
@@ -171,7 +173,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             catch
             {
-                _ = _log.LogMessage("Attempted to post new announcement, but failed", false, color: LogColor);
+                _ = _log.LogMessage("Attempted to post new announcement, but failed", false, color: LOG_COLOR);
             }
         }
 
@@ -192,7 +194,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_oldMessage == null)
             {
                 if (_data.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("No message found in DB to reattach to", false, color: LogColor);
+                    _ = _log.LogMessage("No message found in DB to reattach to", false, color: LOG_COLOR);
 
                 return;
             }
@@ -201,14 +203,14 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (!testEvent.IsValid)
             {
                 if (_data.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("No valid test found to post", false, color: LogColor);
+                    _ = _log.LogMessage("No valid test found to post", false, color: LOG_COLOR);
 
                 return;
             }
 
             _ = _log.LogMessage("Attempting to get old announcement message\n" +
                                 $"{_oldMessage.AnnouncementId} that was created at {_oldMessage.AnnouncementDateTime}",
-                false, color: LogColor);
+                false, color: LOG_COLOR);
 
 
             var eventEditTime = _calendar.GetTestEventNoUpdate().EventEditTime;
@@ -221,7 +223,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     if (PlaytestAnnouncementMessage != null)
                         _ = _log.LogMessage($"Retrieved old announcement! ID: {PlaytestAnnouncementMessage.Id}", false,
-                            color: LogColor);
+                            color: LOG_COLOR);
 
                     var lastEditTime = _calendar.GetTestEventNoUpdate().LastEditTime;
                     if (lastEditTime != null)
@@ -229,12 +231,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
                 catch
                 {
-                    _ = _log.LogMessage("Unable to retrieve old announcement message!", false, color: LogColor);
+                    _ = _log.LogMessage("Unable to retrieve old announcement message!", false, color: LOG_COLOR);
                 }
             }
             else
             {
-                _ = _log.LogMessage("Messages do not match, deleting old message", false, color: LogColor);
+                _ = _log.LogMessage("Messages do not match, deleting old message", false, color: LOG_COLOR);
                 try
                 {
                     await _data.AnnouncementChannel.DeleteMessageAsync(_oldMessage.AnnouncementId);
@@ -243,7 +245,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 catch
                 {
                     _ = _log.LogMessage("Could not delete old message - it was likely deleted manually",
-                        false, color: LogColor);
+                        false, color: LOG_COLOR);
                 }
             }
         }
@@ -268,7 +270,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 var adjusted = DateTime.Now.Add(singleHour);
                 var startDateTime = _calendar.GetTestEventNoUpdate().StartDateTime;
-                _ = _log.LogMessage($"Playtest scheduled for: {startDateTime}", false, color: LogColor);
+                _ = _log.LogMessage($"Playtest scheduled for: {startDateTime}", false, color: LOG_COLOR);
 
                 if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
                 {
@@ -279,7 +281,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     _ = _log.LogMessage("1 hour playtest announcement scheduled for:" +
                                         $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false,
-                        color: LogColor);
+                        color: LOG_COLOR);
                 }
 
                 adjusted = DateTime.Now.Add(fifteenMinutes);
@@ -290,7 +292,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     _ = _log.LogMessage("15 minute playtest announcement scheduled for:" +
                                         $"\n{JobManager.GetSchedule("[Playtest15Minute]").NextRun}", false,
-                        color: LogColor);
+                        color: LOG_COLOR);
                 }
 
                 if (startDateTime != null && DateTime.Compare(DateTime.Now, startDateTime.Value) < 0)
@@ -300,7 +302,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     _ = _log.LogMessage("Starting playtest announcement scheduled for:" +
                                         $"\n{JobManager.GetSchedule("[PlaytestStarting]").NextRun}", false,
-                        color: LogColor);
+                        color: LOG_COLOR);
                 }
             }
         }
@@ -312,10 +314,10 @@ namespace BotHATTwaffle2.Services.Playtesting
         public async Task PlaytestStartingInTask()
         {
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting playtest announcement", false, color: LogColor);
+                _ = _log.LogMessage("Posting playtest announcement", false, color: LOG_COLOR);
 
             //Start asking the server for player counts.
-            _data.includePlayerCount = true;
+            _data.IncludePlayerCount = true;
 
             //Start asing for player counts
             JobManager.AddJob(async () => await _data.GetPlayCountFromServer(_data.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation)),
@@ -343,7 +345,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task PlaytestFifteenMinuteTask()
         {
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LogColor);
+                _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LOG_COLOR);
         }
 
         /// <summary>
@@ -353,7 +355,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task PlaytestStartingTask()
         {
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting playtest start announcement", false, color: LogColor);
+                _ = _log.LogMessage("Posting playtest start announcement", false, color: LOG_COLOR);
 
             await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
 

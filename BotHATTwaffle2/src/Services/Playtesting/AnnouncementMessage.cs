@@ -7,7 +7,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class AnnouncementMessage
     {
-        private const ConsoleColor LogColor = ConsoleColor.Magenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
         private static int _lastImageIndex;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _data;
@@ -33,7 +33,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         public Embed CreatePlaytestEmbed(bool isCasual = true, bool smallEmbed = false, ulong fullMessage = 0)
         {
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Creating Playtest Embed", false, color: LogColor);
+                _ = _log.LogMessage("Creating Playtest Embed", false, color: LOG_COLOR);
 
             var testEvent = _calendar.GetTestEventNoUpdate();
 
@@ -51,7 +51,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
-                        false, color: LogColor);
+                        false, color: LOG_COLOR);
 
                 creatorIndex = _random.Next(0, testEvent.Creators.Count);
                 creatorSpelling = "Creators";
@@ -64,7 +64,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage(
                     $"Creators string\n{creatorProfile}\nUsing creator index {creatorIndex} of {testEvent.Creators.Count - 1} (0 Index!)",
-                    false, color: LogColor);
+                    false, color: LOG_COLOR);
 
             //Timezone information
             var utcTime = testEvent.StartDateTime.GetValueOrDefault().ToUniversalTime();
@@ -94,7 +94,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
-                        false, color: LogColor);
+                        false, color: LOG_COLOR);
 
                 _lastImageIndex = randomIndex;
                 embedImageUrl = testEvent.GalleryImages[randomIndex];
@@ -123,9 +123,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             playtestEmbed.AddField("Moderator",
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
 
-            if (_data.includePlayerCount)
+            if (_data.IncludePlayerCount)
             {
-                playtestEmbed.AddField("Players Connected", _data.playerCount, true);
+                playtestEmbed.AddField("Players Connected", _data.PlayerCount, true);
             }
 
             playtestEmbed.AddField("Connect to",

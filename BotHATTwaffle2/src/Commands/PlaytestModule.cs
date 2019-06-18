@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.src.Handlers;
 using Discord;
@@ -32,7 +33,7 @@ namespace BotHATTwaffle2.Commands
                 .WithAuthor("Source Engine Discord CS:GO Test Servers")
                 .WithFooter($"Total of {foundServers.Count()} servers.")
                 .WithThumbnailUrl(_dataService.Guild.IconUrl)
-                .WithColor(new Color(100,53,22));
+                .WithColor(new Color(255,135,57));
 
             foreach (var server in foundServers)
             {
@@ -40,7 +41,6 @@ namespace BotHATTwaffle2.Commands
             }
 
             await ReplyAsync(embed:embed.Build());
-
         }
 
         [Command("playtester")]
@@ -52,12 +52,12 @@ namespace BotHATTwaffle2.Commands
             if (((SocketGuildUser)Context.User).Roles.Contains(_dataService.PlayTesterRole))
             {
                 await ReplyAsync($"Sorry to see you go from playtest notifications {Context.User.Mention}!");
-                await ((IGuildUser)Context.User).RemoveRoleAsync(_dataService.PlayTesterRole);
+                await ((SocketGuildUser)Context.User).RemoveRoleAsync(_dataService.PlayTesterRole);
             }
             else
             {
                 await ReplyAsync($"Thanks for subscribing to playtest notifications {Context.User.Mention}!");
-                await ((IGuildUser)Context.User).AddRoleAsync(_dataService.PlayTesterRole);
+                await ((SocketGuildUser)Context.User).AddRoleAsync(_dataService.PlayTesterRole);
             }
         }
     }

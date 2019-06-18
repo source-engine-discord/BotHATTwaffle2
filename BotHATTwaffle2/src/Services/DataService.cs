@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.src.Handlers;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -17,7 +18,7 @@ namespace BotHATTwaffle2.Services
 {
     public class DataService
     {
-        private const ConsoleColor LogColor = ConsoleColor.Cyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
         private readonly DiscordSocketClient _client;
         private LogHandler _log;
 
@@ -52,8 +53,8 @@ namespace BotHATTwaffle2.Services
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
 
-        public bool includePlayerCount { get; set; }
-        public string playerCount { get; set; }
+        public bool IncludePlayerCount { get; set; }
+        public string PlayerCount { get; set; }
 
         public async Task DeserializeConfig()
         {
@@ -61,11 +62,11 @@ namespace BotHATTwaffle2.Services
             await DeserializeChannels();
             GetRoles();
 
-            includePlayerCount = false;
-            playerCount = "0";
+            IncludePlayerCount = false;
+            PlayerCount = "0";
 
             try
-            {
+            { 
                 AlertUser = _client.GetUser(RSettings.ProgramSettings.AlertUser);
             }
             catch
@@ -123,7 +124,7 @@ namespace BotHATTwaffle2.Services
         {
             Guild = _client.Guilds.FirstOrDefault();
 
-            Console.ForegroundColor = LogColor;
+            Console.ForegroundColor = LOG_COLOR;
 
             Console.WriteLine($"Active Guild: {Guild?.Name}\n");
 
@@ -195,7 +196,7 @@ namespace BotHATTwaffle2.Services
         {
             var guild = _client.Guilds.FirstOrDefault();
 
-            Console.ForegroundColor = LogColor;
+            Console.ForegroundColor = LOG_COLOR;
 
             if (RSettings.ProgramSettings.Debug)
             {
@@ -293,7 +294,7 @@ namespace BotHATTwaffle2.Services
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: LogColor);
+                _ = _log.LogMessage(e.ToString(), alert: true, color: LOG_COLOR);
             }
 
             return user;
@@ -325,7 +326,7 @@ namespace BotHATTwaffle2.Services
             }
             catch (UriFormatException e)
             {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: LogColor);
+                _ = _log.LogMessage(e.ToString(), alert: true, color: LOG_COLOR);
             }
 
             return null;
@@ -350,7 +351,7 @@ namespace BotHATTwaffle2.Services
                                     $"\nAlbum URL: {albumUrl}" +
                                     $"\nAlbum ID: {albumId}" +
                                     $"\nClient Credits Remaining: {client.RateLimit.ClientRemaining} of {client.RateLimit.ClientLimit}" +
-                                    $"\nImages Found:\n{string.Join("\n", images)}", false, color: LogColor);
+                                    $"\nImages Found:\n{string.Join("\n", images)}", false, color: LOG_COLOR);
 
                 return images;
             }
@@ -378,7 +379,7 @@ namespace BotHATTwaffle2.Services
                 iPHostEntry = Dns.GetHostEntry(server.Address);
 
                 if (RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Server Address: {iPHostEntry.AddressList.FirstOrDefault()}", false, color: LogColor);
+                    _ = _log.LogMessage($"Server Address: {iPHostEntry.AddressList.FirstOrDefault()}", false, color: LOG_COLOR);
             }
             catch
             {
@@ -398,7 +399,7 @@ namespace BotHATTwaffle2.Services
                 retryCount++;
                 
                 if (RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.", false, color: LogColor);
+                    _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.", false, color: LOG_COLOR);
             }
 
             //Are we connected and authenticated?
@@ -410,7 +411,7 @@ namespace BotHATTwaffle2.Services
                 client.SendCommand(command, result => { reply = result; });
 
                 await _log.LogMessage($"Sending RCON command:\n{command}\nTo server: {server.Address}", channel: false,
-                    color: LogColor);
+                    color: LOG_COLOR);
 
                 retryCount = 0;
 
@@ -422,7 +423,7 @@ namespace BotHATTwaffle2.Services
 
                     if (RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Waiting for string from rcon server, tried: {retryCount} time.", false,
-                            color: LogColor);
+                            color: LOG_COLOR);
                 }
 
                 client.Disconnect();
@@ -455,7 +456,7 @@ namespace BotHATTwaffle2.Services
             //Remove extra information from string
             var formatted = results.FirstOrDefault()?.Substring(10);
 
-            playerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
+            PlayerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
         }
 
         public string GetServerCode(string fullServerAddress)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
@@ -21,7 +22,7 @@ namespace BotHATTwaffle2.Commands
         private readonly DataService _data;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
-        private const ConsoleColor LogColor = ConsoleColor.DarkRed;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
@@ -38,6 +39,17 @@ namespace BotHATTwaffle2.Commands
         public async Task TestAsync()
         {
 
+        }
+
+        [Command("Active")]
+        [Summary("Grants a user the Active Memeber role")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task ActiveAsync([Summary("User to give role to")]SocketGuildUser user)
+        {
+            await _log.LogMessage($"{user} has been given {_data.ActiveRole.Mention} by {Context.User}");
+            await ReplyAsync($"{user.Mention} has been given {_data.ActiveRole.Mention}!\n\nThanks for being an active member in our community!");
+            await user.AddRoleAsync(_data.ActiveRole);
         }
 
         [Command("rcon")]

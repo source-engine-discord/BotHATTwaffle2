@@ -7,7 +7,7 @@ namespace BotHATTwaffle2.Services.Calendar
 {
     public class PlaytestEvent
     {
-        private const ConsoleColor LogColor = ConsoleColor.Magenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
 
         private readonly DataService _data;
         private readonly LogHandler _log;
@@ -68,11 +68,11 @@ namespace BotHATTwaffle2.Services.Calendar
                     CanUseGallery = true;
 
                     if (_data.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage("Can use image gallery for test event", false, color: LogColor);
+                        _ = _log.LogMessage("Can use image gallery for test event", false, color: LOG_COLOR);
                 }
 
                 if (_data.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LogColor);
+                    _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LOG_COLOR);
 
                 IsValid = true;
 
@@ -80,7 +80,7 @@ namespace BotHATTwaffle2.Services.Calendar
             }
 
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: LogColor);
+                _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: LOG_COLOR);
 
             IsValid = false;
 
@@ -94,7 +94,7 @@ namespace BotHATTwaffle2.Services.Calendar
         public void VoidEvent()
         {
             if (_data.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Voiding test event", false, color: LogColor);
+                _ = _log.LogMessage("Voiding test event", false, color: LOG_COLOR);
 
             IsValid = false;
             CanUseGallery = false;

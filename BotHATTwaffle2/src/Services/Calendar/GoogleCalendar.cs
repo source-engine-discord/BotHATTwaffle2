@@ -15,7 +15,7 @@ namespace BotHATTwaffle2.Services.Calendar
 {
     public class GoogleCalendar
     {
-        private const ConsoleColor LogColor = ConsoleColor.DarkCyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
         private static PlaytestEvent _testEvent;
         private readonly CalendarService _calendar;
         private readonly DataService _dataService;
@@ -65,7 +65,7 @@ namespace BotHATTwaffle2.Services.Calendar
         private void GetEvents()
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Getting test event", false, color: LogColor);
+                _ = _log.LogMessage("Getting test event", false, color: LOG_COLOR);
 
             // Defines request and parameters.
             var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
@@ -85,7 +85,7 @@ namespace BotHATTwaffle2.Services.Calendar
             if (eventItem == null)
             {
                 if (_dataService.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("No event found", false, color: LogColor);
+                    _ = _log.LogMessage("No event found", false, color: LOG_COLOR);
                 //Scrap null out the event item so it can be ready for the next use.
                 _testEvent.LastEditTime = null;
                 _testEvent.VoidEvent();
@@ -94,7 +94,7 @@ namespace BotHATTwaffle2.Services.Calendar
             }
 
             if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Test event found", false, color: LogColor);
+                _ = _log.LogMessage("Test event found", false, color: LOG_COLOR);
 
             //Update the last time the event was changed
             _testEvent.LastEditTime = eventItem.Updated;
@@ -103,7 +103,7 @@ namespace BotHATTwaffle2.Services.Calendar
             if (_testEvent.EventEditTime == _testEvent.LastEditTime && _testEvent.EventEditTime != null)
             {
                 if (_dataService.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("Event was not changed, not rebuilding", false, color: LogColor);
+                    _ = _log.LogMessage("Event was not changed, not rebuilding", false, color: LOG_COLOR);
                 return;
             }
 
@@ -113,7 +113,7 @@ namespace BotHATTwaffle2.Services.Calendar
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Event description BEFORE stripping:\n{eventItem.Description}\n", false,
-                    color: LogColor);
+                    color: LOG_COLOR);
 
             // Handles the event.
             //Replace <br>s with \n for new line, replace &nbsp as well
@@ -123,7 +123,7 @@ namespace BotHATTwaffle2.Services.Calendar
             strippedHtml = Regex.Replace(strippedHtml, "<.*?>", string.Empty);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage($"Event description AFTER stripping:\n{strippedHtml}\n", false, color: LogColor);
+                _ = _log.LogMessage($"Event description AFTER stripping:\n{strippedHtml}\n", false, color: LOG_COLOR);
 
             // Splits description into lines and keeps only the part after the colon, if one exists.
             var description = strippedHtml.Trim().Split('\n')
@@ -161,7 +161,7 @@ namespace BotHATTwaffle2.Services.Calendar
             if (!_testEvent.TestValid())
                 _ = _log.LogMessage("Error in playtest event! Please check the description and try again.\n" +
                                     $"{_testEvent}\n",
-                    color: LogColor);
+                    color: LOG_COLOR);
         }
 
         /// <summary>

@@ -18,7 +18,7 @@ namespace RCONServerLib
             Auth = 3
         }
 
-        private const int MaxAllowedPacketSize = 4096;
+        private const int MAX_ALLOWED_PACKET_SIZE = 4096;
 
         /// <summary>
         ///     The identifier of the packet
@@ -83,7 +83,7 @@ namespace RCONServerLib
             Payload = payload;
             Id = id;
             Type = type;
-            if (Length > MaxAllowedPacketSize)
+            if (Length > MAX_ALLOWED_PACKET_SIZE)
                 throw new PacketTooLongException();
         }
 

@@ -36,7 +36,7 @@ namespace RCONServerLib
             ConnectionLost
         }
 
-        private const int MaxAllowedPacketSize = 4096;
+        private const int MAX_ALLOWED_PACKET_SIZE = 4096;
 
         /// <summary>
         ///     The TCP Client
@@ -125,8 +125,8 @@ namespace RCONServerLib
 
             // As indicated by specification the maximum packet size is 4096
             // NOTE: Not sure if only the server is allowed to sent packets with max 4096 or both parties!
-            _buffer = new byte[MaxAllowedPacketSize];
-            _ns.BeginRead(_buffer, 0, MaxAllowedPacketSize, OnPacket, null);
+            _buffer = new byte[MAX_ALLOWED_PACKET_SIZE];
+            _ns.BeginRead(_buffer, 0, MAX_ALLOWED_PACKET_SIZE, OnPacket, null);
 
             Log("Connected.");
             if (OnConnectionStateChange != null)
@@ -222,8 +222,8 @@ namespace RCONServerLib
 
                 if (bytesRead == 0)
                 {
-                    _buffer = new byte[MaxAllowedPacketSize];
-                    _ns.BeginRead(_buffer, 0, MaxAllowedPacketSize, OnPacket, null);
+                    _buffer = new byte[MAX_ALLOWED_PACKET_SIZE];
+                    _ns.BeginRead(_buffer, 0, MAX_ALLOWED_PACKET_SIZE, OnPacket, null);
                     return;
                 }
 
@@ -238,8 +238,8 @@ namespace RCONServerLib
                     return;
                 }
 
-                _buffer = new byte[MaxAllowedPacketSize];
-                _ns.BeginRead(_buffer, 0, MaxAllowedPacketSize, OnPacket, null);
+                _buffer = new byte[MAX_ALLOWED_PACKET_SIZE];
+                _ns.BeginRead(_buffer, 0, MAX_ALLOWED_PACKET_SIZE, OnPacket, null);
             }
             catch (IOException)
             {

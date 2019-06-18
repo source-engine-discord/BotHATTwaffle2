@@ -8,7 +8,7 @@ namespace BotHATTwaffle2.Handlers
 {
     internal class GuildHandler
     {
-        private const ConsoleColor LogColor = ConsoleColor.DarkGreen;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkGreen;
         private readonly DiscordSocketClient _client;
         private readonly DataService _data;
         private readonly LogHandler _log;
@@ -30,7 +30,7 @@ namespace BotHATTwaffle2.Handlers
 
         private async Task GuildAvailableEventHandler(SocketGuild guild)
         {
-            await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LogColor);
+            await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LOG_COLOR);
             await _data.DeserializeConfig();
 
             _schedule.AddRequiredJobs();
@@ -46,7 +46,7 @@ namespace BotHATTwaffle2.Handlers
 
         private Task ReadyEventHandler()
         {
-            _ = _log.LogMessage("Guild ready!", false, color: LogColor);
+            _ = _log.LogMessage("Guild ready!", false, color: LOG_COLOR);
             return Task.CompletedTask;
         }
     }

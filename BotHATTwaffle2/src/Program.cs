@@ -14,7 +14,7 @@ namespace BotHATTwaffle2
 {
     internal class Program
     {
-        private const ConsoleColor LogColor = ConsoleColor.Red;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Red;
         private DiscordSocketClient _client;
         private CommandService _commands;
         private DataService _data;

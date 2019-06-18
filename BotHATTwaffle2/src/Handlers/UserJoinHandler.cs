@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.src.Handlers;
+using Discord;
 using Discord.WebSocket;
+using FluentScheduler;
 
-namespace BotHATTwaffle2.src.Handlers
+namespace BotHATTwaffle2.Handlers
 {
     internal class UserHandler
     {
@@ -20,7 +24,7 @@ namespace BotHATTwaffle2.src.Handlers
             _log = log;
 
             _client.UserJoined += UserJoinedEventHandler;
-            _client.UserLeft += UserLeftEventHandler;
+//            _client.UserLeft += UserLeftEventHandler;
         }
 
         private async Task UserJoinedEventHandler(SocketGuildUser user)
@@ -32,11 +36,60 @@ namespace BotHATTwaffle2.src.Handlers
                 .Replace("[WELCOME]", _data.WelcomeChannel.Mention);
 
             await _data.GeneralChannel.SendMessageAsync(message);
+
+            await _log.LogMessage($"USER JOINED {user}\nI will apply a roles at {DateTime.Now.AddMinutes(10)}." +
+                                                         $" They will then have playtester and can talk." +
+                                                           $"\nCreated At: {user.CreatedAt}" +
+                                                           $"\nJoined At: {user.JoinedAt}" +
+                                                           $"\nUser ID: {user.Id}");
+
+
+            DatabaseHandler.AddJoinedUser(user.Id);
+
+            JobManager.AddJob(async () => await UserWelcomeMessage(user), s => s
+                .WithName($"[UserJoin_{user.Id}]").ToRunOnceAt(DateTime.Now.AddMinutes(.1)));
         }
 
-        private async Task UserLeftEventHandler(SocketGuildUser user)
+//        private async Task UserLeftEventHandler(SocketGuildUser user)
+//        {
+//            
+//        }
+
+        public async Task UserWelcomeMessage(SocketGuildUser user)
         {
-            await _log.LogMessage($"{user.Username} has left the guild!");
+            try
+            {
+                await _log.LogMessage($"Welcomed {user.Username} at {DateTime.Now}, and assigning them the Playtester role!");
+                await user.AddRoleAsync(_data.PlayTesterRole);
+                await user.SendMessageAsync(embed:WelcomeEmbed(user));
+            }
+            catch
+            {
+                await _log.LogMessage($"Attempted to send welcome message to {user.Username}, but failed. " +
+                                      $"They either have DMs off, or left the server.");
+            }
+            DatabaseHandler.RemoveJoinedUser(user.Id);
+        }
+
+        private Embed WelcomeEmbed(SocketGuildUser user)
+        {
+            string description = $"Now that the verification time has ended, there are a few things I wanted to tell you! Feel free to ask a question in " +
+                                 $"any of the relevant channels you see. Just try to keep things on topic. Please spend a few minutes to read {_data.WelcomeChannel.Mention} to learn all our rules." +
+                                 $"\n\nAdditionally, you've been given a role called `Playtester`. This role is used to notify you when we have a playtest starting. You can remove yourself from the " +
+                                 $"notifications by typing: `>playtester` in any channel." +
+                                 $"\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!" +
+                                 $"\n\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme`" +
+                                 $" inside inside {(_data.Guild.Channels.FirstOrDefault(x => x.Name == "bot-channel") as SocketTextChannel).Mention}." +
+                                 $"\n\nGLHF, and enjoy your stay.";
+
+            var embed = new EmbedBuilder()
+                .WithAuthor($"Welcome, {user.Username}, to the Source Engine Discord!", user.GetAvatarUrl())
+                .WithThumbnailUrl(_data.Guild.IconUrl)
+                .WithColor(new Color(243, 128, 72))
+                .WithTitle("Thanks for joining!")
+                .WithDescription(description);
+
+            return embed.Build();
         }
     }
 }
