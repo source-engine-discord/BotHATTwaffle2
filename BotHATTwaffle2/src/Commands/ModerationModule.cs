@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ namespace BotHATTwaffle2.Commands
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
         private const ConsoleColor LogColor = ConsoleColor.DarkRed;
+        private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService)
@@ -32,40 +34,78 @@ namespace BotHATTwaffle2.Commands
             _log = log;
         }
 
-        [Command("Kick")]
-        [Summary("Kicks a user.")]
-        [RequireUserPermission(GuildPermission
-            .ManageChannels)] //Require Moderator Role, no reason for custom attribute.
-        public async Task KickAsync(SocketGuildUser user, [Remainder] string reason = "No reason provided.")
-        {
-            try
-            {
-                await user.SendMessageAsync($"You have been kicked from {_client.Guilds.FirstOrDefault()?.Name} " +
-                                            $"for: {reason}. Please take a few minutes to cool off before rejoining.");
-            }
-            catch (Exception) //User cannot be DM'd
-            {
-                await _log.LogMessage($"Attempted to DM {user.Nickname} about them being kicked for" +
-                                      $"{reason}, but they don't allow DMs.");
-            }
-
-            await user.KickAsync(reason);
-            await _log.LogMessage($"{user.Username} (ID: {user.Id}) has been kicked by " +
-                                  $"{Context.User.Username} (ID: {Context.User.Id})");
-        }
-
         [Command("test")]
         public async Task TestAsync()
         {
 
         }
 
-        [Command("rcon", RunMode = RunMode.Async)]
+        [Command("rcon")]
         [Alias("r")]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task RconAsync(string input, [Remainder] string command)
+        [Remarks("Sends RCON commands to a test server.\n" +
+                 "You can use `>rcon auto` to automatically use the next playtest server.\n" +
+                 "You can specify a server be specified before commands are sent.\n" +
+                 "Set a server using `>rcon set [serverId]\n" +
+                 "Then commands can be sent as normal without a server ID:\n" +
+                 "Example: `>r sv_cheats 1`\n" +
+                 "Provide no parameters to see what server you're current sending to.")]
+        public async Task RconAsync([Remainder] string input = null)
         {
-            await ReplyAsync($"```{await _data.RconCommand(input, command)}```");
+            string targetServer = null;
+            if (input == null && ServerDictionary.ContainsKey(Context.User.Id))
+            {
+                targetServer = ServerDictionary[Context.User.Id];
+                await ReplyAsync($"RCON commands sent by {Context.User} will be sent to `{targetServer}`");
+                return;
+            }
+
+            //Set server mode
+            if (!string.IsNullOrWhiteSpace(input) && input.StartsWith("set", StringComparison.OrdinalIgnoreCase))
+            {
+                //Dictionary contains user already, remove them.
+                if(ServerDictionary.ContainsKey(Context.User.Id))
+                {
+                    ServerDictionary.Remove(Context.User.Id);
+                }
+                ServerDictionary.Add(Context.User.Id, input.Substring(3).Trim());
+                await ReplyAsync($"RCON commands sent by {Context.User} will be sent to `{ServerDictionary[Context.User.Id]}`");
+                return;
+            }
+
+            //Set user's mode to Auto, which is really just removing a user from the dictionary
+            if (!string.IsNullOrWhiteSpace(input) && input.StartsWith("auto", StringComparison.OrdinalIgnoreCase))
+            {
+                if (ServerDictionary.ContainsKey(Context.User.Id))
+                {
+                    ServerDictionary.Remove(Context.User.Id);
+                }
+                await ReplyAsync($"RCON commands sent by {Context.User} will be sent using Auto mode. Which is the active playtest server, if there is one.");
+                return;
+            }
+
+            //In auto mode
+            if (!ServerDictionary.ContainsKey(Context.User.Id))
+            {
+                if (_calendar.GetTestEventNoUpdate().IsValid)
+                {
+                    //There is a playtest event, get the server ID from the test event
+                    string serverAddress = _calendar.GetTestEventNoUpdate().ServerLocation;
+                    targetServer = serverAddress.Substring(0, serverAddress.IndexOf('.'));
+                }
+                else
+                {
+                    //No playtest event, we cannot do anything.
+                    await ReplyAsync("No playtest server found. Set your target server using `>rcon set [serverId]`.");
+                    return;
+                }
+            }
+            else
+                //User has a server set manually.
+                targetServer = ServerDictionary[Context.User.Id];
+
+
+            await ReplyAsync($"```{await _data.RconCommand(targetServer, input)}```");
         }
 
         [Command("TestServer")]

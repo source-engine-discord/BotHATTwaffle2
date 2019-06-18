@@ -349,6 +349,12 @@ namespace BotHATTwaffle2.Services
             }
         }
 
+        /// <summary>
+        /// Sends a RCON command to a playtest server.
+        /// </summary>
+        /// <param name="serverId">ID of server to send command to</param>
+        /// <param name="command">RCON Command to send</param>
+        /// <returns></returns>
         public async Task<string> RconCommand(string serverId, string command)
         {
             string reply = null;
@@ -369,18 +375,17 @@ namespace BotHATTwaffle2.Services
             }
 
             int retryCount = 0;
-
             var client = new RemoteConClient();
 
             client.Connect(iPHostEntry.AddressList.FirstOrDefault().ToString(), 27015);
-            client.Authenticate(server.RconPassword);
 
             //Delay until the client is connected, time out after 20 tries
-            while (!client.Authenticated && retryCount < 20)
+            while (!client.Authenticated && client.Connected && retryCount < 20)
             {
                 await Task.Delay(50);
+                client.Authenticate(server.RconPassword);
                 retryCount++;
-
+                
                 if (RootSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.", false, color: LogColor);
             }
@@ -393,7 +398,8 @@ namespace BotHATTwaffle2.Services
                 //As a result we will wait for a proper reply below.
                 client.SendCommand(command, result => { reply = result; });
 
-                await _log.LogMessage($"Sending RCON command:\n{command}\nTo server: {server.Address}", color: LogColor);
+                await _log.LogMessage($"Sending RCON command:\n{command}\nTo server: {server.Address}", channel: false,
+                    color: LogColor);
 
                 retryCount = 0;
 
@@ -404,9 +410,12 @@ namespace BotHATTwaffle2.Services
                     retryCount++;
 
                     if (RootSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Waiting for string from rcon server, tried: {retryCount} time.", false, color: LogColor);
+                        _ = _log.LogMessage($"Waiting for string from rcon server, tried: {retryCount} time.", false,
+                            color: LogColor);
                 }
             }
+            else
+                reply = $"Unable to connect or authenticate to RCON server with the ID of {serverId}.";
 
             return FormatRconServerReply(reply);
         }
