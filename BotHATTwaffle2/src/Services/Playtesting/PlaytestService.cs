@@ -21,7 +21,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private int _failedToFetch;
         private DateTime _lastSeenEditTime;
         private AnnounceMessage _oldMessage;
-        //How do branches work?
+
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random)
         {
             _data = data;
