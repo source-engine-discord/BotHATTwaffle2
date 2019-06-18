@@ -12,21 +12,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BotHATTwaffle2
 {
-    internal class Program
+    class Program
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Red;
-        private DiscordSocketClient _client;
-        private CommandService _commands;
-        private DataService _data;
-        private LogHandler _log;
-        private IServiceProvider _services;
+        private static DiscordSocketClient _client;
+        private static CommandService _commands;
+        private static DataService _data;
+        private static LogHandler _log;
+        private static IServiceProvider _services;
 
-        public static void Main(string[] args)
-        {
-            new Program().MainAsync().GetAwaiter().GetResult();
-        }
-
-        public async Task MainAsync()
+        public static async Task Main(string[] args)
         {
             Console.Title = "BotHATTwaffle 2 - Return of the Bot";
 
