@@ -424,6 +424,8 @@ namespace BotHATTwaffle2.Services
                         _ = _log.LogMessage($"Waiting for string from rcon server, tried: {retryCount} time.", false,
                             color: LogColor);
                 }
+
+                client.Disconnect();
             }
             else
                 reply = $"Unable to connect or authenticate to RCON server with the ID of {serverId}.";

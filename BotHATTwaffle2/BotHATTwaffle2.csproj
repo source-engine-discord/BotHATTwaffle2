@@ -13,8 +13,11 @@
     <PackageReference Include="Imgur.API" Version="4.0.1" />
     <PackageReference Include="JSON" Version="1.0.1" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
-    <PackageReference Include="source-rcon-server" Version="1.3.0" />
   
 </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RCONServerLib\RCONServerLib.csproj" />
+  </ItemGroup>
 
 </Project>

@@ -43,6 +43,7 @@ namespace BotHATTwaffle2.Commands
         [Command("rcon")]
         [Alias("r")]
         [RequireUserPermission(GuildPermission.KickMembers)]
+        [RequireContext(ContextType.Guild)]
         [Remarks("Sends RCON commands to a test server.\n" +
                  "You can use `>rcon auto` to automatically use the next playtest server.\n" +
                  "You can specify a server be specified before commands are sent.\n" +

@@ -185,6 +185,15 @@ namespace BotHATTwaffle2.Commands
             embed.WithFooter("Build date");
             embed.WithTimestamp(buildDate);
 
+            string thanksTo = null;
+
+            foreach (var users in _data.PatreonsRole.Members)
+            {
+                thanksTo += $"{users}\n";
+            }
+
+            embed.AddField($"Thanks to support from these Patreons",thanksTo,true);
+
             await ReplyAsync(string.Empty, false, embed.Build());
         }
     }
