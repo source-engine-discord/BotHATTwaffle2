@@ -227,8 +227,7 @@ namespace BotHATTwaffle2.Commands
                     await _data.AlertUser.SendMessageAsync(reply);
                 }
 
-                await ReplyAsync("Server information contains passwords, as a result I have DM'd whoever is set " +
-                                 "as the `Alert User` in my configuration.");
+                await ReplyAsync($"Server information contains passwords, as a result I have DM'd it to {_data.AlertUser}.");
             }
             //Remove server
             else if (action.StartsWith("r"))
@@ -262,21 +261,21 @@ namespace BotHATTwaffle2.Commands
             if (status == null)
             {
                 await Context.Channel.SendMessageAsync(
-                    $"Current debug status is: `{_data.RootSettings.ProgramSettings.Debug}`");
+                    $"Current debug status is: `{_data.RSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("t", StringComparison.OrdinalIgnoreCase))
             {
-                _data.RootSettings.ProgramSettings.Debug = true;
+                _data.RSettings.ProgramSettings.Debug = true;
                 await _data.UpdateRolesAndUsers();
                 await Context.Channel.SendMessageAsync(
-                    $"Changed debug status to: `{_data.RootSettings.ProgramSettings.Debug}`");
+                    $"Changed debug status to: `{_data.RSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("f", StringComparison.OrdinalIgnoreCase))
             {
-                _data.RootSettings.ProgramSettings.Debug = false;
+                _data.RSettings.ProgramSettings.Debug = false;
                 await _data.UpdateRolesAndUsers();
                 await Context.Channel.SendMessageAsync(
-                    $"Changed debug status to: `{_data.RootSettings.ProgramSettings.Debug}`");
+                    $"Changed debug status to: `{_data.RSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("r", StringComparison.OrdinalIgnoreCase))
             {

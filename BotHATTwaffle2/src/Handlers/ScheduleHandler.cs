@@ -66,19 +66,19 @@ namespace BotHATTwaffle2.Handlers
 
         private void FluentJobStart(JobStartInfo info)
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB STARTED:{info.Name}", false, color: LogColor);
         }
 
         private void FluentJobEnd(JobEndInfo info)
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB ENDED:{info.Name}", false, color: LogColor);
         }
 
         private void FluentJobException(JobExceptionInfo info)
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB EXCEPTION:\n{info.Exception}", false, color: LogColor);
         }
     }

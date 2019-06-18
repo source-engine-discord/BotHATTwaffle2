@@ -43,8 +43,8 @@ namespace BotHATTwaffle2.Services.Calendar
             if (input.Contains("comp", StringComparison.OrdinalIgnoreCase))
             {
                 IsCasual = false;
-                int i = new Random().Next(_data.RootSettings.General.CompPasswords.Length);
-                CompPassword = _data.RootSettings.General.CompPasswords[i];
+                int i = new Random().Next(_data.RSettings.General.CompPasswords.Length);
+                CompPassword = _data.RSettings.General.CompPasswords[i];
 
                 _ = _log.LogMessage($"Competitive password for `{Title}` is: `{CompPassword}`");
             }
@@ -67,11 +67,11 @@ namespace BotHATTwaffle2.Services.Calendar
                 {
                     CanUseGallery = true;
 
-                    if (_data.RootSettings.ProgramSettings.Debug)
+                    if (_data.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Can use image gallery for test event", false, color: LogColor);
                 }
 
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LogColor);
 
                 IsValid = true;
@@ -79,7 +79,7 @@ namespace BotHATTwaffle2.Services.Calendar
                 return true;
             }
 
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: LogColor);
 
             IsValid = false;
@@ -93,7 +93,7 @@ namespace BotHATTwaffle2.Services.Calendar
         /// </summary>
         public void VoidEvent()
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Voiding test event", false, color: LogColor);
 
             IsValid = false;

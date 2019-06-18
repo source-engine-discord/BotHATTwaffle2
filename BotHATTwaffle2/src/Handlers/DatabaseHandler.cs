@@ -43,13 +43,13 @@ namespace BotHATTwaffle2.src.Handlers
                     //If not null, we need to remove the old record first.
                     if (foundMessage != null)
                     {
-                        if (_data.RootSettings.ProgramSettings.Debug)
+                        if (_data.RSettings.ProgramSettings.Debug)
                             _ = _log.LogMessage("Old record found, deleting", false, color: LogColor);
 
                         announcement.Delete(1);
                     }
 
-                    if (_data.RootSettings.ProgramSettings.Debug)
+                    if (_data.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
                                             $"\n{message.Id} at {eventEditTime}", false, color: LogColor);
 
@@ -117,7 +117,7 @@ namespace BotHATTwaffle2.src.Handlers
 
                     foundServer = servers.FindOne(Query.EQ("ServerId",serverId));
                 }
-                if (_data.RootSettings.ProgramSettings.Debug && foundServer != null)
+                if (_data.RSettings.ProgramSettings.Debug && foundServer != null)
                     _ = _log.LogMessage(foundServer.ToString(), false, color: LogColor);
             }
             catch (Exception e)
@@ -142,7 +142,7 @@ namespace BotHATTwaffle2.src.Handlers
 
             if (foundServer == null)
             {
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No server found, so cannot remove anything", false, color: LogColor);
                 return false;
             }
@@ -156,7 +156,7 @@ namespace BotHATTwaffle2.src.Handlers
 
                     servers.Delete(foundServer.Id);
                 }
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage(foundServer.ToString(), false, color: LogColor);
             }
             catch (Exception e)
@@ -206,7 +206,7 @@ namespace BotHATTwaffle2.src.Handlers
         {
             if (GetTestServer(server.ServerId) != null)
             {
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("Unable to add test server since one was found.", false, color: LogColor);
                 //We found an entry under the same name as this server.
                 return false;
@@ -220,7 +220,7 @@ namespace BotHATTwaffle2.src.Handlers
                     //Grab our collection
                     var servers = db.GetCollection<Server>(CollectionServers);
 
-                    if (_data.RootSettings.ProgramSettings.Debug)
+                    if (_data.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Inserting new server into DB", false, color: LogColor);
                     servers.Insert(server);
                     servers.EnsureIndex(x => x.ServerId);

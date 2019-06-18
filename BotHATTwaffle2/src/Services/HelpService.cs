@@ -131,7 +131,7 @@ namespace BotHATTwaffle2.Services
         /// </remarks>
         public string GetUsage(CommandInfo command)
         {
-            return _dataService.RootSettings.ProgramSettings.CommandPrefix[0] +
+            return _dataService.RSettings.ProgramSettings.CommandPrefix[0] +
                    command.Name +
                    " " +
                    string.Join(" ", command.Parameters.Select(p => p.IsOptional ? $"<{p.Name}>" : $"[{p.Name}]"));

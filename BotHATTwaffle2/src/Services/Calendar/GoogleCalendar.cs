@@ -64,11 +64,11 @@ namespace BotHATTwaffle2.Services.Calendar
 
         private void GetEvents()
         {
-            if (_dataService.RootSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Getting test event", false, color: LogColor);
 
             // Defines request and parameters.
-            var request = _calendar.Events.List(_dataService.RootSettings.ProgramSettings.TestCalendarId);
+            var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
 
             request.Q = " TESTEVENT "; // This will limit all search requests to ONLY get playtest events.
             request.TimeMin = DateTime.Now;
@@ -84,7 +84,7 @@ namespace BotHATTwaffle2.Services.Calendar
             //If there is no event
             if (eventItem == null)
             {
-                if (_dataService.RootSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No event found", false, color: LogColor);
                 //Scrap null out the event item so it can be ready for the next use.
                 _testEvent.LastEditTime = null;
@@ -93,7 +93,7 @@ namespace BotHATTwaffle2.Services.Calendar
                 return;
             }
 
-            if (_dataService.RootSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Test event found", false, color: LogColor);
 
             //Update the last time the event was changed
@@ -102,7 +102,7 @@ namespace BotHATTwaffle2.Services.Calendar
             //An event exists and has not changed - do nothing.
             if (_testEvent.EventEditTime == _testEvent.LastEditTime && _testEvent.EventEditTime != null)
             {
-                if (_dataService.RootSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("Event was not changed, not rebuilding", false, color: LogColor);
                 return;
             }
@@ -111,7 +111,7 @@ namespace BotHATTwaffle2.Services.Calendar
 
             string strippedHtml = null;
 
-            if (_dataService.RootSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Event description BEFORE stripping:\n{eventItem.Description}\n", false,
                     color: LogColor);
 
@@ -122,7 +122,7 @@ namespace BotHATTwaffle2.Services.Calendar
             //Strip out HTML tags
             strippedHtml = Regex.Replace(strippedHtml, "<.*?>", string.Empty);
 
-            if (_dataService.RootSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Event description AFTER stripping:\n{strippedHtml}\n", false, color: LogColor);
 
             // Splits description into lines and keeps only the part after the colon, if one exists.

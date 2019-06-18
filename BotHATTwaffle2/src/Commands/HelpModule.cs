@@ -42,8 +42,8 @@ namespace BotHATTwaffle2.Commands
                 Color = new Color(47, 111, 146),
                 Title = "\u2753 Command Help",
                 Description =
-                    $"A command can be invoked by prefixing its name with `{_data.RootSettings.ProgramSettings.CommandPrefix}`. To see usage " +
-                    $"details for a command, use `{_data.RootSettings.ProgramSettings.CommandPrefix}help [command]`.\n\nThe following is a " +
+                    $"A command can be invoked by prefixing its name with `{_data.RSettings.ProgramSettings.CommandPrefix}`. To see usage " +
+                    $"details for a command, use `{_data.RSettings.ProgramSettings.CommandPrefix}help [command]`.\n\nThe following is a " +
                     "list of available commands:"
             };
 

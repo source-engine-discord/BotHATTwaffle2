@@ -64,7 +64,7 @@ namespace BotHATTwaffle2
             // a configuration.
 
             await _client.LoginAsync(TokenType.Bot,
-                _services.GetRequiredService<DataService>().RootSettings.ProgramSettings.BotToken);
+                _services.GetRequiredService<DataService>().RSettings.ProgramSettings.BotToken);
             _data.SetLogHandler(_services.GetRequiredService<LogHandler>());
             DatabaseHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             await _client.StartAsync();

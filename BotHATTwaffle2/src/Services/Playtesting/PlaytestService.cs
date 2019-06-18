@@ -47,12 +47,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Check old message, required for fresh boot with empty collection in db
             if (!_calendar.GetTestEvent().IsValid)
             {
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No test was found!", false, color: LogColor);
 
                 if (PlaytestAnnouncementMessage != null)
                 {
-                    if (_data.RootSettings.ProgramSettings.Debug)
+                    if (_data.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Attempting to deleted outdated announcement", false, color: LogColor);
                     try
                     {
@@ -72,7 +72,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
 
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting or updating playtest announcement", false, color: LogColor);
 
 
@@ -131,7 +131,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     //Have not failed enough, lets keep trying.
                     _failedToFetch++;
-                    if (_data.RootSettings.ProgramSettings.Debug)
+                    if (_data.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Failed to update playtest announcement {_failedToFetch} times", false,
                             color: LogColor);
                 }
@@ -144,7 +144,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PostNewAnnouncement()
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting new announcement", false, color: LogColor);
 
             //Stop asking server for player counts
@@ -191,7 +191,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //No message found in the DB, do nothing. Likely to happen when DB is new.
             if (_oldMessage == null)
             {
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No message found in DB to reattach to", false, color: LogColor);
 
                 return;
@@ -200,7 +200,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Make sure a test is valid
             if (!testEvent.IsValid)
             {
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No valid test found to post", false, color: LogColor);
 
                 return;
@@ -311,7 +311,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         public async Task PlaytestStartingInTask()
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting playtest announcement", false, color: LogColor);
 
             //Start asking the server for player counts.
@@ -342,7 +342,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PlaytestFifteenMinuteTask()
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LogColor);
         }
 
@@ -352,7 +352,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PlaytestStartingTask()
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting playtest start announcement", false, color: LogColor);
 
             await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });

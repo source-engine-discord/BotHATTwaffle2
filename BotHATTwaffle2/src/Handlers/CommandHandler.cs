@@ -55,7 +55,7 @@ namespace BotHATTwaffle2.Handlers
             var argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix(_data.RootSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
+            if (!(message.HasCharPrefix(_data.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
                 return;
@@ -89,11 +89,11 @@ namespace BotHATTwaffle2.Handlers
                     // be empty if somehow no match is found.
                     var commandName =
                         Regex.Match(context.Message.Content,
-                                _data.RootSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)", RegexOptions.IgnoreCase)
+                                _data.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)", RegexOptions.IgnoreCase)
                             .Groups[1].Value;
 
                     await context.Channel.SendMessageAsync(
-                        $"You provided too {determiner} parameters! Please consult `{_data.RootSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
+                        $"You provided too {determiner} parameters! Please consult `{_data.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
 
                     break;
                 case CommandError.ParseFailed:

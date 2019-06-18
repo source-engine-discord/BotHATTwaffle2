@@ -25,7 +25,7 @@ namespace BotHATTwaffle2.src.Handlers
 
         private async Task UserJoinedEventHandler(SocketGuildUser user)
         {
-            var message = _data.RootSettings.General.WelcomeMessage;
+            var message = _data.RSettings.General.WelcomeMessage;
 
             //Replace placeholders
             message = message.Replace("[USER]", user.Mention)

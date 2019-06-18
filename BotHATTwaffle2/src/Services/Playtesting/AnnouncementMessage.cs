@@ -32,7 +32,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns>Prebuilt embed</returns>
         public Embed CreatePlaytestEmbed(bool isCasual = true, bool smallEmbed = false, ulong fullMessage = 0)
         {
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Creating Playtest Embed", false, color: LogColor);
 
             var testEvent = _calendar.GetTestEventNoUpdate();
@@ -49,7 +49,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 $"[{testEvent.Creators[0].Username}](https://discordapp.com/users/{testEvent.Creators[0].Id})";
             if (testEvent.Creators.Count > 1)
             {
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
                         false, color: LogColor);
 
@@ -61,7 +61,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         $"\n[{testEvent.Creators[i].Username}](https://discordapp.com/users/{testEvent.Creators[i].Id})";
             }
 
-            if (_data.RootSettings.ProgramSettings.Debug)
+            if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage(
                     $"Creators string\n{creatorProfile}\nUsing creator index {creatorIndex} of {testEvent.Creators.Count - 1} (0 Index!)",
                     false, color: LogColor);
@@ -86,13 +86,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 countdownString = countdown.ToString("d'D 'h'H 'm'M'").TrimStart(' ', 'D', 'H', '0');
 
             //What image should be displayed
-            var embedImageUrl = _data.RootSettings.General.FallbackTestImageUrl;
+            var embedImageUrl = _data.RSettings.General.FallbackTestImageUrl;
             if (testEvent.CanUseGallery)
             {
                 var randomIndex = _random.Next(testEvent.GalleryImages.Count);
                 while (_lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count);
 
-                if (_data.RootSettings.ProgramSettings.Debug)
+                if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
                         false, color: LogColor);
 
@@ -103,7 +103,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Display the correct password, or omit for comp
             string displayedPassword = "[HIDDEN]";
             if (isCasual)
-                displayedPassword = _data.RootSettings.General.CasualPassword;
+                displayedPassword = _data.RSettings.General.CasualPassword;
 
             string footer = "";
             if (!isCasual)
