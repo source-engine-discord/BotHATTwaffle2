@@ -101,13 +101,21 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Display the correct password, or omit for comp
-            string displayedPassword = "[HIDDEN]";
-            if (isCasual)
-                displayedPassword = _data.RSettings.General.CasualPassword;
+            string displayedConnectionInfo;
+            string footer;
 
-            string footer = "";
-            if (!isCasual)
-                footer = "Password is hidden due to competitive test";
+            if (isCasual)
+            {
+                displayedConnectionInfo = $"`{testEvent.ServerLocation}; password {_data.RSettings.General.CasualPassword}`";
+                footer = "All players welcome to join";
+            }
+            else
+            {
+                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play. You can use the" +
+                                          $" following to check the level out in a sandbox server:*\n" +
+                                          $"`connect {_calendar.GetTestEventNoUpdate().CompCasualServer}; password {_data.RSettings.General.CasualPassword}`";
+                footer = "Connection info hidden due to competitive test";
+            }
 
             //Setup the basic embed
             var playtestEmbed = new EmbedBuilder()
@@ -129,7 +137,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             playtestEmbed.AddField("Connect to",
-                $"`{testEvent.ServerLocation}; password {displayedPassword}`");
+                $"{displayedConnectionInfo}");
             
             //Small VS large embed differences
             string information;

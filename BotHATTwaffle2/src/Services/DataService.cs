@@ -371,6 +371,12 @@ namespace BotHATTwaffle2.Services
         {
             string reply = null;
 
+            //If the server ID contains a period, it can be assumed that it is a FQDN, and we should trim it down.
+            if (serverId.Contains('.'))
+            {
+                serverId = GetServerCode(serverId);
+            }
+
             var server = DatabaseHandler.GetTestServer(serverId);
 
             IPHostEntry iPHostEntry = null;
@@ -462,6 +468,16 @@ namespace BotHATTwaffle2.Services
         public string GetServerCode(string fullServerAddress)
         {
             return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// Gets the workshop ID from a FQDN workshop link
+        /// </summary>
+        /// <param name="workshopUrl">FQDN of workshop link</param>
+        /// <returns>Workshop ID</returns>
+        public string GetWorkshopIdFromFqdn(string workshopUrl)
+        {
+            return Regex.Match(workshopUrl, @"\d+$").Value;
         }
     }
 }

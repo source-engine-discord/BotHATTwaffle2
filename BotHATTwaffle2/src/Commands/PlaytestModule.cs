@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.src.Handlers;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

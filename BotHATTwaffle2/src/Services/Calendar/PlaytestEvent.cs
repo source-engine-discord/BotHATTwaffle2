@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.src.Handlers;
 using Discord.WebSocket;
 
@@ -8,11 +10,20 @@ namespace BotHATTwaffle2.Services.Calendar
     public class PlaytestEvent
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
-
         private readonly DataService _data;
         private readonly LogHandler _log;
+
         public bool IsCasual;
-        
+
+        public PlaytestEvent(DataService data, LogHandler log)
+        {
+            _log = log;
+            _data = data;
+            Creators = new List<SocketUser>();
+            GalleryImages = new List<string>();
+            VoidEvent();
+        }
+
         public bool IsValid { get; private set; }
         public DateTime? EventEditTime { get; set; } //What is the last time the event was edited?
         public DateTime? StartDateTime { get; set; }
@@ -28,32 +39,49 @@ namespace BotHATTwaffle2.Services.Calendar
         public bool CanUseGallery { get; private set; }
         public DateTime? LastEditTime { get; set; }
         public string CompPassword { get; set; }
-
-        public PlaytestEvent(DataService data, LogHandler log)
-        {
-            _log = log;
-            _data = data;
-            Creators = new List<SocketUser>();
-            GalleryImages = new List<string>();
-            VoidEvent();
-        }
+        public string CompCasualServer { get; set; }
 
         public void SetGameMode(string input)
         {
             if (input.Contains("comp", StringComparison.OrdinalIgnoreCase))
             {
                 IsCasual = false;
-                int i = new Random().Next(_data.RSettings.General.CompPasswords.Length);
+                var i = new Random().Next(_data.RSettings.General.CompPasswords.Length);
                 CompPassword = _data.RSettings.General.CompPasswords[i];
 
                 _ = _log.LogMessage($"Competitive password for `{Title}` is: `{CompPassword}`");
             }
             else
+            {
                 IsCasual = true;
+            }
         }
 
         /// <summary>
-        /// Checks the required values on the test event to see if it can be used
+        /// Finds a free server to load the comp level onto
+        /// </summary>
+        private void SetCompCasualServer()
+        {
+            var destServer = DatabaseHandler.GetTestServer(_data.GetServerCode(ServerLocation));
+            var allServers = DatabaseHandler.GetAllTestServers();
+
+            while (true)
+            {
+                var selectedServer = allServers.ToArray()[new Random().Next(allServers.Count())];
+                if (destServer.Id != selectedServer.Id)
+                {
+                    CompCasualServer = selectedServer.Address;
+
+                    if (_data.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Casual server to mirror competitive is {CompCasualServer}", false, color: LOG_COLOR);
+
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Checks the required values on the test event to see if it can be used
         /// </summary>
         /// <returns>True if valid, false otherwise.</returns>
         public bool TestValid()
@@ -74,6 +102,8 @@ namespace BotHATTwaffle2.Services.Calendar
                 if (_data.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LOG_COLOR);
 
+                SetCompCasualServer();
+
                 IsValid = true;
 
                 return true;
@@ -88,8 +118,8 @@ namespace BotHATTwaffle2.Services.Calendar
         }
 
         /// <summary>
-        /// Essentially resets this object for next use. Could dispose and make a new one
-        /// but where is the fun in that?
+        ///     Essentially resets this object for next use. Could dispose and make a new one
+        ///     but where is the fun in that?
         /// </summary>
         public void VoidEvent()
         {
@@ -113,6 +143,7 @@ namespace BotHATTwaffle2.Services.Calendar
             Description = null;
             ServerLocation = null;
             CompPassword = null;
+            CompCasualServer = null;
         }
 
         public override string ToString()
@@ -129,7 +160,7 @@ namespace BotHATTwaffle2.Services.Calendar
                                   + "\ndescription: " + Description
                                   + "\nserverLocation: " + ServerLocation
                                   + "\ncreators: " + string.Join(", ", Creators)
-                                + "\ncompPassword: " + CompPassword;
+                                  + "\ncompPassword: " + CompPassword;
         }
     }
 }

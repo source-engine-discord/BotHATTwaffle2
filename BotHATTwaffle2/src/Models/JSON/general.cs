@@ -15,5 +15,8 @@ namespace BotHATTwaffle2
         public string FallbackTestImageUrl { get; set; }
         public string CasualPassword { get; set; }
         public string[] CompPasswords { get; set; }
+        public string CasualConfig { get; set; }
+        public string CompConfig { get; set; }
+        public string PostgameConfig { get; set; }
     }
 }

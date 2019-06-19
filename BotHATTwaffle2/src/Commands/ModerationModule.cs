@@ -38,18 +38,68 @@ namespace BotHATTwaffle2.Commands
         [Command("test")]
         public async Task TestAsync()
         {
-
         }
 
         [Command("Active")]
         [Summary("Grants a user the Active Memeber role")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task ActiveAsync([Summary("User to give role to")]SocketGuildUser user)
+        public async Task ActiveAsync([Summary("User to give role to.")]SocketGuildUser user)
         {
             await _log.LogMessage($"{user} has been given {_data.ActiveRole.Mention} by {Context.User}");
-            await ReplyAsync($"{user.Mention} has been given {_data.ActiveRole.Mention}!\n\nThanks for being an active member in our community!");
+            await ReplyAsync($"{user.Mention} has been given {_data.ActiveRole.Mention}!\n\nThanks for contributing to our playtest!");
             await user.AddRoleAsync(_data.ActiveRole);
+        }
+
+        [Command("CompetitiveTester")]
+        [Summary("Grants a user the Competitive Tester role")]
+        [Alias("comp")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task CompetitiveTesterAsync([Summary("User to give role to.")]SocketGuildUser user)
+        {
+
+            if (((SocketGuildUser)Context.User).Roles.Contains(_data.CompetitiveTesterRole))
+            {
+                await Context.Message.DeleteAsync();
+                await user.RemoveRoleAsync(_data.CompetitiveTesterRole);
+                await _log.LogMessage($"{user} has {_data.CompetitiveTesterRole} removed by {Context.User}");
+            }
+            else
+            {
+                await ReplyAsync($"{Context.User.Mention} has been added to Competitive Testers!");
+                await user.AddRoleAsync(_data.CompetitiveTesterRole);
+                await _log.LogMessage($"{user} has been given {_data.CompetitiveTesterRole} by {Context.User}");
+            }
+        }
+
+        [Command("Invite")]
+        [Summary("Invites a user to a competitive level test")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task CompInviteAsync([Summary("User to invite.")]SocketGuildUser user)
+        {
+            await Context.Message.DeleteAsync();
+
+            //Do nothing if a test is not valid.
+            if (!_calendar.GetTestEventNoUpdate().IsValid)
+            {
+                await ReplyAsync("There is no valid test that I can invite that user to.");
+                return;
+            }
+
+            await _log.LogMessage($"{user} has been invite to the competitive test of {_calendar.GetTestEventNoUpdate().Title} by {Context.User}");
+
+            try
+            {
+                await user.SendMessageAsync($"You've been invited to join __**{_calendar.GetTestEventNoUpdate().Title}**__!\n" +
+                                            $"Open Counter-Strike Global Offensive and paste the following into console to join:" +
+                                            $"```connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}```");
+            }
+            catch
+            {
+                await ReplyAsync("I attempted to DM that user connection information, but they don't allow DMs.");
+            }
         }
 
         [Command("rcon")]
