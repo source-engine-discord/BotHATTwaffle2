@@ -31,6 +31,10 @@ namespace BotHATTwaffle2.Handlers
         public static async void DownloadPlaytestDemo(PlaytestCommandInfo playtestCommandInfo)
         {
             var server = DatabaseHandler.GetTestServer(playtestCommandInfo.ServerAddress);
+
+            if (server == null)
+                return;
+
             string localPath = $"{_data.RSettings.ProgramSettings.PlaytestDemoPath}\\{playtestCommandInfo.StartDateTime:yyyy}" +
                                $"\\{playtestCommandInfo.StartDateTime:MM} - {playtestCommandInfo.StartDateTime:MMMM}\\{playtestCommandInfo.DemoName}";
 

@@ -65,6 +65,10 @@ namespace BotHATTwaffle2.Services.Calendar
             var destServer = DatabaseHandler.GetTestServer(_data.GetServerCode(ServerLocation));
             var allServers = DatabaseHandler.GetAllTestServers();
 
+            //If for some reason the DB does not contain servers, abort.
+            if (destServer == null || allServers == null)
+                return;
+
             while (true)
             {
                 var selectedServer = allServers.ToArray()[new Random().Next(allServers.Count())];
