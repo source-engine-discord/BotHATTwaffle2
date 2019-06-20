@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.src.Handlers;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -16,6 +17,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _data;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
+        private readonly Workshop _workshop = new Workshop();
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)
@@ -131,6 +133,11 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         internal async void Listen(SocketMessage message)
         {
+            if (message.Author.IsBot) return;
+            if (message.Content.Contains("https://steamcommunity.com/sharedfiles/filedetails/"))
+            {
+                await message.Channel.SendMessageAsync((_workshop.HandleWorkshopEmbeds(message)).ToString());
+            }
             //Add code here for eavesdropping
         }
     }
