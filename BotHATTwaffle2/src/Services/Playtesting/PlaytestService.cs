@@ -5,7 +5,6 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
-using BotHATTwaffle2.src.Models.LiteDB;
 using Discord;
 using FluentScheduler;
 
@@ -341,6 +340,19 @@ namespace BotHATTwaffle2.Services.Playtesting
             var mentionRole = _data.PlayTesterRole;
             string unsubInfo = "";
 
+            //DM users about their test
+            foreach (var creator in _calendar.GetTestEventNoUpdate().Creators)
+            {
+                try
+                {
+                    await creator.SendMessageAsync($"Don't forget that you have a playtest for __**{_calendar.GetTestEventNoUpdate().Title}**__ in __**{countdownString}**__");
+                }
+                catch
+                {
+                    //Could not DM creator about their test.
+                }
+            }
+
             //Handle comp or casual
             if (_calendar.GetTestEvent().IsCasual)
             {
@@ -397,7 +409,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //Delay to make sure level has actually changed
                 await Task.Delay(10000);
                 await _data.RconCommand(_data.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
-                    $"exec {_data.RSettings.General.PostgameConfig}; sv_cheats 1; sv_password {_data.RSettings.General.CasualPassword}");
+                    $"exec {_data.RSettings.General.PostgameConfig}; sv_cheats 1; sv_password {_data.RSettings.General.CasualPassword}; bot_stop 1");
             }
 
             //Delay to make sure password is set.
@@ -409,7 +421,18 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Delay to make sure level has actually changed
             await Task.Delay(10000);
             await _data.RconCommand(_data.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
-                $"exec {_data.RSettings.General.PostgameConfig}; sv_cheats 1");
+                $"exec {_data.RSettings.General.PostgameConfig}; sv_cheats 1; bot_stop 1");
+
+            var embed = new EmbedBuilder()
+                .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
+                .WithTitle("Workshop Link")
+                .WithUrl(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())
+                .WithThumbnailUrl(_calendar.GetTestEventNoUpdate().CanUseGallery ? _calendar.GetTestEventNoUpdate().GalleryImages[0] : _data.RSettings.General.FallbackTestImageUrl)
+                .WithDescription($"{DatabaseHandler.GetTestServer(_calendar.GetTestEventNoUpdate().ServerLocation).Description}" +
+                                 $"\n{_calendar.GetTestEventNoUpdate().Description}")
+                .WithColor(new Color(51,100,173));
+            
+            await _data.TestingChannel.SendMessageAsync(embed: embed.Build());
         }
 
         /// <summary>

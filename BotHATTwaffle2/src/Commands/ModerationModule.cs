@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
-using BotHATTwaffle2.src.Models.LiteDB;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -24,6 +26,7 @@ namespace BotHATTwaffle2.Commands
         private readonly PlaytestService _playtestService;
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
+        private static PlaytestCommandInfo _playtestCommandInfo;
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService)
@@ -38,6 +41,148 @@ namespace BotHATTwaffle2.Commands
         [Command("test")]
         public async Task TestAsync()
         {
+            await _playtestService.PostOrUpdateAnnouncement();
+        }
+
+        [Command("Playtest", RunMode = RunMode.Async)]
+        [Alias("p")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task PlaytestAsync(string command)
+        {
+            //Reload the last used playtest if the current event is null
+            if (_playtestCommandInfo == null)
+                _playtestCommandInfo = DatabaseHandler.GetPlaytestCommandInfo();
+
+
+            //Make sure we have a valid event, if not, abort.
+            if (!_calendar.GetTestEventNoUpdate().IsValid)
+            {
+                await ReplyAsync("This command requires a valid playtest event.");
+                return;
+            }
+
+            //Setup a few variables we'll need later
+            string config = _calendar.GetTestEventNoUpdate().IsCasual
+                ? _data.RSettings.General.CasualConfig
+                : _data.RSettings.General.CompConfig;
+
+            switch (command.ToLower())
+            {
+                case "prestart":
+                case "pre":
+
+                    //Store test information for later use. Will be written to the DB.
+                    string gameMode = _calendar.GetTestEventNoUpdate().IsCasual ? "casual" : "comp";
+                    string mentions = null;
+                    _calendar.GetTestEventNoUpdate().Creators.ForEach(x => mentions += $"{x.Mention} ");
+                    _playtestCommandInfo = new PlaytestCommandInfo
+                    {
+                        Id = 1, //Only storing 1 of these in the DB at a time, so hard code to 1.
+                        Mode = gameMode,
+                        DemoName = $"{_calendar.GetTestEventNoUpdate().StartDateTime:MM_dd_yyyy}" +
+                                   $"_{_calendar.GetTestEventNoUpdate().Title.Substring(0, _calendar.GetTestEventNoUpdate().Title.IndexOf(' '))}" +
+                                   $"_{gameMode}",
+                        WorkshopId = _data.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString()),
+                        ServerAddress = _calendar.GetTestEventNoUpdate().ServerLocation,
+                        Title = _calendar.GetTestEventNoUpdate().Title,
+                        ThumbNailImage = _calendar.GetTestEventNoUpdate().CanUseGallery ? _calendar.GetTestEventNoUpdate().GalleryImages[0] : _data.RSettings.General.FallbackTestImageUrl,
+                        ImageAlbum = _calendar.GetTestEventNoUpdate().ImageGallery.ToString(),
+                        CreatorMentions = mentions,
+                        StartDateTime = _calendar.GetTestEventNoUpdate().StartDateTime.Value
+                    };
+
+                    //Write to the DB so we can restore this info next boot
+                    DatabaseHandler.StorePlaytestCommandInfo(_playtestCommandInfo);
+
+                    await ReplyAsync($"Pre-start playtest of **{_playtestCommandInfo.Title}**" +
+                                     $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
+                                     $"\nWith config of **{config}**" +
+                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**");
+
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
+                    await Task.Delay(1000);
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
+                    break;
+
+                case "start":
+                    await ReplyAsync($"Start playtest of **{_playtestCommandInfo.Title}**" +
+                                     $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
+                                     $"\nWith config of **{config}**" +
+                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**" +
+                                     $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
+
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
+                    await Task.Delay(3000);
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"tv_record {_playtestCommandInfo.DemoName}; say Recording {_playtestCommandInfo.DemoName}");
+                    await Task.Delay(1000);
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
+                    await Task.Delay(1000);
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
+                    await Task.Delay(1000);
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
+                    break;
+
+                case "post":
+                    //This is fired and forgotten. All error handling will be done in the method itself.
+                    await ReplyAsync($"Post playtest of **{_playtestCommandInfo.Title}**" +
+                                     $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
+                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**" +
+                                     $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
+
+                    PlaytestPostTasks(_playtestCommandInfo);
+                    break;
+
+                case "pause":
+                case "p":
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                        @"mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!");
+                    await ReplyAsync($"```Pausing playtest on {_playtestCommandInfo.ServerAddress}!```");
+                    break;
+
+                case "unpause":
+                case "u":
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                        @"mp_unpause_match;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!");
+                    await ReplyAsync($"```Unpausing playtest on {_playtestCommandInfo.ServerAddress}!```");
+                    break;
+
+                case "scramble":
+                case "s":
+                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
+                                                                           ";say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
+                    await ReplyAsync($"```Scrambling teams on {_playtestCommandInfo.ServerAddress}!```");
+                    break;
+
+                default:
+                    await ReplyAsync("Invalid action, please consult the help document for this command.");
+                    break;
+            }
+        }
+
+        internal async void PlaytestPostTasks(PlaytestCommandInfo playtestCommandInfo)
+        {
+            await _data.RconCommand(playtestCommandInfo.ServerAddress, $"host_workshop_map {playtestCommandInfo.WorkshopId}");
+            await Task.Delay(15000); //Wait for map to change
+            await _data.RconCommand(playtestCommandInfo.ServerAddress,
+                $"sv_cheats 1; bot_stop 1;sv_voiceenable 0;exec {_data.RSettings.General.PostgameConfig};" +
+                $"say Please join the level testing voice channel for feedback!;" +
+                $"say Please join the level testing voice channel for feedback!;" +
+                $"say Please join the level testing voice channel for feedback!;" +
+                $"say Please join the level testing voice channel for feedback!;" +
+                $"say Please join the level testing voice channel for feedback!");
+
+            DownloadHandler.DownloadPlaytestDemo(playtestCommandInfo);
+
+            const string demoUrl = "http://demos.tophattwaffle.com";
+
+            var embed = new EmbedBuilder()
+                .WithAuthor($"Download playtest demo for {playtestCommandInfo.Title}",_data.Guild.IconUrl, demoUrl)
+                .WithThumbnailUrl(playtestCommandInfo.ThumbNailImage)
+                .WithColor(new Color(243,128,72))
+                .WithDescription($"[Download Demo Here]({demoUrl}) | [Map Images]({playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
+
+            await _data.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions, embed: embed.Build());
         }
 
         [Command("Active")]
@@ -234,7 +379,7 @@ namespace BotHATTwaffle2.Commands
                     FtpUser = serverValues[4],
                     FtpPassword = serverValues[5],
                     FtpPath = serverValues[6],
-                    FtpType = serverValues[7]
+                    FtpType = serverValues[7].ToLower()
                 }))
                 {
                     await ReplyAsync("Server added!\nI deleted your message since it had passwords in it.");

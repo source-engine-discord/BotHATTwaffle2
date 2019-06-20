@@ -12,5 +12,6 @@ namespace BotHATTwaffle2
         public ulong AlertUser { get; set; }
         public string TestCalendarId { get; set; }
         public string ImgurApi { get; set; }
+        public string PlaytestDemoPath { get; set; }
     }
 }

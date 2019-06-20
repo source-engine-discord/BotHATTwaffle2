@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace BotHATTwaffle2.src.Models.LiteDB
+﻿namespace BotHATTwaffle2.Models.LiteDB
 {
     class Server
     {

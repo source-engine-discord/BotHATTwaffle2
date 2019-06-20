@@ -61,6 +61,7 @@ namespace BotHATTwaffle2
                 _services.GetRequiredService<DataService>().RSettings.ProgramSettings.BotToken);
             _data.SetLogHandler(_services.GetRequiredService<LogHandler>());
             DatabaseHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
+            DownloadHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             await _client.StartAsync();
 
             // Block this task until the program is closed.

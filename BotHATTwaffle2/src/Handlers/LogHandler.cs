@@ -43,7 +43,7 @@ namespace BotHATTwaffle2.src.Handlers
             if (console)
             {
                 Console.ForegroundColor = color;
-                Console.WriteLine(msg + "\n");
+                Console.WriteLine(msg.Replace("```","") + "\n");
                 Console.ResetColor();
             }
         }

@@ -370,13 +370,7 @@ namespace BotHATTwaffle2.Services
         public async Task<string> RconCommand(string serverId, string command)
         {
             string reply = null;
-
-            //If the server ID contains a period, it can be assumed that it is a FQDN, and we should trim it down.
-            if (serverId.Contains('.'))
-            {
-                serverId = GetServerCode(serverId);
-            }
-
+            
             var server = DatabaseHandler.GetTestServer(serverId);
 
             IPHostEntry iPHostEntry = null;

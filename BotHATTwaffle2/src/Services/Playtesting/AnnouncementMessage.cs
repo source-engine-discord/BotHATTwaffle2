@@ -111,8 +111,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play. You can use the" +
-                                          $" following to check the level out in a sandbox server:*\n" +
+                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play. 15 minutes before start time, you can use the following to check the level out in a sandbox server:*\n" +
                                           $"`connect {_calendar.GetTestEventNoUpdate().CompCasualServer}; password {_data.RSettings.General.CasualPassword}`";
                 footer = "Connection info hidden due to competitive test";
             }

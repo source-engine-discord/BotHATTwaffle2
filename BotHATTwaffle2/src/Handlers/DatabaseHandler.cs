@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.src.Handlers;
-using BotHATTwaffle2.src.Models.LiteDB;
 using Discord;
 using LiteDB;
 
@@ -15,6 +14,7 @@ namespace BotHATTwaffle2.Handlers
         private const string COLLECTION_ANNOUNCEMENT = "announcement";
         private const string COLLECTION_SERVERS = "servers";
         private const string COLLECTION_USER_JOIN = "userJoin";
+        private const string COLLECTION_PLAYTEST_COMMAND = "ptCommandInfo";
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private static LogHandler _log;
         private static DataService _data;
@@ -46,7 +46,7 @@ namespace BotHATTwaffle2.Handlers
                     if (foundMessage != null)
                     {
                         if (_data.RSettings.ProgramSettings.Debug)
-                            _ = _log.LogMessage("Old record found, deleting", false, color: LOG_COLOR);
+                            _ = _log.LogMessage("Old announcement record found, deleting", false, color: LOG_COLOR);
 
                         announcement.Delete(1);
                     }
@@ -103,6 +103,67 @@ namespace BotHATTwaffle2.Handlers
             return foundMessage;
         }
 
+        public static bool StorePlaytestCommandInfo(PlaytestCommandInfo playtestCommandInfo)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<PlaytestCommandInfo>(COLLECTION_PLAYTEST_COMMAND);
+
+                    var commandInfo = collection.FindOne(Query.EQ("_id", 1));
+
+                    //If not null, we need to remove the old record first.
+                    if (commandInfo != null)
+                    {
+                        if (_data.RSettings.ProgramSettings.Debug)
+                            _ = _log.LogMessage("Old playtest command info record found, deleting", false, color: LOG_COLOR);
+
+                        collection.Delete(1);
+                    }
+
+                    //Insert new entry with ID of 1, and our values.
+                    collection.Insert(playtestCommandInfo);
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened storing announcement message\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+            return true;
+        }
+
+        public static PlaytestCommandInfo GetPlaytestCommandInfo()
+        {
+            if (_data.RSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage("Getting old playtest command information...", false, color: LOG_COLOR);
+
+            PlaytestCommandInfo commandInfo = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<PlaytestCommandInfo>(COLLECTION_PLAYTEST_COMMAND);
+
+                    commandInfo = collection.FindOne(Query.EQ("_id", 1));
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting announcement message\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return commandInfo;
+            }
+
+            return commandInfo;
+        }
+
         /// <summary>
         ///     Gets a specific test server from the database based on the ID.
         /// </summary>
@@ -110,6 +171,12 @@ namespace BotHATTwaffle2.Handlers
         /// <returns>Server object if found, null otherwise</returns>
         public static Server GetTestServer(string serverId)
         {
+            //If the server ID contains a period, it can be assumed that it is a FQDN, and we should trim it down.
+            if (serverId.Contains('.'))
+            {
+                serverId = _data.GetServerCode(serverId);
+            }
+
             Server foundServer = null;
             try
             {
