@@ -45,11 +45,8 @@ namespace BotHATTwaffle2.Commands
             //var regex = new Regex(@"(?<=<title.*>)([\s\S]*)(?=</title>)", RegexOptions.IgnoreCase);
             //term = regex.Match(term).Value.Trim();
 
-            string builtUrl = $"https://developer.valvesoftware.com/w/api.php?action=query&list=search&srsearch={term}&srwhat=nearmatch&format=json";
-            string siteTitle;
+            string builtUrl = $"https://developer.valvesoftware.com/w/api.php?action=opensearch&search={term}&limit=5&format=json";
             string siteData = "";
-            string changeSearchLinkText = "Search Results";
-
             // This try/catch block will catch all errors that the server sends (if siteData is null)
             try
             {
@@ -69,28 +66,17 @@ namespace BotHATTwaffle2.Commands
                 Console.WriteLine("There was some error sending a GET request to the VDC server. Giving 'no results found' message...");
             }
 
-            // Parse the JSON response
+            // Pull just the URLs that it gives from the GET request
+            List<string> dataArray = new List<string>();
+            dataArray.Add("");
+            MatchCollection matches = Regex.Matches(siteData, @"\b((https?|ftp|file)://|(www|ftp)\.)[-A-Z0-9+()&@#/%?=~_|$!:,.;]*[A-Z0-9+()&@#/%=~_|$]", RegexOptions.IgnoreCase);
+            foreach (Match match in matches)
+            {
+                dataArray.Add(match.Value.ToString());
+            }
 
             // If we get a good (non-empty) response then proceed, otherwise default the URL to the main page
-            if (siteData.Contains("snippet"))
-            {
-                // Slicing up the string because all we want is a super small string between [[ ]]
-                String[] dataList = siteData.Split(":");
-                siteData = dataList[6].ToString();
-                siteData = siteData.Substring(siteData.IndexOf("[") + 2);
-                siteData = siteData.Substring(0, siteData.Length - 10);
-                siteTitle = siteData;
-                siteData = siteData.Replace(' ', '_');
-
-                // Now we build the URL so we can give the user their search results
-                builtUrl = $"https://developer.valvesoftware.com/wiki/{siteData}";
-            }
-            else
-            {
-                siteTitle = "No results found!";
-                changeSearchLinkText = "Click Here to go to VDC Homepage";
-                builtUrl = "https://developer.valvesoftware.com/wiki/Main_Page";
-            }
+            if (string.IsNullOrEmpty(dataArray[0])) builtUrl = "https://developer.valvesoftware.com/wiki/Main_Page";
 
             // Defaults the URL if it isn't properly formatted for some reason
             if (!Uri.IsWellFormedUriString(builtUrl, UriKind.Absolute))
@@ -100,21 +86,35 @@ namespace BotHATTwaffle2.Commands
             }
 
             // Build the embed based on results from GET request
-            var builder = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = $"This is what I was able to find for {term}",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
-                },
-                Title = changeSearchLinkText,
-                Url = builtUrl,
-                ImageUrl = "https://developer.valvesoftware.com/w/skins/valve/images-valve/logo.png",
-                Color = new Color(71, 126, 159),
-                Description = siteTitle
-            };
+            var informationEmbed = new EmbedBuilder()
+                .WithAuthor($"Valve Developer Community Wiki", _client.Guilds.FirstOrDefault()?.IconUrl, builtUrl)
+                .WithImageUrl("https://developer.valvesoftware.com/w/skins/valve/images-valve/logo.png")
+                .WithColor(new Color(71, 126, 159))
+                .WithFooter("This search is limited to the first 5 results");
 
-            await ReplyAsync(string.Empty, false, builder.Build());
+            if (dataArray.Count == 1)
+            {
+                informationEmbed.AddField($"No results found for {term}", "[Click here to go to the VDC homepage](" + builtUrl + ")");
+            }
+            else
+            {
+                dataArray.RemoveAt(0);
+                string resultsConcatenated = "";
+                foreach (string obj in dataArray)
+                {
+                    if (obj.Contains('('))
+                    {
+                        resultsConcatenated += $"[{obj.Substring(41)}]({obj.Replace("(", "%28").Replace(")", "%29")})\n";
+                    }
+                    else
+                    {
+                        resultsConcatenated += $"[{obj.Substring(41)}]({obj})\n";
+                    }
+                }
+                informationEmbed.AddField($"This is what I was able to find for {term}:", resultsConcatenated);
+            }
+
+            await ReplyAsync(string.Empty, false, informationEmbed.Build());
 
             //TODO: Add video/tutorial searches
         }
