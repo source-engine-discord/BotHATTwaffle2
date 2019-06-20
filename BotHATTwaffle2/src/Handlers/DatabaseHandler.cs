@@ -15,6 +15,7 @@ namespace BotHATTwaffle2.Handlers
         private const string COLLECTION_SERVERS = "servers";
         private const string COLLECTION_USER_JOIN = "userJoin";
         private const string COLLECTION_PLAYTEST_COMMAND = "ptCommandInfo";
+        private const string COLLECTION_MUTES = "mutes";
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private static LogHandler _log;
         private static DataService _data;
@@ -395,6 +396,34 @@ namespace BotHATTwaffle2.Handlers
             }
 
             return foundUsers;
+        }
+
+        public static bool AddMute(Mute userMute)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    db.DropCollection(COLLECTION_MUTES);
+
+                    var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
+
+                    collection.EnsureIndex(x => x.UserId);
+
+                    if (_data.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Inserting new user mute into DB", false, color: LOG_COLOR);
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened adding user join\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+            }
+
+            return false;
         }
     }
 }

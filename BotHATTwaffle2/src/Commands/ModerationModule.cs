@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -42,6 +44,36 @@ namespace BotHATTwaffle2.Commands
         public async Task TestAsync()
         {
             await _playtestService.PostOrUpdateAnnouncement();
+        }
+
+        [Command("Mute")]
+        [Remarks(@"Format for duration is `%D%H%M%S` where any unit can be omitted")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task MuteAsync(SocketGuildUser user, string asd, [Remainder]string reason)
+        {
+            string muteLength = "5D12H30M15S";
+
+            int days = 0;
+            int hours = 0;
+            int minutes = 0;
+            int seconds = 0;
+
+            string value = new string(muteLength.TakeWhile(char.IsDigit).ToArray());
+
+            Console.WriteLine($"{value}\nD{days} H{hours} M{minutes} S{seconds}");
+
+//            double duration = 0;
+//                var added = DatabaseHandler.AddMute(new Mute
+//                {
+//                    UserId = user.Id,
+//                    Username = user.Username,
+//                    Reason = reason,
+//                    Duration = duration,
+//                    MuteTime = DateTime.Now,
+//                    ModeratorId = Context.User.Id,
+//                    Expired = false
+//                });
         }
 
         [Command("Playtest", RunMode = RunMode.Async)]
