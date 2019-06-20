@@ -73,6 +73,9 @@ namespace BotHATTwaffle2.Handlers
                 argPos,
                 _service);
 
+            //Fire and forget listening on the message.
+            Listen(messageParam);
+
             if (result.Error is null || result.Error == CommandError.UnknownCommand)
                 return; // Ignores successful executions and unknown commands.
 
@@ -117,6 +120,18 @@ namespace BotHATTwaffle2.Handlers
             }
 
             await _log.LogMessage(logMessage, alert: alert);
+        }
+
+        /// <summary>
+        /// This is used to scan each message for less important things.
+        /// Mostly used for shit posting, but also does useful things like nag users
+        /// to use more up to date tools, or automatically answer some simple questions.
+        /// </summary>
+        /// <param name="message">Message that got us here</param>
+        /// <returns></returns>
+        internal async void Listen(SocketMessage message)
+        {
+            //Add code here for eavesdropping
         }
     }
 }
