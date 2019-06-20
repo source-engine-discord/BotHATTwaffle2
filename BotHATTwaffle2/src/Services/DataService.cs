@@ -373,6 +373,9 @@ namespace BotHATTwaffle2.Services
             
             var server = DatabaseHandler.GetTestServer(serverId);
 
+            if (server == null)
+                return null;
+
             IPHostEntry iPHostEntry = null;
             try
             {
