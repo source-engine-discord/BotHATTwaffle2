@@ -1,7 +1,10 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
+using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
 
@@ -15,9 +18,11 @@ namespace BotHATTwaffle2.Handlers
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
         private readonly UserHandler _userHandler;
+        private readonly Random _random;
+        private int _playtestCount = 0;
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService
-        , UserHandler userHandler)
+        , UserHandler userHandler, Random random)
         {
             Console.WriteLine("Setting up ScheduleHandler...");
             _playtestService = playtestService;
@@ -25,6 +30,7 @@ namespace BotHATTwaffle2.Handlers
             _data = data;
             _client = client;
             _userHandler = userHandler;
+            _random = random;
 
             //Fluent Scheduler init and events
             JobManager.Initialize(new Registry());
@@ -58,6 +64,16 @@ namespace BotHATTwaffle2.Handlers
             //On start up schedule of playtest announcements
             JobManager.AddJob(() => _playtestService.SchedulePlaytestAnnouncements(), s => s
                 .WithName("[SchedulePlaytestAnnouncementsBoot]").ToRunOnceIn(6).Seconds());
+
+            //Add schedule for playing information
+            JobManager.AddJob(async () => await UpdatePlaying(), s => s
+                .WithName("[PlayingUpdate]").ToRunEvery(20).Seconds());
+
+            //Add schedule for playtest count update, will do every few hours, and now to seed the value.
+            JobManager.AddJob(UpdatePlayTestCount, s => s
+                .WithName("[PlayingUpdate]").ToRunEvery(2).Hours());
+            JobManager.AddJob(UpdatePlayTestCount, s => s
+                .WithName("[PlayingUpdate]").ToRunNow());
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
@@ -136,6 +152,31 @@ namespace BotHATTwaffle2.Handlers
         {
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB EXCEPTION:\n{info.Exception}", false, color: LOG_COLOR);
+        }
+
+        /// <summary>
+        /// Updated the playing line on the bot
+        /// </summary>
+        /// <returns></returns>
+        private async Task UpdatePlaying()
+        {
+            string playing = _data.RSettings.Lists.Playing[_random.Next(_data.RSettings.Lists.Playing.Count)];
+
+            if (playing == "[TestCount]")
+                playing = $"{_playtestCount} Playtests Run";
+
+            await _client.SetGameAsync(playing);
+        }
+
+        /// <summary>
+        /// Updates the number of playtest files found on the local machine.
+        /// </summary>
+        private void UpdatePlayTestCount()
+        {
+            _playtestCount = Directory.GetFiles(_data.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem", SearchOption.AllDirectories).Length;
+
+            if (_data.RSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage($"{_playtestService} playtest files found!", false, color: LOG_COLOR);
         }
     }
 }
