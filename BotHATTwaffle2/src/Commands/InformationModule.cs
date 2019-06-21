@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using Discord;
@@ -42,63 +44,57 @@ namespace BotHATTwaffle2.Commands
 
             // Scrub user input to make it safe for a link
             term = term.Replace(' ', '+');
-            //var regex = new Regex(@"(?<=<title.*>)([\s\S]*)(?=</title>)", RegexOptions.IgnoreCase);
-            //term = regex.Match(term).Value.Trim();
+            term = HttpUtility.UrlEncode(term);
+            Console.WriteLine($"ENCODED: {term}");
 
-            string builtUrl = $"https://developer.valvesoftware.com/w/api.php?action=opensearch&search={term}&limit=5&format=json";
+            // Here's where we're putting all the data we get from the server (declared here for scoping reasons)
             string siteData = "";
-            // This try/catch block will catch all errors that the server sends (if siteData is null)
-            try
+
+
+            // Makes the HTTP GET request
+            using (var client = new HttpClient())
             {
-                // Makes the HTTP GET request
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(builtUrl);
-                request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-                using (HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync())
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    // Writes raw JSON data to siteData
-                    siteData = reader.ReadToEnd();
-                }
-            }
-            catch
-            {
-                Console.WriteLine("There was some error sending a GET request to the VDC server. Giving 'no results found' message...");
+                client.BaseAddress = new Uri("https://developer.valvesoftware.com/w/");
+                HttpResponseMessage response = client.GetAsync($"api.php?action=opensearch&search={term}&limit=5&format=json").Result;
+                response.EnsureSuccessStatusCode();
+                siteData = response.Content.ReadAsStringAsync().Result;
             }
 
-            // Pull just the URLs that it gives from the GET request
+            // Now that we've sent the request, we no longer care if the term is encoded for URLs, so we'll decode it
+            term = HttpUtility.UrlDecode(term);
+
+            // Declaring these variables here for scoping reasons
             List<string> dataArray = new List<string>();
-            dataArray.Add("");
-            MatchCollection matches = Regex.Matches(siteData, @"\b((https?|ftp|file)://|(www|ftp)\.)[-A-Z0-9+()&@#/%?=~_|$!:,.;]*[A-Z0-9+()&@#/%=~_|$]", RegexOptions.IgnoreCase);
-            foreach (Match match in matches)
-            {
-                dataArray.Add(match.Value.ToString());
-            }
+            MatchCollection matches;
 
-            // If we get a good (non-empty) response then proceed, otherwise default the URL to the main page
-            if (string.IsNullOrEmpty(dataArray[0])) builtUrl = "https://developer.valvesoftware.com/wiki/Main_Page";
-
-            // Defaults the URL if it isn't properly formatted for some reason
-            if (!Uri.IsWellFormedUriString(builtUrl, UriKind.Absolute))
+            // If we get an empty response, we don't need to regex for the URL, we can just give the "no results found message"
+            if (siteData != $"[\"{term}\",[],[],[]]")
             {
-                builtUrl = "https://developer.valvesoftware.com/wiki/Main_Page";
-                term = "Valve Developer Community";
+                // Pull just the URLs that it gives from the GET request
+                matches = Regex.Matches(siteData, @"\b((https?|ftp|file)://|(www|ftp)\.)[-A-Z0-9+()&@#/%?=~_|$!:,.;]*[A-Z0-9+()&@#/%=~_|$]", RegexOptions.IgnoreCase);
+                foreach (Match match in matches)
+                {
+                    dataArray.Add(match.Value.ToString());
+                }
             }
 
             // Build the embed based on results from GET request
             var informationEmbed = new EmbedBuilder()
-                .WithAuthor($"Valve Developer Community Wiki", _client.Guilds.FirstOrDefault()?.IconUrl, builtUrl)
+                .WithAuthor($"Valve Developer Community Wiki", _client.Guilds.FirstOrDefault()?.IconUrl, "https://developer.valvesoftware.com/wiki/Main_Page")
                 .WithImageUrl("https://developer.valvesoftware.com/w/skins/valve/images-valve/logo.png")
                 .WithColor(new Color(71, 126, 159))
                 .WithFooter("This search is limited to the first 5 results");
 
-            if (dataArray.Count == 1)
+            // If we got no results from the server, then give the default "no results found" message
+            if (siteData == $"[\"{term}\",[],[],[]]")
             {
-                informationEmbed.AddField($"No results found for {term}", "[Click here to go to the VDC homepage](" + builtUrl + ")");
+                informationEmbed.AddField($"No results found for {term}", "[Click here to go to the VDC homepage](https://developer.valvesoftware.com/wiki/Main_Page)");
             }
+
+            // However if we did, we need to check if the URL contains a ( ) in it, because then we will need to format it specially to make it work in the embed
             else
             {
-                dataArray.RemoveAt(0);
+                // Basically we have to put all of the results we get as the same field in the embed, so we're gonna "split" them with newlines
                 string resultsConcatenated = "";
                 foreach (string obj in dataArray)
                 {
