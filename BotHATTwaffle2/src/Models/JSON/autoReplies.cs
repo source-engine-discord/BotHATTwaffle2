@@ -6,7 +6,9 @@ namespace BotHATTwaffle2
 {
     public class AutoReplies
     {
-        public List<string> Firmware { get; set; }
-        public List<string> BootLoader { get; set; }
+        public List<string> Packing { get; set; }
+        public List<string> Pakrat { get; set; }
+        public List<string> Carve { get; set; }
+        public List<string> Propper { get; set; }
     }
 }

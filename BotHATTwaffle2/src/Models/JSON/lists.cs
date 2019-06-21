@@ -6,12 +6,8 @@ namespace BotHATTwaffle2
 {
     public class Lists
     {
-        [DefaultValue("CHANGEME")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public List<string> Roles { get; set; }
-
-        [DefaultValue("CHANGEME")]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public List<string> Playing { get; set; }
+        public List<string> PublicCommands { get; set; }
     }
 }
