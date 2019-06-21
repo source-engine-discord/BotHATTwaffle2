@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.TypeReader;
 using Discord.Commands;
@@ -17,6 +18,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _data;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
+        private readonly Workshop _workshop = new Workshop();
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)
@@ -62,7 +64,11 @@ namespace BotHATTwaffle2.Handlers
             if (!(message.HasCharPrefix(_data.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
-                return;
+                {
+                    //Fire and forget listening on the message.
+                    Listen(messageParam);
+                    return;
+                }
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_client, message);
@@ -121,6 +127,24 @@ namespace BotHATTwaffle2.Handlers
             }
 
             await _log.LogMessage(logMessage, alert: alert);
+        }
+
+        /// <summary>
+        /// This is used to scan each message for less important things.
+        /// Mostly used for shit posting, but also does useful things like nag users
+        /// to use more up to date tools, or automatically answer some simple questions.
+        /// </summary>
+        /// <param name="message">Message that got us here</param>
+        /// <returns></returns>
+        internal async void Listen(SocketMessage message)
+        {
+            if (message.Author.IsBot) return;
+            if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
+            {
+                // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
+                await _workshop.HandleWorkshopEmbeds(message, _data, "", "");
+            }
+            //Add code here for eavesdropping
         }
     }
 }
