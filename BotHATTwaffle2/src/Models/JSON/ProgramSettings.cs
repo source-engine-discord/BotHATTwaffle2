@@ -13,5 +13,6 @@ namespace BotHATTwaffle2
         public string TestCalendarId { get; set; }
         public string ImgurApi { get; set; }
         public string PlaytestDemoPath { get; set; }
+        public string SteamworksAPI { get; set; }
     }
 }

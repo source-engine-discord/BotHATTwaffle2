@@ -60,7 +60,11 @@ namespace BotHATTwaffle2.Handlers
             if (!(message.HasCharPrefix(_data.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
-                return;
+                {
+                    //Fire and forget listening on the message.
+                    Listen(messageParam);
+                    return;
+                }
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_client, message);
@@ -74,9 +78,6 @@ namespace BotHATTwaffle2.Handlers
                 context,
                 argPos,
                 _service);
-
-            //Fire and forget listening on the message.
-            Listen(messageParam);
 
             if (result.Error is null || result.Error == CommandError.UnknownCommand)
                 return; // Ignores successful executions and unknown commands.
@@ -134,9 +135,10 @@ namespace BotHATTwaffle2.Handlers
         internal async void Listen(SocketMessage message)
         {
             if (message.Author.IsBot) return;
-            if (message.Content.Contains("https://steamcommunity.com/sharedfiles/filedetails/"))
+            if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
             {
-                await message.Channel.SendMessageAsync((_workshop.HandleWorkshopEmbeds(message)).ToString());
+                // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
+                await _workshop.HandleWorkshopEmbeds(message, _data, "", "");
             }
             //Add code here for eavesdropping
         }
