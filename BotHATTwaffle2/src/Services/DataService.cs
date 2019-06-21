@@ -473,5 +473,27 @@ namespace BotHATTwaffle2.Services
         {
             return Regex.Match(workshopUrl, @"\d+$").Value;
         }
+
+        public async Task<bool> UnmuteUser(ulong userId)
+        {
+            var dbResult = DatabaseHandler.UnmuteUser(userId);
+            if (dbResult)
+            {
+                try
+                {
+                    var guildUser = Guild.GetUser(userId);
+                    await guildUser.RemoveRoleAsync(MuteRole);
+                    await _log.LogMessage($"Removed mute from `{guildUser.Username}`.");
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    await _log.LogMessage($"Failed to unmute ID `{userId}`, they likely left the server.\n```{e.Message}```");
+                    return false;
+                }
+            }
+            await _log.LogMessage($"Failed to unmute ID `{userId}` because no mute was found in the database.");
+            return false;
+        }
     }
 }

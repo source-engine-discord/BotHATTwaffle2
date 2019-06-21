@@ -397,6 +397,11 @@ namespace BotHATTwaffle2.Handlers
             return foundUsers;
         }
 
+        /// <summary>
+        /// Gets a single active mute for a user. There should only ever be 1 at a time.
+        /// </summary>
+        /// <param name="userId">UserId to get active mute for</param>
+        /// <returns>Valid Mute object if found, null otherwise</returns>
         public static Mute GetActiveMute(ulong userId)
         {
             Mute foundMute = null;
@@ -424,6 +429,11 @@ namespace BotHATTwaffle2.Handlers
             return foundMute;
         }
 
+        /// <summary>
+        /// Adds a mute to the database
+        /// </summary>
+        /// <param name="userMute">Mute object to add</param>
+        /// <returns>True if added, false otherwise</returns>
         public static bool AddMute(Mute userMute)
         {
             //We found an active mute, don't add a second mute.
@@ -456,6 +466,11 @@ namespace BotHATTwaffle2.Handlers
             return false;
         }
 
+        /// <summary>
+        /// Unmutes a user in the database based on userId
+        /// </summary>
+        /// <param name="userId">UserId to unmute</param>
+        /// <returns>True if user was unmuted, false otherwise</returns>
         public static bool UnmuteUser(ulong userId)
         {
             var user = GetActiveMute(userId);
@@ -486,6 +501,63 @@ namespace BotHATTwaffle2.Handlers
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Gets all currently active mutes on server.
+        /// </summary>
+        /// <returns>IEnumerable list of Mutes</returns>
+        public static IEnumerable<Mute> GetAllActiveUserMutes()
+        {
+            IEnumerable<Mute> foundUsers = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
+
+                    foundUsers = collection.Find(x => x.Expired == false);
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting all user mutes\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundUsers;
+            }
+
+            return foundUsers;
+        }
+
+        /// <summary>
+        /// Gets all mutes based on a specific user ID
+        /// </summary>
+        /// <param name="userId">User ID to get mutes for</param>
+        /// <returns>IEnumerable list of Mutes</returns>
+        public static IEnumerable<Mute> GetAllUserMutes(ulong userId)
+        {
+            IEnumerable<Mute> foundMutes = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
+
+                    foundMutes = collection.Find(Query.EQ("UserId", (long)userId));
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage($"Something happened getting all mutes for user ID {userId}\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundMutes;
+            }
+
+            return foundMutes;
         }
     }
 }

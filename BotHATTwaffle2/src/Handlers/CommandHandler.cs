@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.src.Handlers;
+using BotHATTwaffle2.TypeReader;
 using Discord.Commands;
 using Discord.WebSocket;
 
@@ -32,6 +33,9 @@ namespace BotHATTwaffle2.Handlers
         {
             // Hook the MessageReceived event into our command handler
             _client.MessageReceived += HandleCommandAsync;
+
+            //Register custom type readers
+            _commands.AddTypeReader(typeof(TimeSpan), new BetterTimeSpanReader());
 
             // Here we discover all of the command modules in the entry 
             // assembly and load them. Starting from Discord.NET 2.0, a

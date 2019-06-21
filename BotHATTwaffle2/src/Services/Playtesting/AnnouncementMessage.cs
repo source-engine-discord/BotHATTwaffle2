@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.src.Handlers;
 using Discord;
@@ -42,24 +43,39 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (!testEvent.IsCasual)
                 testType = "Competitive";
 
-            //If more than 1 creator, randomly change between them for their index on the thumbnail
-            var creatorIndex = 0;
+            int creatorIndex = 0;
             var creatorSpelling = "Creator";
-            var creatorProfile =
-                $"[{testEvent.Creators[0].Username}](https://discordapp.com/users/{testEvent.Creators[0].Id})";
-            if (testEvent.Creators.Count > 1)
+            string creatorProfile = "If you see this, the creator left the server";
+            string thumbnailUrl = _data.Guild.IconUrl;
+
+            try
             {
-                if (_data.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
-                        false, color: LOG_COLOR);
+                //If more than 1 creator, randomly change between them for their index on the thumbnail
+                creatorProfile =
+                    $"[{testEvent.Creators[0].Username}](https://discordapp.com/users/{testEvent.Creators[0].Id})";
+                if (testEvent.Creators.Count > 1)
+                {
+                    if (_data.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
+                            false, color: LOG_COLOR);
 
-                creatorIndex = _random.Next(0, testEvent.Creators.Count);
-                creatorSpelling = "Creators";
+                    creatorIndex = _random.Next(0, testEvent.Creators.Count);
+                    creatorSpelling = "Creators";
 
-                for (var i = 1; i < testEvent.Creators.Count; i++)
-                    creatorProfile +=
-                        $"\n[{testEvent.Creators[i].Username}](https://discordapp.com/users/{testEvent.Creators[i].Id})";
+                    for (var i = 1; i < testEvent.Creators.Count; i++)
+                        creatorProfile +=
+                            $"\n[{testEvent.Creators[i].Username}](https://discordapp.com/users/{testEvent.Creators[i].Id})";
+
+                    thumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
+                }
             }
+            catch
+            {
+                _ = _log.LogMessage(
+                    $"```Failed to get all creators while building the playtest embed. This is likely because " +
+                    $"they have left the server. Remove the creator from the test event.```",color:LOG_COLOR);
+            }
+            
 
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage(
@@ -152,7 +168,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
                               $"[Testing Information](https://www.tophattwaffle.com/playtesting)";
                 playtestEmbed.ImageUrl = embedImageUrl;
-                playtestEmbed.ThumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
+                playtestEmbed.ThumbnailUrl = thumbnailUrl;
                 playtestEmbed.AddField("When",
                     $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {gmt} GMT");
             }
