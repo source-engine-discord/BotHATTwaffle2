@@ -173,7 +173,15 @@ namespace BotHATTwaffle2.Handlers
         /// </summary>
         private void UpdatePlayTestCount()
         {
-            _playtestCount = Directory.GetFiles(_data.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem", SearchOption.AllDirectories).Length;
+            try
+            {
+                _playtestCount = Directory.GetFiles(_data.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem", SearchOption.AllDirectories).Length;
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage($"Cannot access path for getting playtest count\n{e.Message}",channel:false);
+                throw;
+            }
 
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"{_playtestService} playtest files found!", false, color: LOG_COLOR);
