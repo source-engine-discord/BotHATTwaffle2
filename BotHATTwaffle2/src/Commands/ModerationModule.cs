@@ -186,59 +186,59 @@ namespace BotHATTwaffle2.Commands
 
                 embed.WithAuthor($"All Mutes for {user.Username} - {user.Id}").WithColor(new Color(165, 55, 55));
 
-                foreach (var mute in allMutes.Reverse())
+                if (allMutes.Count() >= 5)
                 {
-                    if (allMutes.Count() >= 5)
+                    //Create string to text file to send along with the embed
+                    foreach (var muteFull in allMutes.Reverse())
                     {
-                        //Create string to text file to send along with the embed
-                        foreach (var muteFull in allMutes.Reverse())
-                        {
-                            fullListing += muteFull.ToString() + "\n------------------------\n";
-                        }
-
-                        //Send the text file before the interactive embed
-                        Directory.CreateDirectory("Mutes");
-                        File.WriteAllText($"Mutes\\AllMutes_{user.Id}.txt", fullListing);
-                        await Context.Channel.SendFileAsync($"Mutes\\AllMutes_{user.Id}.txt");
-
-                        //Paged reply
-                        var lists = new List<string>();
-                        var pageList = new PaginatedMessage
-                        {
-                            Title = $"All Mutes for {user.Username} - {user.Id}",
-                            Color = new Color(165, 55, 55)
-                        };
-                        pageList.Options.DisplayInformationIcon = false;
-                        pageList.Options.JumpDisplayOptions = JumpDisplayOptions.Never;
-
-                        //Build the pages for the interactive embed
-                        int counter = 0;
-                        fullListing = null;
-                        foreach (var mutePage in allMutes.Reverse())
-                        {
-                            fullListing += $"**{mutePage.MuteTime.ToString()}**" +
-                                           $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
-                                           $"\nReason: {mutePage.Reason}" +
-                                           $"\nMuting Mod ID: {mutePage.ModeratorId}\n\n";
-
-                            counter++;
-                            if (counter >= 5)
-                            {
-                                lists.Add(fullListing);
-                                fullListing = null;
-                                counter = 0;
-                            }
-                            
-                        }
-                        //Add any left overs to the pages
-                        lists.Add(fullListing);
-
-                        //Send the page
-                        pageList.Pages = lists;
-                        await PagedReplyAsync(pageList);
-                        return;
+                        fullListing += muteFull.ToString() + "\n------------------------\n";
                     }
 
+                    //Send the text file before the interactive embed
+                    Directory.CreateDirectory("Mutes");
+                    File.WriteAllText($"Mutes\\AllMutes_{user.Id}.txt", fullListing);
+                    await Context.Channel.SendFileAsync($"Mutes\\AllMutes_{user.Id}.txt");
+
+                    //Paged reply
+                    var lists = new List<string>();
+                    var pageList = new PaginatedMessage
+                    {
+                        Title = $"All Mutes for {user.Username} - {user.Id}",
+                        Color = new Color(165, 55, 55)
+                    };
+                    pageList.Options.DisplayInformationIcon = false;
+                    pageList.Options.JumpDisplayOptions = JumpDisplayOptions.Never;
+
+                    //Build the pages for the interactive embed
+                    int counter = 0;
+                    fullListing = null;
+                    foreach (var mutePage in allMutes.Reverse())
+                    {
+                        fullListing += $"**{mutePage.MuteTime.ToString()}**" +
+                                       $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
+                                       $"\nReason: {mutePage.Reason}" +
+                                       $"\nMuting Mod ID: {mutePage.ModeratorId}\n\n";
+
+                        counter++;
+                        if (counter >= 5)
+                        {
+                            lists.Add(fullListing);
+                            fullListing = null;
+                            counter = 0;
+                        }
+
+                    }
+                    //Add any left overs to the pages
+                    lists.Add(fullListing);
+
+                    //Send the page
+                    pageList.Pages = lists;
+                    await PagedReplyAsync(pageList);
+                    return;
+                }
+
+                foreach (var mute in allMutes.Reverse())
+                {
                     fullListing += $"**{mute.MuteTime.ToString()}**" +
                                    $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
                                    $"\nReason: {mute.Reason}" +
