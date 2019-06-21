@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -50,30 +51,170 @@ namespace BotHATTwaffle2.Commands
         [Remarks(@"Format for duration is `%D%H%M%S` where any unit can be omitted")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task MuteAsync(SocketGuildUser user, string asd, [Remainder]string reason)
+        public async Task MuteAsync(SocketGuildUser user, string muteLength, [Remainder]string reason)
         {
-            string muteLength = "5D12H30M15S";
+            var duration = GetMuteDuration(muteLength);
 
+            if (duration == 0)
+            {
+                await ReplyAsync("Invalid time format. Please consult `>help mute`.");
+                return;
+            }
+
+            var added = DatabaseHandler.AddMute(new Mute
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Reason = reason,
+                Duration = duration,
+                MuteTime = DateTime.Now,
+                ModeratorId = Context.User.Id,
+                Expired = false
+            });
+
+            if (added)
+            {
+                try
+                {
+                    await user.AddRoleAsync(_data.MuteRole);
+                }
+                catch
+                {
+                    await ReplyAsync("Failed to apply mute role, did the user leave the server?");
+                    return;
+                }
+
+                var span = TimeSpan.FromMinutes(duration);
+                string formatted = null;
+
+                if (span.Days != 0)
+                    formatted += span.Days == 1 ? $"{span.Days} Day," : $"{span.Days} Days,";
+
+                if (span.Hours != 0)
+                    formatted += span.Hours == 1 ? $" {span.Hours} Hour," : $" {span.Hours} Hours,";
+
+                if (span.Minutes != 0)
+                    formatted += span.Minutes == 1 ? $" {span.Minutes} Minute," : $" {span.Minutes} Minutes,";
+
+                if (span.Seconds != 0)
+                    formatted += span.Seconds == 1 ? $" {span.Seconds} Second," : $" {span.Seconds} Seconds,";
+
+                await ReplyAsync($"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`");
+
+                await _log.LogMessage(
+                    $"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",color:LOG_COLOR);
+
+
+
+                try
+                {
+                    await user.SendMessageAsync(
+                        $"{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`");
+                }
+                catch
+                {
+                    //Can't DM then
+                }
+            }
+            else
+            {
+                await ReplyAsync($"I could not mute `{user.Username}` because they are already muted.");
+            }
+        }
+
+        private static double GetMuteDuration(string muteLength)
+        {
             int days = 0;
             int hours = 0;
             int minutes = 0;
             int seconds = 0;
 
-            string value = new string(muteLength.TakeWhile(char.IsDigit).ToArray());
+            if (!muteLength.All(char.IsNumber) && !muteLength.Contains("."))
+            {
+                int pointer = 0;
+                while (1 < muteLength.Length)
+                {
+                    if (!char.IsLetter(muteLength, pointer))
+                    {
+                        pointer++;
+                    }
+                    else
+                    {
+                        char unit = muteLength[pointer];
+                        switch (unit)
+                        {
+                            case 'd':
+                                int.TryParse(muteLength.Substring(0, pointer), out days);
+                                break;
+                            case 'h':
+                                int.TryParse(muteLength.Substring(0, pointer), out hours);
+                                break;
+                            case 'm':
+                                int.TryParse(muteLength.Substring(0, pointer), out minutes);
+                                break;
+                            case 's':
+                                int.TryParse(muteLength.Substring(0, pointer), out seconds);
+                                break;
+                            default:
+                                //Non-valid character, return 0.
+                                return 0;
+                        }
 
-            Console.WriteLine($"{value}\nD{days} H{hours} M{minutes} S{seconds}");
+                        muteLength = muteLength.Remove(0, pointer + 1);
+                        pointer = 0;
+                    }
+                }
+                return (days * 24 * 60) + (hours * 60) + (minutes) + ((double)seconds / 60);
+            }
 
-//            double duration = 0;
-//                var added = DatabaseHandler.AddMute(new Mute
-//                {
-//                    UserId = user.Id,
-//                    Username = user.Username,
-//                    Reason = reason,
-//                    Duration = duration,
-//                    MuteTime = DateTime.Now,
-//                    ModeratorId = Context.User.Id,
-//                    Expired = false
-//                });
+            double.TryParse(muteLength, out var duration);
+            return duration;
+        }
+
+        private async Task<bool> UnmuteUser(SocketGuildUser user)
+        {
+            var dbResult = DatabaseHandler.UnmuteUser(user.Id);
+            if (dbResult)
+            {
+                try
+                {
+                    await user.RemoveRoleAsync(_data.MuteRole);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        [Command("Unmute")]
+        [Remarks("Unmutes a user")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task MuteAsync(SocketGuildUser user)
+        {
+            var result = await UnmuteUser(user);
+
+            if (result)
+            {
+                await ReplyAsync($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
+                await _log.LogMessage($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
+
+                try
+                {
+                    await user.SendMessageAsync("You have been unmuted!");
+                }
+                catch
+                {
+                    //Try to DM them
+                }
+            }
+            else
+            {
+                await ReplyAsync($"Failed to unmute `{user.Username}`");
+            }
         }
 
         [Command("Playtest", RunMode = RunMode.Async)]
