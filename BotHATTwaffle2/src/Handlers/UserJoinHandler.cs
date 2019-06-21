@@ -47,7 +47,7 @@ namespace BotHATTwaffle2.Handlers
             DatabaseHandler.AddJoinedUser(user.Id);
 
             JobManager.AddJob(async () => await UserWelcomeMessage(user), s => s
-                .WithName($"[UserJoin_{user.Id}]").ToRunOnceAt(DateTime.Now.AddMinutes(.1)));
+                .WithName($"[UserJoin_{user.Id}]").ToRunOnceAt(DateTime.Now.AddMinutes(10)));
         }
 
 //        private async Task UserLeftEventHandler(SocketGuildUser user)

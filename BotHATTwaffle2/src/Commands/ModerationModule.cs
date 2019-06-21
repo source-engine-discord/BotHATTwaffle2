@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -14,6 +18,7 @@ using BotHATTwaffle2.src.Handlers;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using FluentScheduler;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -42,6 +47,180 @@ namespace BotHATTwaffle2.Commands
         public async Task TestAsync()
         {
             await _playtestService.PostOrUpdateAnnouncement();
+        }
+
+        [Command("Mute")]
+        [Summary("Mutes a user")]
+        [Remarks(@"Format for duration is `%D%H%M%S` where any unit can be omitted")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task MuteAsync(SocketGuildUser user, TimeSpan muteLength, [Remainder]string reason)
+        {
+            double duration = muteLength.TotalMinutes;
+
+            var added = DatabaseHandler.AddMute(new Mute
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Reason = reason,
+                Duration = duration,
+                MuteTime = DateTime.Now,
+                ModeratorId = Context.User.Id,
+                Expired = false
+            });
+
+            if (added)
+            {
+                try
+                {
+                    await user.AddRoleAsync(_data.MuteRole);
+
+                    JobManager.AddJob(async () => await _data.UnmuteUser(user.Id), s => s
+                        .WithName($"[UnmuteUser_{user.Id}]").ToRunOnceAt(DateTime.Now.Add(muteLength)));
+                }
+                catch
+                {
+                    await ReplyAsync("Failed to apply mute role, did the user leave the server?");
+                    return;
+                }
+
+                string formatted = null;
+
+                if (muteLength.Days != 0)
+                    formatted += muteLength.Days == 1 ? $"{muteLength.Days} Day," : $"{muteLength.Days} Days,";
+
+                if (muteLength.Hours != 0)
+                    formatted += muteLength.Hours == 1 ? $" {muteLength.Hours} Hour," : $" {muteLength.Hours} Hours,";
+
+                if (muteLength.Minutes != 0)
+                    formatted += muteLength.Minutes == 1 ? $" {muteLength.Minutes} Minute," : $" {muteLength.Minutes} Minutes,";
+
+                if (muteLength.Seconds != 0)
+                    formatted += muteLength.Seconds == 1 ? $" {muteLength.Seconds} Second" : $" {muteLength.Seconds} Seconds";
+
+                await ReplyAsync($"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`");
+
+                await _log.LogMessage(
+                    $"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",color:LOG_COLOR);
+
+                try
+                {
+                    await user.SendMessageAsync(
+                        $"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`");
+                }
+                catch
+                {
+                    //Can't DM then
+                }
+            }
+            else
+            {
+                await ReplyAsync($"I could not mute `{user.Username}` because they are already muted.");
+            }
+        }
+
+        [Command("Unmute")]
+        [Summary("Unmutes a user")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task MuteAsync(SocketGuildUser user)
+        {
+            var result = await _data.UnmuteUser(user.Id);
+
+            if (result)
+            {
+                await ReplyAsync($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
+                await _log.LogMessage($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
+
+                try
+                {
+                    await user.SendMessageAsync($"You have been unmuted in {_data.Guild.Name}!");
+                }
+                catch
+                {
+                    //Try to DM them
+                }
+            }
+            else
+            {
+                await ReplyAsync($"Failed to unmute `{user.Username}`");
+            }
+        }
+
+        [Command("Mutes")]
+        [Alias("MuteHistory")]
+        [Summary("Shows active mutes or mute history for a specific user")]
+        [Remarks("If no parameters are provided, all active mutes for the server are shows." +
+                 "\nIf a user is specific, the mute history for that user will be shown.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task MutesAsync([Optional]SocketGuildUser user)
+        {
+            bool requireTextFile = false;
+            string fullListing = "";
+
+            var embed = new EmbedBuilder();
+            //If null, get all the active mutes on the server.
+            if (user == null)
+            {
+                embed.WithAuthor("Active Mutes in Server").WithColor(new Color(165,55,55));
+
+                var allMutes = DatabaseHandler.GetAllActiveUserMutes();
+                foreach (var mute in allMutes)
+                {
+                    embed.AddField(mute.Username,$"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod ID: `{mute.ModeratorId}`");
+                }
+
+                if (allMutes.ToArray().Length == 0)
+                {
+                    embed.WithColor(55, 165, 55);
+                    embed.AddField("No active mutes found","I'm so proud of this community.");
+                }
+            }
+            else
+            {
+                var allMutes = DatabaseHandler.GetAllUserMutes(user.Id);
+
+                embed.WithAuthor($"All Mutes for {user.Username} - {user.Id}").WithColor(new Color(165, 55, 55));
+
+                int counter = 0;
+                foreach (var mute in allMutes)
+                {
+                    embed.AddField(mute.MuteTime.ToString(),
+                        $"Duration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod ID: `{mute.ModeratorId}`");
+                    counter++;
+
+
+                    if (counter >= 5)
+                    {
+                        embed.WithFooter(
+                            $"I'm only showing 5 of the {allMutes.ToArray().Length} mutes that this user has. See the sent text file for a full listing.");
+                        requireTextFile = true;
+
+                        foreach (var muteFull in allMutes)
+                        {
+                            fullListing += muteFull.ToString() + "\n------------------------\n";
+                        }
+                        break;
+                    }
+
+                }
+
+                if (allMutes.ToArray().Length == 0)
+                {
+                    embed.WithColor(55, 165, 55);
+                    embed.AddField($"No active mutes found for {user.Username}", "I'm so proud of this user.");
+                }
+            }
+
+            await ReplyAsync(embed: embed.Build());
+
+            if (requireTextFile)
+            {
+                Directory.CreateDirectory("Mutes");
+                File.WriteAllText($"Mutes\\Mutes_{user.Id}.txt", fullListing);
+                await Context.Channel.SendFileAsync($"Mutes\\Mutes_{user.Id}.txt");
+            }
         }
 
         [Command("Playtest", RunMode = RunMode.Async)]
