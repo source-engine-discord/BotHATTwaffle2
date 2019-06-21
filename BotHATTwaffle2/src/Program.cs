@@ -6,6 +6,7 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
 using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<GoogleCalendar>()
                 .AddSingleton<PlaytestService>()
                 .AddSingleton<IHelpService, HelpService>()
+                .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromSeconds(20)))
                 .BuildServiceProvider();
 
             _data = _services.GetRequiredService<DataService>();

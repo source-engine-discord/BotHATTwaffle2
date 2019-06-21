@@ -16,31 +16,34 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.src.Handlers;
 using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
 
 namespace BotHATTwaffle2.Commands
 {
-    public class ModerationModule : ModuleBase<SocketCommandContext>
+    public class ModerationModule : InteractiveBase
     {
         private readonly GoogleCalendar _calendar;
         private readonly DiscordSocketClient _client;
         private readonly DataService _data;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
+        private readonly InteractiveService _interactive;
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
         private static PlaytestCommandInfo _playtestCommandInfo;
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
-            PlaytestService playtestService)
+            PlaytestService playtestService, InteractiveService interactive)
         {
             _playtestService = playtestService;
             _calendar = calendar;
             _data = data;
             _client = client;
             _log = log;
+            _interactive = interactive;
         }
 
         [Command("test")]
@@ -183,28 +186,66 @@ namespace BotHATTwaffle2.Commands
 
                 embed.WithAuthor($"All Mutes for {user.Username} - {user.Id}").WithColor(new Color(165, 55, 55));
 
-                int counter = 0;
-                foreach (var mute in allMutes)
+                foreach (var mute in allMutes.Reverse())
                 {
-                    embed.AddField(mute.MuteTime.ToString(),
-                        $"Duration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod ID: `{mute.ModeratorId}`");
-                    counter++;
-
-
-                    if (counter >= 5)
+                    if (allMutes.Count() >= 5)
                     {
-                        embed.WithFooter(
-                            $"I'm only showing 5 of the {allMutes.ToArray().Length} mutes that this user has. See the sent text file for a full listing.");
-                        requireTextFile = true;
-
-                        foreach (var muteFull in allMutes)
+                        //Create string to text file to send along with the embed
+                        foreach (var muteFull in allMutes.Reverse())
                         {
                             fullListing += muteFull.ToString() + "\n------------------------\n";
                         }
-                        break;
+
+                        //Send the text file before the interactive embed
+                        Directory.CreateDirectory("Mutes");
+                        File.WriteAllText($"Mutes\\AllMutes_{user.Id}.txt", fullListing);
+                        await Context.Channel.SendFileAsync($"Mutes\\AllMutes_{user.Id}.txt");
+
+                        //Paged reply
+                        var lists = new List<string>();
+                        var pageList = new PaginatedMessage
+                        {
+                            Title = $"All Mutes for {user.Username} - {user.Id}",
+                            Color = new Color(165, 55, 55)
+                        };
+                        pageList.Options.DisplayInformationIcon = false;
+                        pageList.Options.JumpDisplayOptions = JumpDisplayOptions.Never;
+
+                        //Build the pages for the interactive embed
+                        int counter = 0;
+                        fullListing = null;
+                        foreach (var mutePage in allMutes.Reverse())
+                        {
+                            fullListing += $"**{mutePage.MuteTime.ToString()}**" +
+                                           $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
+                                           $"\nReason: {mutePage.Reason}" +
+                                           $"\nMuting Mod ID: {mutePage.ModeratorId}\n\n";
+
+                            counter++;
+                            if (counter >= 5)
+                            {
+                                lists.Add(fullListing);
+                                fullListing = null;
+                                counter = 0;
+                            }
+                            
+                        }
+                        //Add any left overs to the pages
+                        lists.Add(fullListing);
+
+                        //Send the page
+                        pageList.Pages = lists;
+                        await PagedReplyAsync(pageList);
+                        return;
                     }
 
+                    fullListing += $"**{mute.MuteTime.ToString()}**" +
+                                   $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
+                                   $"\nReason: {mute.Reason}" +
+                                   $"\nMuting Mod ID: {mute.ModeratorId}\n\n";
                 }
+
+                embed.WithDescription(fullListing);
 
                 if (allMutes.ToArray().Length == 0)
                 {
@@ -212,15 +253,8 @@ namespace BotHATTwaffle2.Commands
                     embed.AddField($"No active mutes found for {user.Username}", "I'm so proud of this user.");
                 }
             }
-
+            
             await ReplyAsync(embed: embed.Build());
-
-            if (requireTextFile)
-            {
-                Directory.CreateDirectory("Mutes");
-                File.WriteAllText($"Mutes\\Mutes_{user.Id}.txt", fullListing);
-                await Context.Channel.SendFileAsync($"Mutes\\Mutes_{user.Id}.txt");
-            }
         }
 
         [Command("Playtest", RunMode = RunMode.Async)]
@@ -331,6 +365,12 @@ namespace BotHATTwaffle2.Commands
                     await _data.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
                                                                            ";say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
                     await ReplyAsync($"```Scrambling teams on {_playtestCommandInfo.ServerAddress}!```");
+                    break;
+
+                case "kick":
+                case "k":
+                    var kick = new KickUserRcon(Context, _interactive, _data, _log);
+                    await kick.KickPlaytestUser(_playtestCommandInfo.ServerAddress);
                     break;
 
                 default:
