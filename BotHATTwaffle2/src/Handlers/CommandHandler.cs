@@ -152,9 +152,42 @@ namespace BotHATTwaffle2.Handlers
             }
 
             // Listen for specific user questions, then answer them if we can
-
             // Listen for carve messages
             if (_data.RSettings.AutoReplies.Carve.Any(s => message.Content.ToLower().Contains(s)))
+            {
+                await Carve();
+                return;
+            }
+
+            // Listen for packing questions
+            if (_data.RSettings.AutoReplies.Packing.Any(s => message.Content.ToLower().Contains(s)))
+            {
+                await Packing();
+                return;
+            }
+
+            // Tell users that pakrat is bad
+            if (_data.RSettings.AutoReplies.Pakrat.Any(s => message.Content.ToLower().Contains(s)))
+            {
+                await Pakrat();
+                return;
+            }
+
+            // Recommend WallWorm over propper
+            if (_data.RSettings.AutoReplies.Propper.Any(s => message.Content.ToLower().Contains(s)))
+            {
+                await Propper();
+                return;
+            }
+
+            // Methods for building the embeds that the if statements caught above
+
+            /// <summary>
+            /// Shames users for asking about carve.
+            /// </summary>
+            /// <param name="message"></param>
+            /// <returns></returns>
+            async Task Carve()
             {
                 var carveEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
@@ -167,8 +200,12 @@ namespace BotHATTwaffle2.Handlers
                 await message.Channel.SendMessageAsync(embed: carveEmbed.Build());
             }
 
-            // Listen for packing questions
-            if (_data.RSettings.AutoReplies.Packing.Any(s => message.Content.ToLower().Contains(s)))
+            /// <summary>
+            /// Tells users how to pack custom content.
+            /// </summary>
+            /// <param name="message"></param>
+            /// <returns></returns>
+            async Task Packing()
             {
                 var packingEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
@@ -182,8 +219,12 @@ namespace BotHATTwaffle2.Handlers
                 await message.Channel.SendMessageAsync(embed: packingEmbed.Build());
             }
 
-            // Tell users that pakrat is bad
-            if (_data.RSettings.AutoReplies.Pakrat.Any(s => message.Content.ToLower().Contains(s)))
+            /// <summary>
+            /// Nags users to not use pakrat.
+            /// </summary>
+            /// <param name="message"></param>
+            /// <returns></returns>
+            async Task Pakrat()
             {
                 var pakratEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
@@ -196,11 +237,14 @@ namespace BotHATTwaffle2.Handlers
                     .WithColor(new Color(243, 128, 72));
 
                 await message.Channel.SendMessageAsync(embed: pakratEmbed.Build());
-                
             }
 
-            // Recommend WallWorm over propper
-            if (_data.RSettings.AutoReplies.Propper.Any(s => message.Content.ToLower().Contains(s)))
+            /// <summary>
+            /// Suggests WWMT over Propper
+            /// </summary>
+            /// <param name="message"></param>
+            /// <returns></returns>
+            async Task Propper()
             {
                 var wallWormEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
@@ -215,8 +259,6 @@ namespace BotHATTwaffle2.Handlers
 
                 await message.Channel.SendMessageAsync(embed: wallWormEmbed.Build());
             }
-
-            //Add code here for eavesdropping
         }
     }
 }
