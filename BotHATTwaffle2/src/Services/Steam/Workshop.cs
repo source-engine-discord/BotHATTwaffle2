@@ -10,17 +10,44 @@ using Discord.WebSocket;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using System.Net;
+using BotHATTwaffle2.Models.JSON.Steam;
+using BotHATTwaffle2.src.Handlers;
 
 namespace BotHATTwaffle2.Services.Steam
 {
     public class Workshop
     {
+        private static RootWorkshop workshopJsonGameData;
         public Workshop()
         {
-            Console.WriteLine("Constructor");
+            EnsureGameListCache();
         }
 
-        public async Task HandleWorkshopEmbeds(SocketMessage message, DataService _data, string images = null, string testType = null)
+        private bool EnsureGameListCache()
+        {
+            if (workshopJsonGameData != null)
+                return true;
+
+            // So basically the only way to get game name from appid is to get a list of a user's owned games, then match our appid from the workshop item with their game (and yoink the name)
+            using (var clientGame = new HttpClient())
+            {
+                Console.WriteLine("FETCHING GAMES FROM STEAM");
+                clientGame.BaseAddress = new Uri("https://api.steampowered.com/ISteamApps/GetAppList/v2/");
+                HttpResponseMessage responseGame = clientGame.GetAsync("").Result;
+                responseGame.EnsureSuccessStatusCode();
+                string resultGame = responseGame.Content.ReadAsStringAsync().Result;
+
+                // Don't embed anything if the third GET request fails (hopefully it doesn't)
+                if (resultGame == "{}") return false;
+                //Deserialize version 3, electric boogaloo
+                workshopJsonGameData = JsonConvert.DeserializeObject<RootWorkshop>(resultGame);
+            }
+
+            return true;
+        }
+
+        public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message, DataService _data, string images = null, string testType = null, string inputId = null)
         {
             // Cut down the message to grab just the first URL
             Match regMatch = Regex.Match(message.Content, @"\b((https?|ftp|file)://|(www|ftp)\.)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]", RegexOptions.IgnoreCase);
@@ -31,22 +58,34 @@ namespace BotHATTwaffle2.Services.Steam
             using (var clientItem = new HttpClient())
             {
                 clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
+
+                //Define our key value pairs
+                var kvp1 = new KeyValuePair<string,string>("itemcount", "1");
+
+                //Create empty key value pair and populate it based input variables.
+                var kvp2 = new KeyValuePair<string, string>();
+                if (inputId != null)
+                    kvp2 = new KeyValuePair<string, string>("publishedfileids[0]", inputId);
+                else
+                    kvp2 = new KeyValuePair<string, string>("publishedfileids[0]",
+                        _data.GetWorkshopIdFromFqdn(workshopLink));
+                
                 var contentItem = new FormUrlEncodedContent(new[]
                 {
-                    new KeyValuePair<string, string>("itemcount", "1"),
-                    new KeyValuePair<string, string>("publishedfileids[0]", _data.GetWorkshopIdFromFqdn(workshopLink)),
+                    kvp1,kvp2
                 });
+
+
                 var resultItem = await clientItem.PostAsync("", contentItem);
                 string resultContentItem = await resultItem.Content.ReadAsStringAsync();
 
                 //Check if response is empty
-                if (resultContentItem == "{}") return;
+                if (resultContentItem == "{}") return null;
 
                 // Build workshop item embed, and set up author and game data embeds here for scoping reasons
                 RootWorkshop workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
                 RootWorkshop workshopJsonAuthor;
-                RootWorkshop workshopJsonGameData;
-
+                
                 // Send the GET request for the author information
                 using (var clientAuthor = new HttpClient())
                 {
@@ -56,26 +95,16 @@ namespace BotHATTwaffle2.Services.Steam
                     string resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
 
                     // Don't embed anything if getting the author fails for some reason
-                    if (resultAuthor == "{}") return;
+                    if (resultAuthor == "{\"response\":{}}") return null;
 
                     // If we get a good response though, we're gonna deserialize it
                     workshopJsonAuthor = JsonConvert.DeserializeObject<RootWorkshop>(resultAuthor);
                 }
 
-                // So basically the only way to get game name from appid is to get a list of a user's owned games, then match our appid from the workshop item with their game (and yoink the name)
-                using (var clientGame = new HttpClient())
-                {
-                    clientGame.BaseAddress = new Uri("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/");
-                    HttpResponseMessage responseGame = clientGame.GetAsync($"?key={apiKey}&steamid={workshopJsonItem.response.publishedfiledetails[0].creator}&include_appinfo=1&appids_filter={workshopJsonItem.response.publishedfiledetails[0].consumer_app_id}").Result;
-                    responseGame.EnsureSuccessStatusCode();
-                    string resultGame = responseGame.Content.ReadAsStringAsync().Result;
+                //Make sure a cache exists
+                if (!EnsureGameListCache())
+                    return null;
 
-                    // Don't embed anything if the third GET request fails (hopefully it doesn't)
-                    if (resultGame == "{}") return;
-
-                    //Deserialize version 3, electric boogaloo
-                    workshopJsonGameData = JsonConvert.DeserializeObject<RootWorkshop>(resultGame);
-                }
 
                 // Finally we can build the embed after too many HTTP requests
                 var workshopItemEmbed = new EmbedBuilder()
@@ -85,14 +114,11 @@ namespace BotHATTwaffle2.Services.Steam
                     .WithImageUrl(workshopJsonItem.response.publishedfiledetails[0].preview_url)
                     .WithColor(new Color(71, 126, 159));
 
-                // foreach loop to pull the game name from the list of user games
-                foreach (var item in workshopJsonGameData.response.games)
+                var gameId = workshopJsonGameData.applist.apps.SingleOrDefault(x => x.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id);
+
+                if (gameId != null)
                 {
-                    if (item.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id)
-                    {
-                        workshopItemEmbed.AddField("Game", item.name, true);
-                        break;
-                    }
+                    workshopItemEmbed.AddField("Game", gameId.name, true);
                 }
 
                 // Add every other field now
@@ -114,8 +140,16 @@ namespace BotHATTwaffle2.Services.Steam
                     workshopItemEmbed.AddField("Links", images, false);
                 }
 
-                await message.Channel.SendMessageAsync(embed: workshopItemEmbed.Build());
+                return workshopItemEmbed;
             }
+        }
+
+        public async Task SendWorkshopEmbed(SocketMessage message, DataService _data)
+        {
+            var embed = await HandleWorkshopEmbeds(message, _data);
+
+            if(embed != null)
+                await message.Channel.SendMessageAsync(embed: embed.Build());
         }
     }
 }

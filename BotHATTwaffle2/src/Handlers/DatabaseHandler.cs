@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Security;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.src.Handlers;
@@ -17,6 +18,7 @@ namespace BotHATTwaffle2.Handlers
         private const string COLLECTION_USER_JOIN = "userJoin";
         private const string COLLECTION_PLAYTEST_COMMAND = "ptCommandInfo";
         private const string COLLECTION_MUTES = "mutes";
+        private const string COLLECTION_RESERVATIONS = "serverReservations";
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private static LogHandler _log;
         private static DataService _data;
@@ -174,10 +176,7 @@ namespace BotHATTwaffle2.Handlers
         public static Server GetTestServer(string serverId)
         {
             //If the server ID contains a period, it can be assumed that it is a FQDN, and we should trim it down.
-            if (serverId.Contains('.'))
-            {
-                serverId = _data.GetServerCode(serverId);
-            }
+            serverId = _data.GetServerCode(serverId);
 
             Server foundServer = null;
             try
@@ -558,6 +557,250 @@ namespace BotHATTwaffle2.Handlers
             }
 
             return foundMutes;
+        }
+
+        /// <summary>
+        /// Adds a new server reservations
+        /// </summary>
+        /// <param name="serverReservation">Server reservation to add</param>
+        /// <returns>True if reservation could be added, false otherwise</returns>
+        public static bool AddServerReservation(ServerReservation serverReservation)
+        {
+            //Need to check if a valid reservation exists first as a safety check
+            if (GetServerReservation(serverReservation.ServerId) != null)
+                return false;
+
+            //That server ID does not exist
+            if (GetTestServer(serverReservation.ServerId) == null)
+                return false;
+
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+
+                    collection.EnsureIndex(x => x.UserId);
+
+                    if (_data.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Inserting new server reservation into DB", false, color: LOG_COLOR);
+
+                    collection.Insert(serverReservation);
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened adding server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Gets a server reservation
+        /// </summary>
+        /// <param name="server">server ID to get reservation for</param>
+        /// <returns>ServerReservation object if found, null otherwiser</returns>
+        public static ServerReservation GetServerReservation(string server)
+        {
+            ServerReservation serverReservation = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+
+                    serverReservation = collection.FindOne(x => x.ServerId == _data.GetServerCode(server));
+                }
+
+                if (_data.RSettings.ProgramSettings.Debug && serverReservation != null)
+                    _ = _log.LogMessage(serverReservation.ToString(), false, color: LOG_COLOR);
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return serverReservation;
+            }
+            return serverReservation;
+        }
+
+        public static ServerReservation GetServerReservation(ulong userId)
+        {
+            ServerReservation serverReservation = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+
+                    serverReservation = collection.FindOne(Query.EQ("UserId", (long)userId));
+                }
+
+                if (_data.RSettings.ProgramSettings.Debug && serverReservation != null)
+                    _ = _log.LogMessage(serverReservation.ToString(), false, color: LOG_COLOR);
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return serverReservation;
+            }
+            return serverReservation;
+        }
+
+        /// <summary>
+        /// Gets server object on an active reservation based on a user ID
+        /// </summary>
+        /// <param name="userId">UserID to locate server from</param>
+        /// <returns>Server object if reservation found, null otherwise</returns>
+        public static Server GetTestServerFromReservationUserId(ulong userId)
+        {
+            Server foundServer = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+
+                    var serverReservation = collection.FindOne(Query.EQ("UserId", (long)userId));
+
+                    if (serverReservation != null)
+                    {
+                        foundServer = GetTestServer(serverReservation.ServerId);
+                    }
+                }
+
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting test server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundServer;
+            }
+            return foundServer;
+        }
+
+        /// <summary>
+        /// Gets all active server reservations
+        /// </summary>
+        /// <returns>IEnumerable of ServerReservation objects of active reservations, or null if none.</returns>
+        public static IEnumerable<ServerReservation> GetAllServerReservation()
+        {
+            IEnumerable<ServerReservation> serverReservations = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+
+                    serverReservations = collection.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting all server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return serverReservations;
+            }
+
+            return serverReservations;
+        }
+
+        /// <summary>
+        /// Removes all server reservations by dropping the collection
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool RemoveAllServerReservations()
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    return db.DropCollection(COLLECTION_RESERVATIONS);
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting all server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Removes a server reservation based on user ID
+        /// </summary>
+        /// <param name="userId">User ID to remove server reservation</param>
+        /// <returns>True if removed, false otherwise</returns>
+        public static bool RemoveServerReservation(ulong userId)
+        {
+
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+                    var reservation = collection.FindOne(Query.EQ("UserId", (long) userId));
+
+                    if (reservation != null)
+                    {
+                        collection.Delete(reservation.Id);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened releasing reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Changes the announced flag to true on a server reservation based on user ID
+        /// </summary>
+        /// <param name="userId">User ID of reservation</param>
+        /// <returns>True if updated, false otherwise</returns>
+        public static bool UpdateAnnouncedServerReservation(ulong userId)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
+                    var reservation = collection.FindOne(Query.EQ("UserId", (long)userId));
+
+                    if (reservation != null)
+                    {
+                        reservation.Announced = true;
+                        return collection.Update(reservation);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened releasing reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+            return false;
         }
     }
 }

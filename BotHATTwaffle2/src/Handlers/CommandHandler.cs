@@ -142,7 +142,7 @@ namespace BotHATTwaffle2.Handlers
             if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                await _workshop.HandleWorkshopEmbeds(message, _data);
+                await _workshop.SendWorkshopEmbed(message, _data);
             }
             //Add code here for eavesdropping
         }

@@ -34,9 +34,10 @@ namespace BotHATTwaffle2.Commands
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
         private static PlaytestCommandInfo _playtestCommandInfo;
+        private readonly ReservationService _reservationService;
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
-            PlaytestService playtestService, InteractiveService interactive)
+            PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -44,12 +45,13 @@ namespace BotHATTwaffle2.Commands
             _client = client;
             _log = log;
             _interactive = interactive;
+            _reservationService = reservationService;
         }
 
-        [Command("test")]
+        [Command("t")]
         public async Task TestAsync()
         {
-            await _playtestService.PostOrUpdateAnnouncement();
+            await _playtestService.PlaytestStartingInTask();
         }
 
         [Command("Mute")]
@@ -373,6 +375,12 @@ namespace BotHATTwaffle2.Commands
                     await kick.KickPlaytestUser(_playtestCommandInfo.ServerAddress);
                     break;
 
+                case "end":
+                    //Allow manual enabling of community reservations
+                    _reservationService.AllowReservations();
+                    await ReplyAsync("```Community servers may now be reserved.```");
+
+                    break;
                 default:
                     await ReplyAsync("Invalid action, please consult the help document for this command.");
                     break;

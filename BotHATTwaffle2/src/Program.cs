@@ -39,6 +39,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<DataService>()
                 .AddSingleton<Random>()
                 .AddSingleton<GoogleCalendar>()
+                .AddSingleton<ReservationService>()
                 .AddSingleton<PlaytestService>()
                 .AddSingleton<IHelpService, HelpService>()
                 .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromSeconds(20)))

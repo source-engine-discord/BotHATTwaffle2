@@ -464,7 +464,10 @@ namespace BotHATTwaffle2.Services
 
         public string GetServerCode(string fullServerAddress)
         {
-            return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
+            if (fullServerAddress.Contains('.'))
+                return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
+
+            return fullServerAddress;
         }
 
         /// <summary>

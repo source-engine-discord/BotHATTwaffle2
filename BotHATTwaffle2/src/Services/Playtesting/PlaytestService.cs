@@ -17,17 +17,18 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly GoogleCalendar _calendar;
         private readonly DataService _data;
         private readonly LogHandler _log;
+        private readonly ReservationService _reservationService;
         private readonly int _failedRetryCount = 60;
         private int _failedToFetch;
         private DateTime _lastSeenEditTime;
         private AnnounceMessage _oldMessage;
-        public bool CanReserveServers = true;
 
-        public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random)
+        public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random, ReservationService reservationService)
         {
             _data = data;
             _log = log;
             _calendar = calendar;
+            _reservationService = reservationService;
 
             PlaytestAnnouncementMessage = null;
             _oldMessage = null;
@@ -154,10 +155,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             _data.IncludePlayerCount = false;
             _data.PlayerCount = "0";
 
+            //We posted a new announcement, meaning we can allow reservations again.
+            _reservationService.AllowReservations();
+
             //Default the server password
             await _data.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation, $"sv_password {_data.RSettings.General.CasualPassword}");
-
-            CanReserveServers = true;
 
             try
             {
@@ -321,6 +323,9 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting playtest announcement", false, color: LOG_COLOR);
+    
+            //Disable reservations on servers
+            await _reservationService.DisableReservations();
 
             //Start asking the server for player counts.
             _data.IncludePlayerCount = true;
@@ -328,9 +333,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Start asking for player counts
             JobManager.AddJob(async () => await _data.GetPlayCountFromServer(_data.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation)),
                 s => s.WithName("[QueryPlayerCount]").ToRunEvery(60).Seconds());
-
-            //Prevent new server reservations.
-            CanReserveServers = false;
 
             //Figure out how long until the event starts
             var countdown = _calendar.GetTestEventNoUpdate().StartDateTime.GetValueOrDefault().Subtract(DateTime.Now);
@@ -390,6 +392,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LOG_COLOR);
 
+            //Disable reservations on servers
+            await _reservationService.DisableReservations();
+
             //Set password as needed, again just in case RCON wasn't listening / server wasn't ready.
             if (_calendar.GetTestEvent().IsCasual)
             {
@@ -443,6 +448,9 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             if (_data.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting playtest start announcement", false, color: LOG_COLOR);
+
+            //Disable reservations on servers
+            await _reservationService.DisableReservations();
 
             var mentionRole = _data.PlayTesterRole;
             string unsubInfo = "";
