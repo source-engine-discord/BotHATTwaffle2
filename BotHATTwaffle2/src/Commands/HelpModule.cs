@@ -167,7 +167,7 @@ namespace BotHATTwaffle2.Commands
                 "Contributors",
                 "[Mark](https://github.com/MarkKoz)\n" +
                 "[JimWood](https://github.com/JamesT-W)\n" +
-                "[Squidski](https://github.com/18swenskiq)", true);
+                "[Squidski](https://github.com/18swenskiq)", true); //moron
             embed.AddField(
                 "Build Date",
                 $"{buildDate:yyyy-MM-ddTHH:mm:ssK}\n[Changelog](https://github.com/tophattwaffle/BotHATTwaffle2/commits/master)",
