@@ -30,7 +30,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// Releases all server reservations.
         /// Alerts users of why their reservations were released.
         /// </summary>
-        private async Task ClearAllServerReservations()
+        public async Task ClearAllServerReservations()
         {
             //Get all active reservations
             var allReservations = DatabaseHandler.GetAllServerReservation();

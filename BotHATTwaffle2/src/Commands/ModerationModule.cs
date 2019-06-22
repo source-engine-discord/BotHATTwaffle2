@@ -160,7 +160,6 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task MutesAsync([Optional]SocketGuildUser user)
         {
-            bool requireTextFile = false;
             string fullListing = "";
 
             var embed = new EmbedBuilder();
@@ -542,6 +541,38 @@ namespace BotHATTwaffle2.Commands
             await ReplyAsync($"```{await _data.RconCommand(targetServer, input)}```");
         }
 
+        [Command("ClearReservation")]
+        [Alias("cr")]
+        [Summary("Clears a server reservation")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task ClearReservationAsync([Optional]string serverId)
+        {
+            if (serverId != null)
+            {
+                var reservation = DatabaseHandler.GetServerReservation(serverId);
+
+                if (reservation != null)
+                {
+                    await ReplyAsync(embed: _reservationService.ReleaseServer(reservation.UserId,
+                        "A moderator has cleared your reservation."));
+
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"{DatabaseHandler.GetTestServer(serverId).Address} has been released.", _data.Guild.IconUrl)
+                        .WithColor(new Color(55, 165, 55)).Build());
+                    return;
+                }
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("No server reservation found to release", _data.Guild.IconUrl)
+                    .WithColor(new Color(165, 55, 55)).Build());
+            }
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Clearing all reservations", _data.Guild.IconUrl)
+                .WithColor(new Color(165, 55, 55)).Build());
+
+            await _reservationService.ClearAllServerReservations();
+        }
+
         [Command("TestServer")]
         [Alias("ts")]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -557,7 +588,7 @@ namespace BotHATTwaffle2.Commands
         "[FtpUser]\n" +
         "[FtpPassword]\n" +
         "[FtpPath]\n" +
-        "[FtpType]\n`")]
+        "[FtpType]`")]
         public async Task TestServerAsync(string action, [Remainder]string values = null)
         {
             //Add server

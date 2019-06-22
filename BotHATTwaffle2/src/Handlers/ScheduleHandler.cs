@@ -157,7 +157,7 @@ namespace BotHATTwaffle2.Handlers
                 {
                     mention = _data.Guild.GetUser(reservation.UserId).Mention;
                 }
-                catch (Exception e)
+                catch
                 {
                     //Can't get user don't do a mention
                 }
