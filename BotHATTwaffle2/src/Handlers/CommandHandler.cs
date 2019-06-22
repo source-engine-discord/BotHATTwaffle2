@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
-using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.TypeReader;
 using Discord;
 using Discord.Commands;
@@ -147,7 +146,7 @@ namespace BotHATTwaffle2.Handlers
             if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                await _workshop.HandleWorkshopEmbeds(message, _data);
+                await _workshop.SendWorkshopEmbed(message, _data);
                 return;
             }
 
