@@ -47,12 +47,6 @@ namespace BotHATTwaffle2.Commands
             _reservationService = reservationService;
         }
 
-        [Command("t")]
-        public async Task TestAsync()
-        {
-            await _playtestService.PlaytestStartingInTask();
-        }
-
         [Command("Mute")]
         [Summary("Mutes a user")]
         [Remarks(@"Format for duration is `%D%H%M%S` where any unit can be omitted")]
@@ -489,7 +483,10 @@ namespace BotHATTwaffle2.Commands
             if (input == null && ServerDictionary.ContainsKey(Context.User.Id))
             {
                 targetServer = ServerDictionary[Context.User.Id];
-                await ReplyAsync($"RCON commands sent by {Context.User} will be sent to `{targetServer}`");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                    .WithDescription($"will be sent to `{targetServer}`")
+                    .WithColor(new Color(55, 165, 55)).Build());
                 return;
             }
 
@@ -502,7 +499,10 @@ namespace BotHATTwaffle2.Commands
                     ServerDictionary.Remove(Context.User.Id);
                 }
                 ServerDictionary.Add(Context.User.Id, input.Substring(3).Trim());
-                await ReplyAsync($"RCON commands sent by {Context.User} will be sent to `{ServerDictionary[Context.User.Id]}`");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                    .WithDescription($"will be sent to `{ServerDictionary[Context.User.Id]}`")
+                    .WithColor(new Color(55, 165, 55)).Build());
                 return;
             }
 
@@ -513,7 +513,10 @@ namespace BotHATTwaffle2.Commands
                 {
                     ServerDictionary.Remove(Context.User.Id);
                 }
-                await ReplyAsync($"RCON commands sent by {Context.User} will be sent using Auto mode. Which is the active playtest server, if there is one.");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                    .WithDescription($"will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
+                    .WithColor(new Color(55, 165, 55)).Build());
                 return;
             }
 
@@ -529,7 +532,10 @@ namespace BotHATTwaffle2.Commands
                 else
                 {
                     //No playtest event, we cannot do anything.
-                    await ReplyAsync("No playtest server found. Set your target server using `>rcon set [serverId]`.");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("No playtest server found.", _data.Guild.IconUrl)
+                        .WithDescription("Set your target server using `>rcon set [serverId]`.")
+                        .WithColor(new Color(55, 165, 55)).Build());
                     return;
                 }
             }
@@ -537,8 +543,10 @@ namespace BotHATTwaffle2.Commands
                 //User has a server set manually.
                 targetServer = ServerDictionary[Context.User.Id];
 
-
-            await ReplyAsync($"```{await _data.RconCommand(targetServer, input)}```");
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor($"Command sent to {targetServer}", _data.Guild.IconUrl)
+                .WithDescription($"```{await _data.RconCommand(targetServer, input)}```")
+                .WithColor(new Color(55, 165, 55)).Build());
         }
 
         [Command("ClearReservation")]
