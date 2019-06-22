@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.src.Handlers;
 using Discord.WebSocket;
 
 namespace BotHATTwaffle2.Services.Calendar

@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Playtesting;
-using BotHATTwaffle2.src.Handlers;
 using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
@@ -19,10 +18,11 @@ namespace BotHATTwaffle2.Handlers
         private readonly PlaytestService _playtestService;
         private readonly UserHandler _userHandler;
         private readonly Random _random;
+        private readonly ReservationService _reservationService;
         private int _playtestCount = 0;
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService
-        , UserHandler userHandler, Random random)
+        , UserHandler userHandler, Random random, ReservationService reservationService)
         {
             Console.WriteLine("Setting up ScheduleHandler...");
             _playtestService = playtestService;
@@ -31,6 +31,7 @@ namespace BotHATTwaffle2.Handlers
             _client = client;
             _userHandler = userHandler;
             _random = random;
+            _reservationService = reservationService;
 
             //Fluent Scheduler init and events
             JobManager.Initialize(new Registry());
@@ -125,6 +126,56 @@ namespace BotHATTwaffle2.Handlers
                     //Not passed, scheduled ahead
                     JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
                         .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceAt(user.MuteTime.AddMinutes(user.Duration)));
+                }
+            }
+
+            //Re-add user mutes
+            foreach (var user in DatabaseHandler.GetAllActiveUserMutes())
+            {
+
+                //Send welcome message right away, or wait?
+                if (DateTime.Now > user.MuteTime.AddMinutes(user.Duration))
+                {
+                    //Timer expired, schedule now
+                    JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
+                        .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceIn(20).Seconds());
+                }
+                else
+                {
+                    //Not passed, scheduled ahead
+                    JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
+                        .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceAt(user.MuteTime.AddMinutes(user.Duration)));
+                }
+            }
+
+            //Re-add user mutes
+            foreach (var reservation in DatabaseHandler.GetAllServerReservation())
+            {
+                string mention = null;
+
+                try
+                {
+                    mention = _data.Guild.GetUser(reservation.UserId).Mention;
+                }
+                catch (Exception e)
+                {
+                    //Can't get user don't do a mention
+                }
+
+                //Send welcome message right away, or wait?
+                if (DateTime.Now > reservation.StartTime.AddHours(2))
+                {
+                    //Timer expired, schedule now
+                    JobManager.AddJob(async () => await _data.TestingChannel.SendMessageAsync($"{mention}",
+                            embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
+                        s => s.WithName($"[TSRelease_{_data.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceIn(15).Seconds());
+                }
+                else
+                {
+                    //Not passed, scheduled ahead
+                    JobManager.AddJob(async () => await _data.TestingChannel.SendMessageAsync($"{mention}",
+                            embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
+                        s => s.WithName($"[TSRelease_{_data.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceAt(reservation.StartTime.AddHours(2)));
                 }
             }
 

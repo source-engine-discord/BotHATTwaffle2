@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
-using BotHATTwaffle2.src.Handlers;
 using BotHATTwaffle2.TypeReader;
 using Discord.Commands;
 using Discord.WebSocket;

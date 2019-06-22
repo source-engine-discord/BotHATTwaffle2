@@ -4,7 +4,7 @@ using BotHATTwaffle2.Services;
 using Discord;
 using Discord.WebSocket;
 
-namespace BotHATTwaffle2.src.Handlers
+namespace BotHATTwaffle2.Handlers
 {
     public class LogHandler
     {

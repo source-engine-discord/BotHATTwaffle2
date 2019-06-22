@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services.Calendar;
-using BotHATTwaffle2.src.Handlers;
 using Discord;
 
 namespace BotHATTwaffle2.Services.Playtesting

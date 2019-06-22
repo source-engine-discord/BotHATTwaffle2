@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -9,7 +8,6 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.Steam;
-using BotHATTwaffle2.src.Handlers;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -22,9 +20,9 @@ namespace BotHATTwaffle2.Commands
     {
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
-        private readonly ReservationService _reservationService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
+        private readonly ReservationService _reservationService;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService,
@@ -42,18 +40,18 @@ namespace BotHATTwaffle2.Commands
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task PublicTestStartAsync(
-            [Summary("The server to reserve.")]
-            string serverCode,
-            [Optional][Summary("The ID of a Steam Workshop map for the server to host.")]
+            [Summary("The server to reserve.")] string serverCode,
+            [Optional] [Summary("The ID of a Steam Workshop map for the server to host.")]
             string workshopId)
         {
             //Check if reservations can be made.
             if (!_reservationService.CanReserve)
             {
-                await ReplyAsync(embed:new EmbedBuilder()
+                await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Cannot reserve servers at this time")
-                    .WithDescription("Servers cannot be reserved 1 hour before the test, lasting until the test event is over.")
-                    .WithColor(new Color(255,100,0))
+                    .WithDescription(
+                        "Servers cannot be reserved 1 hour before the test, lasting until the test event is over.")
+                    .WithColor(new Color(255, 100, 0))
                     .WithThumbnailUrl(_dataService.Guild.IconUrl)
                     .Build());
 
@@ -66,19 +64,22 @@ namespace BotHATTwaffle2.Commands
             {
                 var hasServerEmbed = new EmbedBuilder()
                     .WithAuthor("You already have a server reservation", _dataService.Guild.IconUrl)
-                    .WithDescription($"")
+                    .WithDescription("")
                     .WithColor(new Color(165, 55, 55));
 
-                hasServerEmbed.AddField("Connect With", $"`connect {hasServer.Address}; password {_dataService.RSettings.General.CasualPassword}`", true);
+                hasServerEmbed.AddField("Connect With",
+                    $"`connect {hasServer.Address}; password {_dataService.RSettings.General.CasualPassword}`", true);
                 await ReplyAsync(embed: hasServerEmbed.Build());
                 return;
             }
+
+            string formattedServer = _dataService.GetServerCode(serverCode);
 
             //Attempt add, see if successful
             var success = DatabaseHandler.AddServerReservation(new ServerReservation
             {
                 UserId = Context.User.Id,
-                ServerId = _dataService.GetServerCode(serverCode),
+                ServerId = formattedServer,
                 StartTime = DateTime.Now,
                 Announced = false
             });
@@ -89,22 +90,23 @@ namespace BotHATTwaffle2.Commands
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Could not reserve server")
                     .WithDescription($"A reservation on `{serverCode}` could not be made. Someone else already has" +
-                                     $" it reserved, or it does not exist.\n\nType `>Servers` to see all servers.\n" +
-                                     $"Type `>ShowReservations` to see all active reservations.")
+                                     " it reserved, or it does not exist.\n\nType `>Servers` to see all servers.\n" +
+                                     "Type `>ShowReservations` to see all active reservations.")
                     .WithColor(new Color(165, 55, 55))
                     .WithThumbnailUrl(_dataService.Guild.IconUrl)
                     .Build());
-                
+
                 return;
             }
 
             //Add the job to release the server
-            JobManager.AddJob(() => _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired."), s => s
-                .WithName($"[TSRelease_{serverCode}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
+            JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{Context.User.Mention}",
+            embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
+                s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
 
             var server = DatabaseHandler.GetTestServerFromReservationUserId(Context.User.Id);
 
-            string rconCommand = $"sv_password {_dataService.RSettings.General.CasualPassword}";
+            var rconCommand = $"sv_password {_dataService.RSettings.General.CasualPassword}";
 
             if (workshopId != null)
                 rconCommand += $"; host_workshop_map {workshopId}";
@@ -119,13 +121,14 @@ namespace BotHATTwaffle2.Commands
                                  "\n`>PC host_workshop_map [ID]` Example:\n`>PC host_workshop_map 267340686`")
                 .WithColor(new Color(55, 165, 55))
                 .WithThumbnailUrl(_dataService.Guild.IconUrl);
-            embed.AddField("Connect With", $"`connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`", true);
+            embed.AddField("Connect With",
+                $"`connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`", true);
             embed.AddField("To Send Commands", "`>PC [command]` or\n`>PublicCommand [command]`", true);
             embed.AddField("View Allowed Commands", "`>PC` or\n`>PublicCommand`", true);
             embed.AddField("Mention Community Testers", "`>PA` or\n`>PublicAnnounce`", true);
             embed.AddField("View Remaining Time", "`>SR` or\n`>ShowReservations`", true);
             embed.AddField("End Reservation Early", "`>RS` or\n`>ReleaseServer`", true);
-            
+
             await ReplyAsync(embed: embed.Build());
         }
 
@@ -141,7 +144,7 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("You don't have a server reservation", _dataService.Guild.IconUrl)
-                    .WithDescription($"Get one using the `>PublicServer` command.")
+                    .WithDescription("Get one using the `>PublicServer` command.")
                     .WithColor(new Color(165, 55, 55)).Build());
 
                 return;
@@ -157,9 +160,9 @@ namespace BotHATTwaffle2.Commands
                 DatabaseHandler.UpdateAnnouncedServerReservation(Context.User.Id);
             }
 
-            string reply = await _dataService.RconCommand(server.Address, "host_map");
+            var reply = await _dataService.RconCommand(server.Address, "host_map");
             reply = reply.Substring(14, reply.IndexOf(".bsp", StringComparison.Ordinal) - 14);
-            string[] result = reply.Split('/');
+            var result = reply.Split('/');
 
             var embed = new EmbedBuilder();
 
@@ -169,10 +172,17 @@ namespace BotHATTwaffle2.Commands
             {
                 reply = result[2];
                 embed = await new Workshop().HandleWorkshopEmbeds(Context.Message, _dataService, inputId: result[1]);
-            }
 
-            await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-             $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}`",embed: embed.Build());
+                await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                                                                   $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`",
+                    embed: embed.Build());
+            }
+            else
+            {
+                //No embed
+                await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                                                                   $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
+            }
 
             if (!reservation.Announced)
                 await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
@@ -182,16 +192,13 @@ namespace BotHATTwaffle2.Commands
         [Alias("pc")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
-        public async Task PublicCommandAsync([Optional][Remainder]string command)
+        public async Task PublicCommandAsync([Optional] [Remainder] string command)
         {
             //Allow viewing of commands without a reservation
             if (command == null)
             {
-                StringBuilder sv = new StringBuilder();
-                StringBuilder mp = new StringBuilder();
-                StringBuilder bot = new StringBuilder();
-                StringBuilder exec = new StringBuilder();
-                StringBuilder misc = new StringBuilder();
+
+                StringBuilder sv = new StringBuilder(),mp = new StringBuilder(), bot = new StringBuilder(), exec = new StringBuilder(), misc = new StringBuilder();
 
                 foreach (var s in _dataService.RSettings.Lists.PublicCommands)
                 {
@@ -200,35 +207,38 @@ namespace BotHATTwaffle2.Commands
                         sv.AppendLine(s);
                         continue;
                     }
+
                     if (s.StartsWith("mp", StringComparison.OrdinalIgnoreCase))
                     {
                         mp.AppendLine(s);
                         continue;
                     }
+
                     if (s.StartsWith("bot", StringComparison.OrdinalIgnoreCase))
                     {
                         bot.AppendLine(s);
                         continue;
                     }
-                    if (s.StartsWith("exec", StringComparison.OrdinalIgnoreCase) || s.StartsWith("game", StringComparison.OrdinalIgnoreCase))
+
+                    if (s.StartsWith("exec", StringComparison.OrdinalIgnoreCase) ||
+                        s.StartsWith("game", StringComparison.OrdinalIgnoreCase))
                     {
                         exec.AppendLine(s);
                         continue;
                     }
+
                     misc.AppendLine(s);
                 }
+                
 
-                var commandsEmbed = new EmbedBuilder()
+                await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Allowed test server commands", _dataService.Guild.IconUrl)
-                    .WithColor(new Color(55, 55, 165));
-
-                commandsEmbed.AddField("SV Commands", sv,true);
-                commandsEmbed.AddField("MP Commands", mp, true);
-                commandsEmbed.AddField("BOT Commands", bot, true);
-                commandsEmbed.AddField("Game Mode Commands", exec, true);
-                commandsEmbed.AddField("Other Commands", misc, true);
-
-                await ReplyAsync(embed: commandsEmbed.Build());
+                    .WithColor(new Color(55, 55, 165))
+                    .AddField("SV Commands", sv, true)
+                    .AddField("MP Commands", mp, true)
+                    .AddField("BOT Commands", bot, true)
+                    .AddField("Game Mode Commands", exec, true)
+                    .AddField("Other Commands", misc, true).Build());
 
                 return;
             }
@@ -239,7 +249,7 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("You don't have a server reservation", _dataService.Guild.IconUrl)
-                    .WithDescription($"Get one using the `>PublicServer` command.")
+                    .WithDescription("Get one using the `>PublicServer` command.")
                     .WithColor(new Color(165, 55, 55)).Build());
 
                 return;
@@ -249,7 +259,7 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Invalid command!", _dataService.Guild.IconUrl)
-                    .WithDescription($"Commands cannot contain the `;` character.")
+                    .WithDescription("Commands cannot contain the `;` character.")
                     .WithColor(new Color(165, 55, 55)).Build());
                 return;
             }
@@ -278,7 +288,7 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Invalid command!", _dataService.Guild.IconUrl)
-                    .WithDescription($"Type `>PublicCommand` to see what commands can be sent.")
+                    .WithDescription("Type `>PublicCommand` to see what commands can be sent.")
                     .WithColor(new Color(165, 55, 55)).Build());
             }
         }
@@ -290,13 +300,13 @@ namespace BotHATTwaffle2.Commands
         public async Task ShowReservationsAsync()
         {
             var embed = new EmbedBuilder()
-                .WithAuthor($"Current Server Reservations",
+                .WithAuthor("Current Server Reservations",
                     _dataService.Guild.IconUrl)
                 .WithColor(new Color(55, 165, 55));
 
             foreach (var serverReservation in DatabaseHandler.GetAllServerReservation())
             {
-                string user = "" + serverReservation.UserId;
+                var user = "" + serverReservation.UserId;
 
                 try
                 {
@@ -307,16 +317,18 @@ namespace BotHATTwaffle2.Commands
                     //Can't get user, just display ID instead
                 }
 
-                TimeSpan timeLeft = serverReservation.StartTime.AddHours(2).Subtract(DateTime.Now);
+                var timeLeft = serverReservation.StartTime.AddHours(2).Subtract(DateTime.Now);
                 embed.AddField(DatabaseHandler.GetTestServer(serverReservation.ServerId).Address,
                     $"User: `{user}`\nTime Left: `{timeLeft:h\'H \'m\'M \'s\'S'}`");
             }
 
             if (embed.Fields.Count == 0)
-                embed.AddField("No Server Reservations Active", $"Server reservations are currently " + 
-                                                                (_reservationService.CanReserve ? "allowed" : "not allowed"));
+                embed.AddField("No Server Reservations Active", "Server reservations are currently " +
+                                                                (_reservationService.CanReserve
+                                                                    ? "allowed"
+                                                                    : "not allowed"));
 
-            await ReplyAsync(embed:embed.Build());
+            await ReplyAsync(embed: embed.Build());
         }
 
         [Command("ReleaseServer")]
@@ -331,14 +343,15 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("You don't have a server reservation", _dataService.Guild.IconUrl)
-                    .WithDescription($"Get one using the `>PublicServer` command.")
+                    .WithDescription("Get one using the `>PublicServer` command.")
                     .WithColor(new Color(165, 55, 55)).Build());
 
                 return;
             }
 
-            await ReplyAsync(embed:_reservationService.ReleaseServer(Context.User.Id, $"{Context.User} has released the " +
-                                                                                      $"server reservation manually."));
+            await ReplyAsync(embed: _reservationService.ReleaseServer(Context.User.Id,
+                $"{Context.User} has released the " +
+                "server reservation manually."));
         }
 
         [Command("Servers")]
@@ -351,14 +364,11 @@ namespace BotHATTwaffle2.Commands
                 .WithAuthor("Source Engine Discord CS:GO Test Servers")
                 .WithFooter($"Total of {foundServers.Count()} servers.")
                 .WithThumbnailUrl(_dataService.Guild.IconUrl)
-                .WithColor(new Color(255,135,57));
+                .WithColor(new Color(255, 135, 57));
 
-            foreach (var server in foundServers)
-            {
-                embed.AddField(server.Address, server.Description, true);
-            }
+            foreach (var server in foundServers) embed.AddField(server.Address, server.Description, true);
 
-            await ReplyAsync(embed:embed.Build());
+            await ReplyAsync(embed: embed.Build());
         }
 
         [Command("Playtester")]
@@ -367,15 +377,15 @@ namespace BotHATTwaffle2.Commands
         [Remarks("Toggles your subscription to playtest notifications.")]
         public async Task PlaytesterAsync()
         {
-            if (((SocketGuildUser)Context.User).Roles.Contains(_dataService.PlayTesterRole))
+            if (((SocketGuildUser) Context.User).Roles.Contains(_dataService.PlayTesterRole))
             {
                 await ReplyAsync($"Sorry to see you go from playtest notifications {Context.User.Mention}!");
-                await ((SocketGuildUser)Context.User).RemoveRoleAsync(_dataService.PlayTesterRole);
+                await ((SocketGuildUser) Context.User).RemoveRoleAsync(_dataService.PlayTesterRole);
             }
             else
             {
                 await ReplyAsync($"Thanks for subscribing to playtest notifications {Context.User.Mention}!");
-                await ((SocketGuildUser)Context.User).AddRoleAsync(_dataService.PlayTesterRole);
+                await ((SocketGuildUser) Context.User).AddRoleAsync(_dataService.PlayTesterRole);
             }
         }
     }

@@ -12,7 +12,6 @@ using Newtonsoft.Json.Linq;
 using System.Linq;
 using System.Net;
 using BotHATTwaffle2.Models.JSON.Steam;
-using BotHATTwaffle2.src.Handlers;
 
 namespace BotHATTwaffle2.Services.Steam
 {

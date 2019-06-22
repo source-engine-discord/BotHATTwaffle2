@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.src.Handlers;
 using Discord.WebSocket;
 
 namespace BotHATTwaffle2.Handlers

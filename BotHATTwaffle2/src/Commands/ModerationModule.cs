@@ -14,7 +14,6 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
-using BotHATTwaffle2.src.Handlers;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;

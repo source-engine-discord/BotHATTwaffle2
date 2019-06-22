@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
-using BotHATTwaffle2.src.Handlers;
 using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
@@ -27,6 +26,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             CanReserve = true;
         }
 
+        /// <summary>
+        /// Releases all server reservations.
+        /// Alerts users of why their reservations were released.
+        /// </summary>
         private async Task ClearAllServerReservations()
         {
             //Get all active reservations
@@ -34,7 +37,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             
             foreach (var reservation in allReservations)
             {
-                Console.WriteLine("RUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\nRUNNING\n");
                 SocketGuildUser user = null;
                 string mention = null;
                 string userName = "" + reservation.UserId;
@@ -61,7 +63,14 @@ namespace BotHATTwaffle2.Services.Playtesting
             DatabaseHandler.RemoveAllServerReservations();
         }
 
-        public Embed BuildServerReleaseEmbed(string user, ServerReservation reservation, string reason = null)
+        /// <summary>
+        /// Builds the embed for releasing a server
+        /// </summary>
+        /// <param name="user">Username of reservation holder</param>
+        /// <param name="reservation">Server reservation to build for</param>
+        /// <param name="reason">Reason for release</param>
+        /// <returns></returns>
+        public Embed BuildServerReleaseEmbed(string user, ServerReservation reservation, string reason)
         {
             var server = DatabaseHandler.GetTestServerFromReservationUserId(reservation.UserId);
 
@@ -74,6 +83,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             return embed.Build();
         }
 
+        /// <summary>
+        /// Releases a server reservation
+        /// </summary>
+        /// <param name="userId">userId of server to release</param>
+        /// <param name="reason">Reason for release</param>
+        /// <returns>A prebuilt embed message containing the reason</returns>
         public Embed ReleaseServer(ulong userId, string reason)
         {
             var reservation = DatabaseHandler.GetServerReservation(userId);
@@ -87,10 +102,22 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //Can't get user, they likely left.
             }
             var embed = BuildServerReleaseEmbed(userName, reservation, reason);
+
+            //Find the job that is a reservation, and has the user ID
+            var job = JobManager.AllSchedules.SingleOrDefault(x => x.Name.Contains($"{userId}") && x.Name.StartsWith("[TSRelease_"));
+
+            //Remove it if not null
+            if (job != null)
+                JobManager.RemoveJob(job.Name);
+
             DatabaseHandler.RemoveServerReservation(userId);
             return embed;
         }
 
+        /// <summary>
+        /// Prevents server reservations from being made
+        /// Clears any existing when called.
+        /// </summary>
         public async Task DisableReservations()
         {
             CanReserve = false;

@@ -6,7 +6,6 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.src.Handlers;
 using Discord.Commands;
 using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
