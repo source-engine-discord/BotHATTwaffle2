@@ -56,8 +56,6 @@ namespace BotHATTwaffle2.Services.Steam
             // Send the POST request for item info
             using (var clientItem = new HttpClient())
             {
-                clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
-
                 //Define our key value pairs
                 var kvp1 = new KeyValuePair<string,string>("itemcount", "1");
 
@@ -74,7 +72,8 @@ namespace BotHATTwaffle2.Services.Steam
                     kvp1,kvp2
                 });
 
-
+                // Send the actual post request
+                clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
                 var resultItem = await clientItem.PostAsync("", contentItem);
                 string resultContentItem = await resultItem.Content.ReadAsStringAsync();
 
@@ -84,7 +83,12 @@ namespace BotHATTwaffle2.Services.Steam
                 // Build workshop item embed, and set up author and game data embeds here for scoping reasons
                 RootWorkshop workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
                 RootWorkshop workshopJsonAuthor;
-                
+
+                // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us
+                if (workshopJsonItem.response.publishedfiledetails[0].result == 9) return null;
+                if (workshopJsonItem.response.publishedfiledetails[0].filename.Contains("/screenshots/".ToLower())) return null;
+                if (workshopJsonItem.response.publishedfiledetails[0].filename == "") return null;
+
                 // Send the GET request for the author information
                 using (var clientAuthor = new HttpClient())
                 {
@@ -103,7 +107,6 @@ namespace BotHATTwaffle2.Services.Steam
                 //Make sure a cache exists
                 if (!EnsureGameListCache())
                     return null;
-
 
                 // Finally we can build the embed after too many HTTP requests
                 var workshopItemEmbed = new EmbedBuilder()
