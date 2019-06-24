@@ -289,7 +289,9 @@ namespace BotHATTwaffle2.Services
                 }
 
                 if (user == null)
-                    throw new InvalidOperationException($"Error Setting SocketUser for string {input}");
+                {
+                    _ = _log.LogMessage($"Error Setting SocketUser for string {input}");
+                }
             }
             catch (Exception e)
             {

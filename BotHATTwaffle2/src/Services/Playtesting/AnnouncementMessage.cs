@@ -126,7 +126,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (isCasual)
             {
-                displayedConnectionInfo = $"`{testEvent.ServerLocation}; password {_data.RSettings.General.CasualPassword}`";
+                displayedConnectionInfo = $"`connect {testEvent.ServerLocation}; password {_data.RSettings.General.CasualPassword}`";
                 footer = "All players welcome to join";
             }
             else

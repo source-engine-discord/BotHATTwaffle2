@@ -108,6 +108,9 @@ namespace BotHATTwaffle2.Services.Steam
                 if (!EnsureGameListCache())
                     return null;
 
+                if (string.IsNullOrWhiteSpace(workshopLink))
+                    workshopLink = $"https://steamcommunity.com/sharedfiles/filedetails/?id={workshopJsonItem.response.publishedfiledetails[0].publishedfileid}";
+
                 // Finally we can build the embed after too many HTTP requests
                 var workshopItemEmbed = new EmbedBuilder()
                     .WithAuthor($"{workshopJsonItem.response.publishedfiledetails[0].title}", workshopJsonAuthor.response.players[0].avatar, workshopLink)

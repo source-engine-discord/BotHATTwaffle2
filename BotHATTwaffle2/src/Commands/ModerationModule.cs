@@ -60,7 +60,7 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Only mortals can be muted")
-                    .WithDescription("As a result, Admins are immune.")
+                    .WithDescription($"As a result, {_data.AdminRole.Mention} are immune.")
                     .WithColor(new Color(165,55,55))
                     .Build());
                 return;
@@ -138,7 +138,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Unmutes a user")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task MuteAsync(SocketGuildUser user)
+        public async Task UnmuteAsync(SocketGuildUser user)
         {
             var result = await _data.UnmuteUser(user.Id);
 
@@ -508,9 +508,19 @@ namespace BotHATTwaffle2.Commands
         public async Task RconAsync([Remainder] string input = null)
         {
             string targetServer = null;
-            if (input == null && ServerDictionary.ContainsKey(Context.User.Id))
+            if (input == null)
             {
-                targetServer = ServerDictionary[Context.User.Id];
+                if (ServerDictionary.ContainsKey(Context.User.Id))
+                    targetServer = ServerDictionary[Context.User.Id];
+                else
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                        .WithDescription($"will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
+                        .WithColor(new Color(55, 165, 55)).Build());
+                    return;
+                }
+
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
                     .WithDescription($"will be sent to `{targetServer}`")
@@ -519,7 +529,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Set server mode
-            if (!string.IsNullOrWhiteSpace(input) && input.StartsWith("set", StringComparison.OrdinalIgnoreCase))
+            if (input.StartsWith("set", StringComparison.OrdinalIgnoreCase))
             {
                 var server = DatabaseHandler.GetTestServer(input.Substring(3).Trim());
 
@@ -546,7 +556,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Set user's mode to Auto, which is really just removing a user from the dictionary
-            if (!string.IsNullOrWhiteSpace(input) && input.StartsWith("auto", StringComparison.OrdinalIgnoreCase))
+            if (input.StartsWith("auto", StringComparison.OrdinalIgnoreCase))
             {
                 if (ServerDictionary.ContainsKey(Context.User.Id))
                 {
@@ -582,17 +592,11 @@ namespace BotHATTwaffle2.Commands
                 //User has a server set manually.
                 targetServer = ServerDictionary[Context.User.Id];
 
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor("Commands cannot be empty")
-                    .WithColor(new Color(165, 5, 55)).Build());
-                return;
-            }
+            var reply = await _data.RconCommand(targetServer, input);
 
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _data.Guild.IconUrl)
-                .WithDescription($"```{await _data.RconCommand(targetServer, input)}```")
+                .WithDescription($"```{(string.IsNullOrWhiteSpace(reply) ? $"{input} was sent, but provided no reply." : reply)}```")
                 .WithColor(new Color(55, 165, 55)).Build());
         }
 
