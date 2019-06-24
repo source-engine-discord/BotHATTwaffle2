@@ -56,6 +56,16 @@ namespace BotHATTwaffle2.Commands
         {
             double duration = muteLength.TotalMinutes;
 
+            if (user.Roles.Contains(_data.AdminRole))
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Only mortals can be muted")
+                    .WithDescription("As a result, Admins are immune.")
+                    .WithColor(new Color(165,55,55))
+                    .Build());
+                return;
+            }
+
             var added = DatabaseHandler.AddMute(new Mute
             {
                 UserId = user.Id,
@@ -146,7 +156,7 @@ namespace BotHATTwaffle2.Commands
                 {
                     await user.SendMessageAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Unmuted!")
-                        .WithDescription($"`You have been unmuted.")
+                        .WithDescription($"You have been unmuted.")
                         .WithColor(new Color(165, 55, 55))
                         .Build());
                 }
@@ -439,7 +449,7 @@ namespace BotHATTwaffle2.Commands
         public async Task CompetitiveTesterAsync([Summary("User to give role to.")]SocketGuildUser user)
         {
 
-            if (((SocketGuildUser)Context.User).Roles.Contains(_data.CompetitiveTesterRole))
+            if (user.Roles.Contains(_data.CompetitiveTesterRole))
             {
                 await Context.Message.DeleteAsync();
                 await user.RemoveRoleAsync(_data.CompetitiveTesterRole);
@@ -447,7 +457,9 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
-                await ReplyAsync($"{Context.User.Mention} has been added to Competitive Testers!");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithDescription($"{user.Mention} has been added to {_data.CompetitiveTesterRole.Mention}").Build());
+
                 await user.AddRoleAsync(_data.CompetitiveTesterRole);
                 await _log.LogMessage($"{user} has been given {_data.CompetitiveTesterRole} by {Context.User}");
             }
@@ -509,6 +521,17 @@ namespace BotHATTwaffle2.Commands
             //Set server mode
             if (!string.IsNullOrWhiteSpace(input) && input.StartsWith("set", StringComparison.OrdinalIgnoreCase))
             {
+                var server = DatabaseHandler.GetTestServer(input.Substring(3).Trim());
+
+                if (server == null)
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Cannot set RCON server", _data.Guild.IconUrl)
+                        .WithDescription($"No server found with the name {input.Substring(3).Trim()}")
+                        .WithColor(new Color(165, 55, 55)).Build());
+                    return;
+                }
+
                 //Dictionary contains user already, remove them.
                 if(ServerDictionary.ContainsKey(Context.User.Id))
                 {
@@ -558,6 +581,14 @@ namespace BotHATTwaffle2.Commands
             else
                 //User has a server set manually.
                 targetServer = ServerDictionary[Context.User.Id];
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Commands cannot be empty")
+                    .WithColor(new Color(165, 5, 55)).Build());
+                return;
+            }
 
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _data.Guild.IconUrl)

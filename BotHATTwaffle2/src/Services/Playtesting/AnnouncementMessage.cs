@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services.Calendar;
 using Discord;
@@ -50,6 +51,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             try
             {
+                //Try set thumbnail to creator icons
+                thumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
+
                 //If more than 1 creator, randomly change between them for their index on the thumbnail
                 creatorProfile =
                     $"[{testEvent.Creators[0].Username}](https://discordapp.com/users/{testEvent.Creators[0].Id})";

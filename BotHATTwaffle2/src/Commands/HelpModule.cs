@@ -175,7 +175,6 @@ namespace BotHATTwaffle2.Commands
             embed.AddField(
                 "Libraries",
                 "[Discord.net](https://github.com/RogueException/Discord.Net)\n" +
-                "[Html Agility Pack](http://html-agility-pack.net/)\n" +
                 "[Newtonsoft Json.NET](https://www.newtonsoft.com/json)\n" +
                 "[LiteDB](https://www.litedb.org/)\n" +
                 "[Imgur.API](https://github.com/DamienDennehy/Imgur.API)\n" +
@@ -187,12 +186,22 @@ namespace BotHATTwaffle2.Commands
 
             string thanksTo = null;
 
+            bool tick = true;
             foreach (var users in _data.PatreonsRole.Members)
             {
-                thanksTo += $"{users}\n";
+                if (tick)
+                {
+                    thanksTo += $"`{users}`,    ";
+                    tick = false;
+                }
+                else
+                {
+                    thanksTo += $"`{users}`\n";
+                    tick = true;
+                }
             }
 
-            embed.AddField($"Thanks to support from these Patreons",thanksTo,true);
+            embed.AddField($"Thanks to support from these Patreons",thanksTo.Trim(),true);
 
             await ReplyAsync(string.Empty, false, embed.Build());
         }

@@ -68,6 +68,9 @@ namespace BotHATTwaffle2.Services.Calendar
             if (destServer == null || allServers == null)
                 return;
 
+            if (IsCasual)
+                return;
+
             while (true)
             {
                 var selectedServer = allServers.ToArray()[new Random().Next(allServers.Count())];
