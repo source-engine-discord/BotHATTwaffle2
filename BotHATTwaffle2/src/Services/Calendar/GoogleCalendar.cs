@@ -70,7 +70,7 @@ namespace BotHATTwaffle2.Services.Calendar
             // Defines request and parameters.
             var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
 
-            request.Q = " TESTEVENT "; // This will limit all search requests to ONLY get playtest events.
+            request.Q = " by "; // This will limit all search requests to ONLY get playtest events.
             request.TimeMin = DateTime.Now;
             request.ShowDeleted = false;
             request.SingleEvents = true;
