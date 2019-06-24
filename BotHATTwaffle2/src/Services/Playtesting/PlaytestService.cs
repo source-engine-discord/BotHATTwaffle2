@@ -378,8 +378,11 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
 
-            await _data.CompetitiveTestingChannel.SendMessageAsync($"**{_calendar.GetTestEventNoUpdate().Title}** Paste the following into console to join:" +
-                                                                   $"```connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}```");
+            await _data.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
+                .WithAuthor(_calendar.GetTestEventNoUpdate().Title)
+                .AddField("Connect Information",$"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}`")
+                .WithColor(new Color(55,55,165))
+                .Build());
         }
         
         /// <summary>

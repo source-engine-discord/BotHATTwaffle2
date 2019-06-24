@@ -4,10 +4,12 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.YouTube;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
+using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BotHATTwaffle2
@@ -22,7 +24,7 @@ namespace BotHATTwaffle2
 
         public static async Task Main(string[] args)
         {
-            Console.Title = "BotHATTwaffle 2 - Return of the Bot";
+            Console.Title = "Bot Ido";
 
             // Dependency injection. All objects use constructor injection.
             _client = new DiscordSocketClient();
@@ -38,6 +40,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<DataService>()
                 .AddSingleton<Random>()
                 .AddSingleton<GoogleCalendar>()
+                .AddSingleton<YouTube>()
                 .AddSingleton<ReservationService>()
                 .AddSingleton<PlaytestService>()
                 .AddSingleton<IHelpService, HelpService>()
