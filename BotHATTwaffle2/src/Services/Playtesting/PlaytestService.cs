@@ -366,6 +366,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _data.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
                 mentionRole = _data.CompetitiveTesterRole;
+
+                await _data.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithAuthor(_calendar.GetTestEventNoUpdate().Title)
+                    .AddField("Connect Information", $"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}`")
+                    .WithColor(new Color(55, 55, 165))
+                    .Build());
             }
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
@@ -377,12 +383,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                     true, PlaytestAnnouncementMessage.Id));
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
-
-            await _data.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
-                .WithAuthor(_calendar.GetTestEventNoUpdate().Title)
-                .AddField("Connect Information",$"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}`")
-                .WithColor(new Color(55,55,165))
-                .Build());
         }
         
         /// <summary>
