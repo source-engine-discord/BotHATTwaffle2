@@ -96,15 +96,22 @@ namespace BotHATTwaffle2.Commands
                 if (muteLength.Seconds != 0)
                     formatted += muteLength.Seconds == 1 ? $" {muteLength.Seconds} Second" : $" {muteLength.Seconds} Seconds";
 
-                await ReplyAsync($"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{user.Username} Muted")
+                    .WithDescription($"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
+                    .WithColor(new Color(165, 55, 55))
+                    .Build());
 
                 await _log.LogMessage(
                     $"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",color:LOG_COLOR);
 
                 try
                 {
-                    await user.SendMessageAsync(
-                        $"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`");
+                    await user.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithAuthor("You have been muted")
+                        .WithDescription($"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
+                        .WithColor(new Color(165,55,55))
+                        .Build());
                 }
                 catch
                 {
@@ -127,12 +134,21 @@ namespace BotHATTwaffle2.Commands
 
             if (result)
             {
-                await ReplyAsync($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{user.Username}")
+                    .WithDescription($"`{user.Username}` has been unmuted by `{Context.User.Username}`.")
+                    .WithColor(new Color(165, 55, 55))
+                    .Build());
+
                 await _log.LogMessage($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
 
                 try
                 {
-                    await user.SendMessageAsync($"You have been unmuted in {_data.Guild.Name}!");
+                    await user.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Unmuted!")
+                        .WithDescription($"`You have been unmuted.")
+                        .WithColor(new Color(165, 55, 55))
+                        .Build());
                 }
                 catch
                 {

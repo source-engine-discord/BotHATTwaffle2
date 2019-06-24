@@ -476,7 +476,7 @@ namespace BotHATTwaffle2.Services
         /// <returns>Workshop ID</returns>
         public string GetWorkshopIdFromFqdn(string workshopUrl)
         {
-            return Regex.Match(workshopUrl, @"\d+$").Value;
+            return Regex.Match(workshopUrl, @"(\d+)").Value;
         }
 
         public async Task<bool> UnmuteUser(ulong userId)
