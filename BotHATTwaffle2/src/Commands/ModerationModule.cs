@@ -34,9 +34,10 @@ namespace BotHATTwaffle2.Commands
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
         private static PlaytestCommandInfo _playtestCommandInfo;
         private readonly ReservationService _reservationService;
+        private readonly Random _random;
 
         public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
-            PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService)
+            PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService, Random random)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -45,6 +46,7 @@ namespace BotHATTwaffle2.Commands
             _log = log;
             _interactive = interactive;
             _reservationService = reservationService;
+            _random = random;
         }
 
         [Command("Mute")]
@@ -61,19 +63,42 @@ namespace BotHATTwaffle2.Commands
             [Summary("Reason the user has been muted")][Remainder]string reason)
         {
             double duration = muteLength.TotalMinutes;
-
             //Variables used if we are extending a mute.
             double oldMuteTime = 0;
             DateTime muteStartTime = DateTime.Now;
+            bool added = false;
 
+            //Setup the embed for later.
+            var embed = new EmbedBuilder();
+            
+            //This is all for a shitpost on mods trying to mute admins
             if (user.Roles.Contains(_data.AdminRole))
             {
-                await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor("Only mortals can be muted")
-                    .WithDescription($"As a result, {_data.AdminRole.Mention} are immune.")
-                    .WithColor(new Color(165,55,55))
-                    .Build());
-                return;
+                user = Context.User as SocketGuildUser;
+                muteLength = new TimeSpan(0,69,0);
+                string modReason = null;
+                for (int i = 0; i < reason.Length; i++)
+                {
+                    modReason += _random.Next(2) == 1
+                        ? reason[i].ToString().ToLower()
+                        : reason[i].ToString().ToUpper();
+                }
+
+                //Set the reason string
+                reason = modReason;
+                
+                added = DatabaseHandler.AddMute(new Mute
+                {
+                    UserId = Context.User.Id,
+                    Username = Context.User.Username,
+                    Reason = reason,
+                    Duration = muteLength.TotalMinutes,
+                    MuteTime = muteStartTime,
+                    ModeratorId = Context.User.Id,
+                    Expired = false
+                });
+
+                embed.WithThumbnailUrl(@"https://content.tophattwaffle.com/BotHATTwaffle/reverse.png");
             }
 
             if (reason.StartsWith("e ", StringComparison.OrdinalIgnoreCase))
@@ -97,16 +122,20 @@ namespace BotHATTwaffle2.Commands
                 }
             }
 
-            var added = DatabaseHandler.AddMute(new Mute
+            //If a mod mute didn't bring us here
+            if (!added)
             {
-                UserId = user.Id,
-                Username = user.Username,
-                Reason = reason,
-                Duration = duration + oldMuteTime,
-                MuteTime = muteStartTime,
-                ModeratorId = Context.User.Id,
-                Expired = false
-            });
+                added = DatabaseHandler.AddMute(new Mute
+                {
+                    UserId = user.Id,
+                    Username = user.Username,
+                    Reason = reason,
+                    Duration = duration + oldMuteTime,
+                    MuteTime = muteStartTime,
+                    ModeratorId = Context.User.Id,
+                    Expired = false
+                });
+            }
 
             if (added)
             {
@@ -137,7 +166,11 @@ namespace BotHATTwaffle2.Commands
                 if (muteLength.Seconds != 0)
                     formatted += muteLength.Seconds == 1 ? $" {muteLength.Seconds} Second" : $" {muteLength.Seconds} Seconds";
 
-                await ReplyAsync(embed: new EmbedBuilder()
+                //hahaha funny number
+                if (muteLength.TotalMinutes == 69)
+                    formatted = "69 minutes";
+
+                await ReplyAsync(embed: embed
                     .WithAuthor($"{user.Username} Muted")
                     .WithDescription($"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
                     .WithColor(new Color(165, 55, 55))
@@ -148,7 +181,7 @@ namespace BotHATTwaffle2.Commands
 
                 try
                 {
-                    await user.SendMessageAsync(embed: new EmbedBuilder()
+                    await user.SendMessageAsync(embed: embed
                         .WithAuthor("You have been muted")
                         .WithDescription($"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
                         .WithColor(new Color(165,55,55))
@@ -161,7 +194,7 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
-                await ReplyAsync(embed: new EmbedBuilder()
+                await ReplyAsync(embed: embed
                     .WithAuthor($"Unable to mute {user.Username}")
                     .WithDescription($"I could not mute `{user.Username}` because they are already muted.")
                     .WithColor(new Color(165,55,55))
