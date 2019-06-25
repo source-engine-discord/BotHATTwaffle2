@@ -129,26 +129,7 @@ namespace BotHATTwaffle2.Handlers
                 }
             }
 
-            //Re-add user mutes
-            foreach (var user in DatabaseHandler.GetAllActiveUserMutes())
-            {
-
-                //Send welcome message right away, or wait?
-                if (DateTime.Now > user.MuteTime.AddMinutes(user.Duration))
-                {
-                    //Timer expired, schedule now
-                    JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
-                        .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceIn(20).Seconds());
-                }
-                else
-                {
-                    //Not passed, scheduled ahead
-                    JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
-                        .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceAt(user.MuteTime.AddMinutes(user.Duration)));
-                }
-            }
-
-            //Re-add user mutes
+            //Re-add server reservations.
             foreach (var reservation in DatabaseHandler.GetAllServerReservation())
             {
                 string mention = null;
