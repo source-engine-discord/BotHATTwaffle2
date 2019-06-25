@@ -19,5 +19,6 @@ namespace BotHATTwaffle2
         public string AnnouncementChannel { get; set; }
         public string TestingChannel { get; set; }
         public string CompetitiveTestingChannel { get; set; }
+        public string WebhookChannel { get; set; }
     }
 }

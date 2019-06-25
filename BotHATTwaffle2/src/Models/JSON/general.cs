@@ -18,5 +18,6 @@ namespace BotHATTwaffle2
         public string CasualConfig { get; set; }
         public string CompConfig { get; set; }
         public string PostgameConfig { get; set; }
+        public string WebhookChannel { get; set; }
     }
 }

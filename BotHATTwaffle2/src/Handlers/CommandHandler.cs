@@ -107,8 +107,25 @@ namespace BotHATTwaffle2.Handlers
                         $"You provided too {determiner} parameters! Please consult `{_data.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
 
                     break;
-                case CommandError.ParseFailed:
                 case CommandError.UnmetPrecondition:
+                    string reason = result.ErrorReason;
+
+                    //Give user a more accurate representation of what roles they need.
+                    switch (result.ErrorReason)
+                    {
+                        case "User requires channel permission UseExternalEmojis.":
+                            reason = $"This command requires you to have the `{_data.ActiveRole.Name}` role.";
+                            break;
+                        case "User requires guild permission KickMembers.":
+                            reason = $"This command requires you to have the `{_data.ModeratorRole.Name}` role.";
+                            break;
+                        case "User requires guild permission Administrator.":
+                            reason = $"This command requires you be a server Administrator.";
+                            break;
+                    }
+                    await context.Channel.SendMessageAsync(reason);
+                    break;
+                case CommandError.ParseFailed:
                 case CommandError.ObjectNotFound:
                     await context.Channel.SendMessageAsync(result.ErrorReason);
                     break;
@@ -139,6 +156,15 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         internal async void Listen(SocketMessage message)
         {
+            //Process webhooks
+            if (message.Channel == _data.WebhookChannel && message.Author.IsWebhook)
+            {
+                if (message.Content.StartsWith("PT"))
+                    await PlaytestRequest();
+
+                return;
+            }
+
             // Don't want to listen to what a bot tells us to do
             if (message.Author.IsBot) return;
 
@@ -180,6 +206,21 @@ namespace BotHATTwaffle2.Handlers
             }
 
             // Methods for building the embeds that the if statements caught above
+
+            async Task PlaytestRequest()
+            {
+                //Format input and trim.
+                //prefix | creator | images | workshop | Type
+                var input = message.Content.Split('|').Select(s => s.Trim()).ToArray();
+
+                //Get the creator
+                var creator = _data.GetSocketUser(input[1]);
+                string creatorMention = creator != null ? creator.Mention : input[1];
+
+                await _data.TestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
+                    (await _workshop.HandleWorkshopEmbeds(message, _data, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
+                    .Build());
+            }
 
             /// <summary>
             /// Shames users for asking about carve.

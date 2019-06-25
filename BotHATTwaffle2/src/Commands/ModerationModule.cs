@@ -448,6 +448,9 @@ namespace BotHATTwaffle2.Commands
                                      $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
 
                     PlaytestPostTasks(_playtestCommandInfo);
+
+                    //Test over - stop asking for player counts.
+                    JobManager.RemoveJob("[QueryPlayerCount]");
                     break;
 
                 case "pause":

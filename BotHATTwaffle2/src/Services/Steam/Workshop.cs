@@ -49,7 +49,7 @@ namespace BotHATTwaffle2.Services.Steam
         public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message, DataService _data, string images = null, string testType = null, string inputId = null)
         {
             // Cut down the message to grab just the first URL
-            Match regMatch = Regex.Match(message.Content, @"\b((https?|ftp|file)://|(www|ftp)\.)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]", RegexOptions.IgnoreCase);
+            Match regMatch = Regex.Match(message.Content, @"\b((https?|ftp|file)://|(www|ftp)\.)(steamcommunity)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]", RegexOptions.IgnoreCase);
             string workshopLink = regMatch.ToString();
             string apiKey = _data.RSettings.ProgramSettings.SteamworksAPI;
 

@@ -40,6 +40,7 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel AnnouncementChannel { get; private set; }
         public SocketTextChannel TestingChannel { get; private set; }
         public SocketTextChannel CompetitiveTestingChannel { get; private set; }
+        public SocketTextChannel WebhookChannel { get; private set; }
 
         // Roles
         public SocketRole PlayTesterRole { get; private set; }
@@ -145,6 +146,9 @@ namespace BotHATTwaffle2.Services
                 Console.WriteLine(
                     $"AnnouncementChannel ID:{AnnouncementChannel.Id} Discovered Name:{AnnouncementChannel.Name}");
 
+                WebhookChannel = await ParseChannel(RSettings.DebugValues.WebhookChannel);
+                Console.WriteLine($"WebhookChannel ID:{WebhookChannel.Id} Discovered Name:{WebhookChannel.Name}");
+
                 TestingChannel = await ParseChannel(RSettings.DebugValues.TestingChannel);
                 Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
 
@@ -166,6 +170,9 @@ namespace BotHATTwaffle2.Services
 
                 TestingChannel = await ParseChannel(RSettings.General.TestingChannel);
                 Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
+
+                WebhookChannel = await ParseChannel(RSettings.General.WebhookChannel);
+                Console.WriteLine($"WebhookChannel ID:{WebhookChannel.Id} Discovered Name:{WebhookChannel.Name}");
 
                 CompetitiveTestingChannel = await ParseChannel(RSettings.General.CompetitiveTestingChannel);
                 Console.WriteLine(
