@@ -121,7 +121,13 @@ namespace BotHATTwaffle2.Commands
 
         [Command("Search", RunMode = RunMode.Async)]
         [Alias("s")]
-        public async Task SearchAsync([Remainder]string search)
+        [Summary("Searches Tutorial Content.")]
+        [Remarks("Allows users to search for tutorials on level design. There are a few commands to request a specific video.\n" +
+                 "Using `>s bc [search]` will get results from the CSGO Level Design Bootcamp Series\n" +
+                 "Using `>s v2 [search]` will get results from the V2 tutorial series.\n" +
+                 "Using just a series and number will get that specific video. Meaning `>s bc 1` will return the " +
+                 "CSGO Level Design Bootcamp day 1 video.")]
+        public async Task SearchAsync([Summary("Search Term")][Remainder]string search)
         {
             string rawSearch = search;
             const string bootCamp = "CSGO Level Design Boot Camp";

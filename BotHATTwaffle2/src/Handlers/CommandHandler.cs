@@ -88,7 +88,7 @@ namespace BotHATTwaffle2.Handlers
                 return; // Ignores successful executions and unknown commands.
 
             var logMessage =
-                $"Invoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
+                $"Command: {message}\nInvoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
             var alert = false;
 
             switch (result.Error)

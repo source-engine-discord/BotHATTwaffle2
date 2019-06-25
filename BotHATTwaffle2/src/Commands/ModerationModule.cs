@@ -48,13 +48,23 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Mute")]
-        [Summary("Mutes a user")]
-        [Remarks(@"Format for duration is `%D%H%M%S` where any unit can be omitted")]
+        [Summary("Mutes a user.")]
+        [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
+                 "you may leave off any unit of time. For example `>Mute [user] 1D5H [reason]` will mute for 1 day 5 hours. " +
+                 "Alternatively, if you don't specify a unit of time, minutes is assumed. `>Mute [user] 120 [reason]` will mute for 2 hours.\n\n" +
+                 "A mute may be extended on a currently muted user if you start the mute reason with `e`. For example `>Mute [user] 1D e User keeps being difficult` " +
+                 "will mute the user for 1 addational day, on top of their existing mute.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task MuteAsync(SocketGuildUser user, TimeSpan muteLength, [Remainder]string reason)
+        public async Task MuteAsync([Summary("User to mute")]SocketGuildUser user,
+            [Summary("Length to mute for, in `%D%H%M%S` format")]TimeSpan muteLength,
+            [Summary("Reason the user has been muted")][Remainder]string reason)
         {
             double duration = muteLength.TotalMinutes;
+
+            //Variables used if we are extending a mute.
+            double oldMuteTime = 0;
+            DateTime muteStartTime = DateTime.Now;
 
             if (user.Roles.Contains(_data.AdminRole))
             {
@@ -66,13 +76,34 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            if (reason.StartsWith("e ", StringComparison.OrdinalIgnoreCase))
+            {
+                //Get the old mute, and make sure it exists before removing it. Also need some data from it.
+                var oldMute = DatabaseHandler.GetActiveMute(user.Id);
+
+                if (oldMute != null)
+                {
+                    //Set vars for next mute
+                    oldMuteTime = oldMute.Duration;
+                    muteStartTime = oldMute.MuteTime;
+
+                    //Unmute inside the DB
+                    var result = DatabaseHandler.UnmuteUser(user.Id);
+
+                    //Remove old mute from job manager
+                    JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
+
+                    reason = "Extended from previous mute: " + reason.Substring(reason.IndexOf(' '));
+                }
+            }
+
             var added = DatabaseHandler.AddMute(new Mute
             {
                 UserId = user.Id,
                 Username = user.Username,
                 Reason = reason,
-                Duration = duration,
-                MuteTime = DateTime.Now,
+                Duration = duration + oldMuteTime,
+                MuteTime = muteStartTime,
                 ModeratorId = Context.User.Id,
                 Expired = false
             });
@@ -82,7 +113,7 @@ namespace BotHATTwaffle2.Commands
                 try
                 {
                     await user.AddRoleAsync(_data.MuteRole);
-
+                    
                     JobManager.AddJob(async () => await _data.UnmuteUser(user.Id), s => s
                         .WithName($"[UnmuteUser_{user.Id}]").ToRunOnceAt(DateTime.Now.Add(muteLength)));
                 }
@@ -130,15 +161,19 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
-                await ReplyAsync($"I could not mute `{user.Username}` because they are already muted.");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"Unable to mute {user.Username}")
+                    .WithDescription($"I could not mute `{user.Username}` because they are already muted.")
+                    .WithColor(new Color(165,55,55))
+                    .Build());
             }
         }
 
         [Command("Unmute")]
-        [Summary("Unmutes a user")]
+        [Summary("Unmutes a user.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task UnmuteAsync(SocketGuildUser user)
+        public async Task UnmuteAsync([Summary("User to unmute")]SocketGuildUser user)
         {
             var result = await _data.UnmuteUser(user.Id);
 
@@ -152,6 +187,9 @@ namespace BotHATTwaffle2.Commands
 
                 await _log.LogMessage($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
 
+                //Remove the scheduled job, because we are manually unmuting.
+                JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
+                
                 try
                 {
                     await user.SendMessageAsync(embed: new EmbedBuilder()
@@ -173,12 +211,13 @@ namespace BotHATTwaffle2.Commands
 
         [Command("Mutes")]
         [Alias("MuteHistory")]
-        [Summary("Shows active mutes or mute history for a specific user")]
-        [Remarks("If no parameters are provided, all active mutes for the server are shows." +
-                 "\nIf a user is specific, the mute history for that user will be shown.")]
+        [Summary("Shows active mutes or mute history for a specific user.")]
+        [Remarks("If no parameters are provided, all active mutes for the server are shown." +
+                 "\nIf a user is specific, the mute history for that user will be shown. A paged reply will be returned, " +
+                 "along with a text file to let you see extended mute histories.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task MutesAsync([Optional]SocketGuildUser user)
+        public async Task MutesAsync([Summary("User for which to get mute history")][Optional]SocketGuildUser user)
         {
             string fullListing = "";
 
@@ -236,8 +275,8 @@ namespace BotHATTwaffle2.Commands
                     {
                         fullListing += $"**{mutePage.MuteTime.ToString()}**" +
                                        $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
-                                       $"\nReason: {mutePage.Reason}" +
-                                       $"\nMuting Mod ID: {mutePage.ModeratorId}\n\n";
+                                       $"\nReason: `{mutePage.Reason}`" +
+                                       $"\nMuting Mod ID: `{mutePage.ModeratorId}`\n\n";
 
                         counter++;
                         if (counter >= 5)
@@ -261,8 +300,8 @@ namespace BotHATTwaffle2.Commands
                 {
                     fullListing += $"**{mute.MuteTime.ToString()}**" +
                                    $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
-                                   $"\nReason: {mute.Reason}" +
-                                   $"\nMuting Mod ID: {mute.ModeratorId}\n\n";
+                                   $"\nReason: `{mute.Reason}`" +
+                                   $"\nMuting Mod ID: `{mute.ModeratorId}`\n\n";
                 }
 
                 embed.WithDescription(fullListing);
@@ -279,9 +318,21 @@ namespace BotHATTwaffle2.Commands
 
         [Command("Playtest", RunMode = RunMode.Async)]
         [Alias("p")]
+        [Summary("Handles playtesting functions.")]
+        [Remarks("This command contains many sub commands for various playtesting functions. For this command to work, a playtest event must be active. " +
+                 "Command syntax is `>p [subcommand]`, for example `>p post`\n\n" +
+                 "`pre` / `prestart` - Pre-start the playtest. Required before a playtest can go live. Always run this before running `start`.\n" +
+                 "`start` - Starts the playtest, including recording the demo file.\n" +
+                 "`post` - Run when the gameplay portion of the playtest is complete. This will reload the map and get postgame " +
+                 "features enabled on the test server. It will also handle downloading the demo and giving it to the creators.\n" +
+                 "`p` / `pause` - Pauses a live test.\n" +
+                 "`u` / `unpause` - Unpauses a live test.\n" +
+                 "`s` / `scramble` - Scrambles teams on test server. This command will restart the test. Don't run it after running `start`\n" +
+                 "`k` / `kick` - Kicks a player from the playtest.\n" +
+                 "`end` - Officially ends a playtest which allows community server reservations.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task PlaytestAsync(string command)
+        public async Task PlaytestAsync([Summary("Playtesting Sub-command")]string command)
         {
             //Reload the last used playtest if the current event is null
             if (_playtestCommandInfo == null)
@@ -405,6 +456,10 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
+        /// <summary>
+        /// Handles post playtest tasks.
+        /// </summary>
+        /// <param name="playtestCommandInfo"></param>
         internal async void PlaytestPostTasks(PlaytestCommandInfo playtestCommandInfo)
         {
             await _data.RconCommand(playtestCommandInfo.ServerAddress, $"host_workshop_map {playtestCommandInfo.WorkshopId}");
@@ -431,22 +486,27 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Active")]
-        [Summary("Grants a user the Active Memeber role")]
+        [Summary("Grants a user the Active Memeber role.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task ActiveAsync([Summary("User to give role to.")]SocketGuildUser user)
         {
             await _log.LogMessage($"{user} has been given {_data.ActiveRole.Mention} by {Context.User}");
-            await ReplyAsync($"{user.Mention} has been given {_data.ActiveRole.Mention}!\n\nThanks for contributing to our playtest!");
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor($"{user.Username} is now an active member!")
+                .WithDescription($"The {_data.ActiveRole.Mention} is given to users who are active and helpful in our community. " +
+                                 $"Thanks for contributing!")
+                .WithColor(new Color(241, 196, 15))
+                .Build());
             await user.AddRoleAsync(_data.ActiveRole);
         }
 
         [Command("CompetitiveTester")]
-        [Summary("Grants a user the Competitive Tester role")]
+        [Summary("Grants a user the Competitive Tester role.")]
         [Alias("comp")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task CompetitiveTesterAsync([Summary("User to give role to.")]SocketGuildUser user)
+        public async Task CompetitiveTesterAsync([Summary("User to give role to")]SocketGuildUser user)
         {
 
             if (user.Roles.Contains(_data.CompetitiveTesterRole))
@@ -458,7 +518,11 @@ namespace BotHATTwaffle2.Commands
             else
             {
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithDescription($"{user.Mention} has been added to {_data.CompetitiveTesterRole.Mention}").Build());
+                    .WithAuthor($"{user.Username} is now a Competitive Tester!")
+                    .WithDescription($"The {_data.CompetitiveTesterRole.Mention} is given to users who contribute positively to the playtesting service. " +
+                                     $"Such as attending tests, giving valid feedback, and making smart plays.")
+                    .WithColor(new Color(52, 152, 219))
+                    .Build());
 
                 await user.AddRoleAsync(_data.CompetitiveTesterRole);
                 await _log.LogMessage($"{user} has been given {_data.CompetitiveTesterRole} by {Context.User}");
@@ -466,10 +530,10 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Invite")]
-        [Summary("Invites a user to a competitive level test")]
+        [Summary("Invites a user to a competitive level test.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task CompInviteAsync([Summary("User to invite.")]SocketGuildUser user)
+        public async Task CompInviteAsync([Summary("User to invite")]SocketGuildUser user)
         {
             await Context.Message.DeleteAsync();
 
@@ -498,6 +562,7 @@ namespace BotHATTwaffle2.Commands
         [Alias("r")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         [RequireContext(ContextType.Guild)]
+        [Summary("Sends RCON commands to a server.")]
         [Remarks("Sends RCON commands to a test server.\n" +
                  "You can use `>rcon auto` to automatically use the next playtest server.\n" +
                  "You can specify a server be specified before commands are sent.\n" +
@@ -505,10 +570,10 @@ namespace BotHATTwaffle2.Commands
                  "Then commands can be sent as normal without a server ID:\n" +
                  "Example: `>r sv_cheats 1`\n" +
                  "Provide no parameters to see what server you're current sending to.")]
-        public async Task RconAsync([Remainder] string input = null)
+        public async Task RconAsync([Summary("Rcon command to send")][Remainder][Optional]string command)
         {
             string targetServer = null;
-            if (input == null)
+            if (command == null)
             {
                 if (ServerDictionary.ContainsKey(Context.User.Id))
                     targetServer = ServerDictionary[Context.User.Id];
@@ -529,15 +594,15 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Set server mode
-            if (input.StartsWith("set", StringComparison.OrdinalIgnoreCase))
+            if (command.StartsWith("set", StringComparison.OrdinalIgnoreCase))
             {
-                var server = DatabaseHandler.GetTestServer(input.Substring(3).Trim());
+                var server = DatabaseHandler.GetTestServer(command.Substring(3).Trim());
 
                 if (server == null)
                 {
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Cannot set RCON server", _data.Guild.IconUrl)
-                        .WithDescription($"No server found with the name {input.Substring(3).Trim()}")
+                        .WithDescription($"No server found with the name {command.Substring(3).Trim()}")
                         .WithColor(new Color(165, 55, 55)).Build());
                     return;
                 }
@@ -547,7 +612,7 @@ namespace BotHATTwaffle2.Commands
                 {
                     ServerDictionary.Remove(Context.User.Id);
                 }
-                ServerDictionary.Add(Context.User.Id, input.Substring(3).Trim());
+                ServerDictionary.Add(Context.User.Id, command.Substring(3).Trim());
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
                     .WithDescription($"will be sent to `{ServerDictionary[Context.User.Id]}`")
@@ -556,7 +621,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Set user's mode to Auto, which is really just removing a user from the dictionary
-            if (input.StartsWith("auto", StringComparison.OrdinalIgnoreCase))
+            if (command.StartsWith("auto", StringComparison.OrdinalIgnoreCase))
             {
                 if (ServerDictionary.ContainsKey(Context.User.Id))
                 {
@@ -592,20 +657,30 @@ namespace BotHATTwaffle2.Commands
                 //User has a server set manually.
                 targetServer = ServerDictionary[Context.User.Id];
 
-            var reply = await _data.RconCommand(targetServer, input);
+            //Quick kick feature
+            if (command.StartsWith("kick", StringComparison.OrdinalIgnoreCase))
+            {
+                var kick = new KickUserRcon(Context, _interactive, _data, _log);
+                await kick.KickPlaytestUser(targetServer);
+                return;
+            }
+
+            var reply = await _data.RconCommand(targetServer, command);
 
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _data.Guild.IconUrl)
-                .WithDescription($"```{(string.IsNullOrWhiteSpace(reply) ? $"{input} was sent, but provided no reply." : reply)}```")
+                .WithDescription($"```{(string.IsNullOrWhiteSpace(reply) ? $"{command} was sent, but provided no reply." : reply)}```")
                 .WithColor(new Color(55, 165, 55)).Build());
         }
 
         [Command("ClearReservation")]
         [Alias("cr")]
-        [Summary("Clears a server reservation")]
+        [Summary("Clears a server reservation.")]
+        [Remarks("Clears all server reservations manually. Can be used if users are abusing the reservation system.\n" +
+                 "If a server code is provided, just that server reservation will be removed.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task ClearReservationAsync([Optional]string serverId)
+        public async Task ClearReservationAsync([Summary("ID of test server to clear")][Optional]string serverId)
         {
             if (serverId != null)
             {
@@ -635,7 +710,7 @@ namespace BotHATTwaffle2.Commands
         [Command("TestServer")]
         [Alias("ts")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Summary("Command for manipulating test servers. See command help for more information.")]
+        [Summary("Command for manipulating test servers.")]
         [Remarks("`>TestServer get [ServerCode / all]`\n" +
         "`>TestServer remove [ServerCode]`\n\n" +
         "Adding a server requires the information provided with each variable on a new line after the invoking command." +
@@ -647,16 +722,18 @@ namespace BotHATTwaffle2.Commands
         "[FtpUser]\n" +
         "[FtpPassword]\n" +
         "[FtpPath]\n" +
-        "[FtpType]`")]
+        "[FtpType]`\n\n" +
+        "Getting a single test server will reply with the required information to re-add the server into the database. " +
+        "This is useful when editing servers.")]
         public async Task TestServerAsync(string action, [Remainder]string values = null)
         {
             //Add server
             if (action.StartsWith("a", StringComparison.OrdinalIgnoreCase))
             {
-                //Need input values, abort if we don't have them.
+                //Need command values, abort if we don't have them.
                 if (values == null)
                 {
-                    await ReplyAsync("No input provided");
+                    await ReplyAsync("No command provided");
                     return;
                 }
 
@@ -776,9 +853,29 @@ namespace BotHATTwaffle2.Commands
             await _playtestService.PlaytestStartingInTask();
         }
 
+        [Command("SkipAnnounce")]
+        [Alias("sa")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Toggles the next playtest announcement.")]
+        [Remarks("Toggles if the next playtest announcement happens. This will allow you to prevent the 1 hour, or starting " +
+                 "playtest announcement messages from happening. Server setup tasks are still preformed, just the message is skipped. " +
+                 "After server setup tasks run, the flag is reset. Meaning if you disable the 1 hour announcement, the starting announcement " +
+                 "will still go out unless you disable it after the 1 hour announcement would have gone out.")]
+        public async Task SkipAnnounceAsync()
+        {
+            //Toggle the announcement state
+            _playtestService.PlaytestStartAlert = !_playtestService.PlaytestStartAlert;
+
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor($"Next Playtest Alert is: {_playtestService.PlaytestStartAlert}")
+                .WithColor(_playtestService.PlaytestStartAlert ? new Color(55,165,55) : new Color(165,55,55))
+                .Build());
+        }
+
         [Command("Debug")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Summary("View or change the debug flag." +
+        [Summary("Debug settings.")]
+        [Remarks("View or change the debug flag." +
                  "\n`>debug [true/false/reload]` to set the flag, or reload settings from the settings file.")]
         public async Task DebugAsync(string status = null)
         {

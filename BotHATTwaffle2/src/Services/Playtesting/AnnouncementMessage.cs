@@ -46,7 +46,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             int creatorIndex = 0;
             var creatorSpelling = "Creator";
-            string creatorProfile = "If you see this, the creator left the server";
+            string creatorProfile = "Unable to get creator(s)";
             string thumbnailUrl = _data.Guild.IconUrl;
 
             try

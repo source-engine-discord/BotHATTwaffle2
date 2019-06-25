@@ -21,6 +21,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private int _failedToFetch;
         private DateTime _lastSeenEditTime;
         private AnnounceMessage _oldMessage;
+        public bool PlaytestStartAlert = true;
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random, ReservationService reservationService)
         {
@@ -341,19 +342,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             var mentionRole = _data.PlayTesterRole;
             string unsubInfo = "";
 
-            //DM users about their test
-            foreach (var creator in _calendar.GetTestEventNoUpdate().Creators)
-            {
-                try
-                {
-                    await creator.SendMessageAsync($"Don't forget that you have a playtest for __**{_calendar.GetTestEventNoUpdate().Title}**__ in __**{countdownString}**__");
-                }
-                catch
-                {
-                    //Could not DM creator about their test.
-                }
-            }
-
             //Handle comp or casual
             if (_calendar.GetTestEvent().IsCasual)
             {
@@ -374,14 +362,32 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .Build());
             }
 
-            await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
+            //Skip the alert.
+            if (!PlaytestStartAlert)
+            {
+                PlaytestStartAlert = true;
+                return;
+            }
 
+            await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
             await _data.TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
                                                         $"There is a playtest starting in {countdownString}." +
                                                         $"{unsubInfo}",
                 embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
                     true, PlaytestAnnouncementMessage.Id));
 
+            //DM users about their test
+            foreach (var creator in _calendar.GetTestEventNoUpdate().Creators)
+            {
+                try
+                {
+                    await creator.SendMessageAsync($"Don't forget that you have a playtest for __**{_calendar.GetTestEventNoUpdate().Title}**__ in __**{countdownString}**__");
+                }
+                catch
+                {
+                    //Could not DM creator about their test.
+                }
+            }
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
         }
         
@@ -468,6 +474,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _data.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
                 mentionRole = _data.CompetitiveTesterRole;
+            }
+
+            //Skip the alert.
+            if (!PlaytestStartAlert)
+            {
+                PlaytestStartAlert = true;
+                return;
             }
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = true; });

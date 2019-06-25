@@ -59,6 +59,14 @@ namespace BotHATTwaffle2.Services.Playtesting
                     "All server reservations have been cleared. This happens when a scheduled playtest starts soon."));
             }
 
+            var jobs = JobManager.AllSchedules.Where(x => x.Name.StartsWith("[TSRelease_"));
+
+            //Clear all jobs that are server releases
+            foreach (var job in jobs)
+            {
+                JobManager.RemoveJob(job.Name);
+            }
+
             //Lastly drop the collection to fully remove all reservations.
             DatabaseHandler.RemoveAllServerReservations();
         }
@@ -122,13 +130,6 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             CanReserve = false;
             await ClearAllServerReservations();
-            var jobs = JobManager.AllSchedules.Where(x => x.Name.StartsWith("[TSRelease_"));
-
-            //Clear all jobs that are server releases
-            foreach (var job in jobs)
-            {
-                JobManager.RemoveJob(job.Name);
-            }
         }
 
         public void AllowReservations()

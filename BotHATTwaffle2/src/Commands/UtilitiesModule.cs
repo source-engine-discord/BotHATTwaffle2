@@ -46,9 +46,31 @@ namespace BotHATTwaffle2.Commands
         {
             if (string.IsNullOrWhiteSpace(roles))
             {
-                await ReplyAsync(
-                    $"Toggleable roles are:```\n{string.Join("\n", _dataService.RSettings.Lists.Roles)}```" +
-                    "\n`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.");
+                string d1 = null;
+                string d2 = null;
+                bool tick = true;
+                foreach (var role in _dataService.RSettings.Lists.Roles)
+                {
+                    if (tick)
+                    {
+                        d1 += $"{role}\n";
+                        tick = false;
+                    }
+                    else
+                    {
+                        d2 += $"{role}\n";
+                        tick = true;
+                    }
+                }
+
+                await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Toggleable Roles")
+                .WithColor(new Color(255, 135, 57))
+                .AddField("\u200E",d1.Trim(), true)
+                .AddField("\u200E", d2.Trim(),true)
+                .Build());
+//                    $"Toggleable roles are:```\n{string.Join("\n", _dataService.RSettings.Lists.Roles)}```" +
+//                    "\n`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.");
                 return;
             }
 

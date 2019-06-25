@@ -248,7 +248,7 @@ namespace BotHATTwaffle2.src.Commands
                 Url = "http://www.interlopers.net/errors",
                 ThumbnailUrl = "https://www.tophattwaffle.com/wp-content/uploads/2017/12/selectall.jpg",
                 Color = new Color(84, 137, 71),
-                Description = "The compile log checker on Interlopers is a web tool which analyses compile logs of maps to " +
+                Description = "The compile log checker on Interlopers is a web tool which analyzes compile logs of maps to " +
                               "detect compilation issues and propose solutions. Simply copy and paste an entire log or a " +
                               "section with an error and click the button to have the log checked."
             };

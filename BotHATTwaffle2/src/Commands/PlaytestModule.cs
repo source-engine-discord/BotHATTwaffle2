@@ -37,11 +37,15 @@ namespace BotHATTwaffle2.Commands
 
         [Command("PublicServer")]
         [Alias("ps")]
+        [Summary("Reserves a public test server.")]
+        [Remarks("Reserves a public test server using a server address/code. To see all servers type `>servers`. " +
+                 "Example: `>ps vpn`\nYou may also include a workshop ID to automatically load that level on the server as well. " +
+                 "Example: `>ps vpn 267340686`")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task PublicTestStartAsync(
-            [Summary("The server to reserve.")] string serverCode,
-            [Optional] [Summary("The ID of a Steam Workshop map for the server to host.")]
+            [Summary("The server to reserve")] string serverCode,
+            [Optional][Summary("The ID of a Steam Workshop map for the server to host")]
             string workshopId)
         {
             //Check if reservations can be made.
@@ -134,6 +138,9 @@ namespace BotHATTwaffle2.Commands
 
         [Command("PublicAnnounce")]
         [Alias("pa")]
+        [Summary("Announces that you are looking for playtesters.")]
+        [Remarks("Mentions the Community Tester role that you are looking for testers for your level. Community " +
+                 "Testers will only be mentioned the first time you use to command, this is to prevent spam.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task PublicAnnounceAsync()
@@ -190,6 +197,10 @@ namespace BotHATTwaffle2.Commands
 
         [Command("PublicCommand", RunMode = RunMode.Async)]
         [Alias("pc")]
+        [Summary("Sends commands to your reserved server.")]
+        [Remarks("Send server commands to your server. For security reasons only certain commands are allowed. To" +
+                 " see the list of commands, type `>pc`. To send a command type `>pc [command]` Example: `pc sv_cheats 1`. " +
+                 "If you believe another command should be added, ask TopHATTwaffle.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task PublicCommandAsync([Optional] [Remainder] string command)
@@ -295,6 +306,7 @@ namespace BotHATTwaffle2.Commands
 
         [Command("ShowReservations")]
         [Alias("sr")]
+        [Summary("Shows all current server reservations with the time remaining.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task ShowReservationsAsync()
@@ -333,6 +345,7 @@ namespace BotHATTwaffle2.Commands
 
         [Command("ReleaseServer")]
         [Alias("rs")]
+        [Summary("Manually ends your server reservation early.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task ReleaseServerReservationAsync()

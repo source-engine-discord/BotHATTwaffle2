@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using Discord.Commands;
 using Discord.WebSocket;
+using FluentScheduler;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Newtonsoft.Json;
@@ -290,7 +291,7 @@ namespace BotHATTwaffle2.Services
 
                 if (user == null)
                 {
-                    _ = _log.LogMessage($"Error Setting SocketUser for string {input}");
+                    _ = _log.LogMessage($"Error Setting SocketUser for string `{input}`");
                 }
             }
             catch (Exception e)
