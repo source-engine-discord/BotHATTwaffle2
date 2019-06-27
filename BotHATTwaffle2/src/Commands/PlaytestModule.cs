@@ -152,7 +152,8 @@ namespace BotHATTwaffle2.Commands
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("You don't have a server reservation", _dataService.Guild.IconUrl)
                     .WithDescription("Get one using the `>PublicServer` command.")
-                    .WithColor(new Color(165, 55, 55)).Build());
+                    .WithColor(new Color(165, 55, 55))
+                    .Build());
 
                 return;
             }
@@ -181,7 +182,8 @@ namespace BotHATTwaffle2.Commands
                 embed = await new Workshop().HandleWorkshopEmbeds(Context.Message, _dataService, inputId: result[1]);
 
                 await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                   $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`",
+                                                                   $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                                   $"\nType `>roleme Community Tester` to get this role.",
                     embed: embed.Build());
             }
             else

@@ -206,7 +206,6 @@ namespace BotHATTwaffle2.Handlers
             }
 
             // Methods for building the embeds that the if statements caught above
-
             async Task PlaytestRequest()
             {
                 //Format input and trim.

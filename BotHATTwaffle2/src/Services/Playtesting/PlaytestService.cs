@@ -346,13 +346,13 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_calendar.GetTestEvent().IsCasual)
             {
                 await _data.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
-                    $"sv_password {_data.RSettings.General.CasualPassword}");
+                    $"sv_cheats 0; sv_password {_data.RSettings.General.CasualPassword}");
                 unsubInfo = "\nType `>playtester` to stop getting these notifications.";
             }
             else
             {
                 await _data.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
-                    $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
+                    $"sv_cheats 0; sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
                 mentionRole = _data.CompetitiveTesterRole;
 
                 await _data.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
@@ -422,7 +422,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //Delay to make sure level has actually changed
                 await Task.Delay(10000);
                 await _data.RconCommand(_data.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
-                    $"exec {_data.RSettings.General.PostgameConfig}; sv_cheats 1; sv_password {_data.RSettings.General.CasualPassword}; bot_stop 1");
+                    $"exec {_data.RSettings.General.PostgameConfig}; sv_password {_data.RSettings.General.CasualPassword}; bot_stop 1");
             }
 
             //Delay to make sure password is set.
@@ -434,7 +434,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Delay to make sure level has actually changed
             await Task.Delay(10000);
             await _data.RconCommand(_data.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
-                $"exec {_data.RSettings.General.PostgameConfig}; sv_cheats 1; bot_stop 1");
+                $"exec {_data.RSettings.General.PostgameConfig}; bot_stop 1");
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
@@ -491,6 +491,17 @@ namespace BotHATTwaffle2.Services.Playtesting
                     true, PlaytestAnnouncementMessage.Id));
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
+        }
+
+        public async Task CallNormalTesters(int neededPlayers)
+        {
+            await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
+
+            await _data.TestingChannel.SendMessageAsync($"Currently looking for {neededPlayers} players. {_data.PlayTesterRole.Mention}",
+                embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
+                    true, PlaytestAnnouncementMessage.Id));
+
+            await _data.PlayTesterRole.ModifyAsync(x => { x.Mentionable = false; });
         }
     }
 }

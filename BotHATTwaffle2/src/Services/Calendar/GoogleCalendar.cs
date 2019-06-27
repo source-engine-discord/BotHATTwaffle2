@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.src.Models;
+using Discord.WebSocket;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
@@ -25,12 +30,13 @@ namespace BotHATTwaffle2.Services.Calendar
         {
             _log = log;
             _dataService = dataService;
+            Console.Write("Getting or checking Sheets OAuth Credentials... ");
             _calendar = new CalendarService(new BaseClientService.Initializer
             {
-                HttpClientInitializer = GetCredential(),
+                HttpClientInitializer = GetCalendarCredentials(),
                 ApplicationName = "BotHATTwaffle 2"
             });
-
+            Console.WriteLine("Done!");
             _testEvent = new PlaytestEvent(_dataService, _log);
         }
 
@@ -45,24 +51,21 @@ namespace BotHATTwaffle2.Services.Calendar
         ///     <see cref="Environment.SpecialFolder.Personal" />.
         /// </remarks>
         /// <returns>The retrieved OAuth 2.0 credential.</returns>
-        private static UserCredential GetCredential()
+        private UserCredential GetCalendarCredentials()
         {
             using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
             {
-                var credPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                credPath = Path.Combine(credPath, ".credentials/calendar-dotnet-quickstart.json");
-
                 return GoogleWebAuthorizationBroker.AuthorizeAsync(
                         GoogleClientSecrets.Load(stream).Secrets,
-                        new[] {CalendarService.Scope.CalendarReadonly},
+                        new[] {CalendarService.Scope.Calendar},
                         "user",
                         CancellationToken.None,
-                        new FileDataStore(credPath, true))
+                        new FileDataStore(".credentials/calendar.json"))
                     .Result;
             }
         }
 
-        private void GetEvents()
+        private void GetNextTestEvent()
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Getting test event", false, color: LOG_COLOR);
@@ -70,7 +73,12 @@ namespace BotHATTwaffle2.Services.Calendar
             // Defines request and parameters.
             var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
 
-            request.Q = " by "; // This will limit all search requests to ONLY get playtest events.
+            //Set the playtest search based on debug flag
+            if (_dataService.RSettings.ProgramSettings.Debug)
+                request.Q = " DEBUG ";
+            else
+                request.Q = " by "; // This will limit all search requests to ONLY get playtest events.
+
             request.TimeMin = DateTime.Now;
             request.ShowDeleted = false;
             request.SingleEvents = true;
@@ -140,19 +148,19 @@ namespace BotHATTwaffle2.Services.Calendar
             _testEvent.Creators = _dataService.GetSocketUser(description.ElementAtOrDefault(0), ',');
 
             //Imgur Album
-            _testEvent.ImageGallery = _dataService.ValidateUri(description.ElementAtOrDefault(2));
+            _testEvent.ImageGallery = _dataService.ValidateUri(description.ElementAtOrDefault(1));
 
             //Workshop URL
-            _testEvent.WorkshopLink = _dataService.ValidateUri(description.ElementAtOrDefault(3));
+            _testEvent.WorkshopLink = _dataService.ValidateUri(description.ElementAtOrDefault(2));
 
-            //Gamemode
-            _testEvent.SetGameMode(description.ElementAtOrDefault(4));
+            //Game mode
+            _testEvent.SetGameMode(description.ElementAtOrDefault(3));
 
             //Moderator
-            _testEvent.Moderator = _dataService.GetSocketUser(description.ElementAtOrDefault(5));
+            _testEvent.Moderator = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
 
             //Description
-            _testEvent.Description = description.ElementAtOrDefault(6);
+            _testEvent.Description = description.ElementAtOrDefault(5);
 
             //Gallery Images
             _testEvent.GalleryImages = _dataService.GetImgurAlbum(_testEvent.ImageGallery.ToString());
@@ -165,12 +173,101 @@ namespace BotHATTwaffle2.Services.Calendar
         }
 
         /// <summary>
+        /// Checks the testing calendar for if a test already exists for that date.
+        /// </summary>
+        /// <param name="testTime">DateTime to check with</param>
+        /// <returns>True if event conflict found</returns>
+        public async Task<Events> CheckForScheduleConflict(DateTime testTime)
+        {
+            var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
+            request.Q = " by ";
+            request.TimeMin = DateTime.Now;
+            request.ShowDeleted = false;
+            request.SingleEvents = true;
+            request.TimeMin = testTime.Date;
+            request.TimeMax = testTime.Date.AddDays(1).AddSeconds(-1); //Sets to 23:59:59 same day
+
+            // Executes the request for events and retrieves the first event in the resulting items.
+            var events = await request.ExecuteAsync();
+
+            return events;
+        }
+
+        /// <summary>
+        /// Adds a test event to the testing calendar.
+        /// </summary>
+        /// <param name="playtestRequest">Playtest request to add</param>
+        /// <param name="moderator">Moderator for the test</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public async Task<bool> AddTestEvent(PlaytestRequest playtestRequest, SocketUser moderator)
+        {
+            string creators = null;
+            foreach (var creator in playtestRequest.CreatorsDiscord)
+            {
+                var user = _dataService.GetSocketUser(creator);
+                if (user != null)
+                    creators += $"{user.Username}, ";
+                else
+                    creators += $"Unknown[{creator}]";
+            }
+
+            //Create list and add the required attendee.
+            var attendeeLists = new List<EventAttendee>();
+            attendeeLists.Add(new EventAttendee {Email = playtestRequest.Email});
+
+            //Add every other user's email
+            foreach (var email in playtestRequest.AdditionalEmail)
+            {
+                if(!string.IsNullOrWhiteSpace(email))
+                    attendeeLists.Add(new EventAttendee { Email = email });
+            }
+
+            string description = $"Creator: {string.Join(", " ,playtestRequest.CreatorsDiscord)}\n" +
+                                 $"Map Images: {playtestRequest.ImgurAlbum}\n" +
+                                 $"Workshop Link: {playtestRequest.WorkshopURL}\n" +
+                                 $"Game Mode: {playtestRequest.TestType}\n" +
+                                 $"Moderator: {moderator.Id}\n" +
+                                 $"Description: {playtestRequest.TestGoals}";
+
+            Event newEvent = new Event()
+            {
+                Summary = $"{playtestRequest.MapName} by {creators.TrimEnd(',',' ')}",
+                Location = playtestRequest.Preferredserver,
+                Description = description,
+                Start = new EventDateTime()
+                {
+                    DateTime = playtestRequest.TestDate,
+                    TimeZone = "America/Chicago",
+                },
+                End = new EventDateTime()
+                {
+                    DateTime = playtestRequest.TestDate.AddHours(2),
+                    TimeZone = "America/Chicago",
+                },
+                Attendees = attendeeLists
+            };
+
+            try
+            {
+                EventsResource.InsertRequest request = _calendar.Events.Insert(newEvent, _dataService.RSettings.ProgramSettings.TestCalendarId);
+                Event createdEvent = await request.ExecuteAsync();
+            }
+            catch (Exception e)
+            {
+                await _log.LogMessage($"Issue added test event to calendar!\n{e.Message}",color:LOG_COLOR);
+                return false;
+            }
+            
+            return true;
+        }
+
+        /// <summary>
         /// Gets the latest test event from Google
         /// </summary>
         /// <returns>Latest test event Google</returns>
         public PlaytestEvent GetTestEvent()
         {
-            GetEvents();
+            GetNextTestEvent();
             return _testEvent;
         }
 

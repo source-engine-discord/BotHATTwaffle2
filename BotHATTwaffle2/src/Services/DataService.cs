@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.ConstrainedExecution;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
+using HtmlAgilityPack;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Newtonsoft.Json;
@@ -422,7 +424,7 @@ namespace BotHATTwaffle2.Services
                 //As a result we will wait for a proper reply below.
                 client.SendCommand(command, result => { reply = result; });
 
-                await _log.LogMessage($"Sending RCON command:\n{command}\nTo server: {server.Address}", channel: false,
+                await _log.LogMessage($"Sending RCON command:\n`{command}`\nTo server: `{server.Address}`", channel: true,
                     color: LOG_COLOR);
 
                 retryCount = 0;
@@ -443,7 +445,12 @@ namespace BotHATTwaffle2.Services
             else
                 reply = $"Unable to connect or authenticate to RCON server with the ID of {serverId}.";
 
-            return FormatRconServerReply(reply);
+            string finalReply = FormatRconServerReply(reply);
+
+            if (string.IsNullOrWhiteSpace(finalReply))
+                return $"{command} was sent, but provided no reply.";
+
+            return finalReply;
         }
 
         private string FormatRconServerReply(string input)

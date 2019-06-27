@@ -24,36 +24,34 @@ namespace BotHATTwaffle2.Services.YouTube
     /// </summary>
     public class YouTube
     {
-        private readonly DataService _dataService;
-        public YouTube(DataService dataService)
+        private readonly YouTubeService _youTube;
+        public YouTube()
         {
-
+            Console.Write("Getting or checking YouTube OAuth Credentials... ");
+            _youTube = new YouTubeService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = GetYouTubeCredentials(),
+                ApplicationName = this.GetType().ToString()
+            });
+            Console.WriteLine("Done!");
         }
-        private async Task<UserCredential> GetYouTubeCredentials()
+        private UserCredential GetYouTubeCredentials()
         {
-            UserCredential credential;
             using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
             {
-                credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                return GoogleWebAuthorizationBroker.AuthorizeAsync(
                     GoogleClientSecrets.Load(stream).Secrets,
                     new[] { YouTubeService.Scope.YoutubeReadonly },
                     "user",
                     CancellationToken.None,
-                    new FileDataStore(this.GetType().ToString())
-                );
+                    new FileDataStore(".credentials/youtube.json"))
+                    .Result;
             }
-            return credential;
         }
 
         public async Task<SearchListResponse> YouTubeSearch(string search, long maxResults = 10)
         {
-            var youtubeService = new YouTubeService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = await GetYouTubeCredentials(),
-                ApplicationName = this.GetType().ToString()
-            });
-
-            var searchListRequest = youtubeService.Search.List("snippet");
+            var searchListRequest = _youTube.Search.List("snippet");
             searchListRequest.Q = search;
             searchListRequest.ChannelId = "UCiKV_fEUKDc2IxTvTTQLegw"; //My channel ID
             searchListRequest.MaxResults = maxResults;
