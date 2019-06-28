@@ -104,7 +104,6 @@ namespace BotHATTwaffle2.Services.Sheets
 
             for (row = 0; row < currentQueue.Count; row++)
             {
-                Console.WriteLine(currentQueue[row].Timestamp);
                 //Set row int to the found row
                 if (currentQueue[row].Timestamp == timeStamp)
                 {
