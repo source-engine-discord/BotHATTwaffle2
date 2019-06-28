@@ -252,7 +252,7 @@ namespace BotHATTwaffle2.Commands
                         goto retry;
                     }
 
-                    if (!result[id].WorkshopURL.Contains("https://steamcommunity.com/sharedfiles/filedetails/?id=",
+                    if (!result[id].WorkshopURL.Contains("https://steamcommunity.com/sharedfiles/filedetails",
                         StringComparison.OrdinalIgnoreCase))
                     {
                         instructionsString =
