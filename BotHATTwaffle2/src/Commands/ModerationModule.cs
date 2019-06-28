@@ -97,6 +97,8 @@ namespace BotHATTwaffle2.Commands
                 //abort
                 if (userInput.Content.Contains("cancel", StringComparison.OrdinalIgnoreCase))
                 {
+                    embed.WithColor(new Color(25, 25, 25));
+                    await display.ModifyAsync(x => x.Embed = embed.Build());
                     await instructions.ModifyAsync(x => x.Content = "Cancelled!");
                     return;
                 }
@@ -222,6 +224,8 @@ namespace BotHATTwaffle2.Commands
                             : "Casual";
                         break;
                     case "cancel":
+                        embed.WithColor(new Color(25, 25, 25));
+                        await display.ModifyAsync(x => x.Embed = embed.Build());
                         await instructions.ModifyAsync(x => x.Content = "Cancelled!");
                         return;
                 }
@@ -309,7 +313,8 @@ namespace BotHATTwaffle2.Commands
                 await instructions.ModifyAsync(x =>
                     x.Content = "An error occured working with the Google APIs, consult the logs.");
             }
-
+            embed.WithColor(new Color(25, 25, 25));
+            await display.ModifyAsync(x => x.Embed = embed.Build());
             await instructions.ModifyAsync(x => x.Content = "Cancelled!");
         }
 
