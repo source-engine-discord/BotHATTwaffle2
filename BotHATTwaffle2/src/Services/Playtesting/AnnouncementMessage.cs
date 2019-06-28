@@ -12,7 +12,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
         private static int _lastImageIndex;
         private readonly GoogleCalendar _calendar;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly Random _random;
 
@@ -20,7 +20,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             _log = log;
             _calendar = calendar;
-            _data = data;
+            _dataService = data;
             _random = random;
         }
 
@@ -34,7 +34,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns>Prebuilt embed</returns>
         public Embed CreatePlaytestEmbed(bool isCasual = true, bool smallEmbed = false, ulong fullMessage = 0)
         {
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Creating Playtest Embed", false, color: LOG_COLOR);
 
             var testEvent = _calendar.GetTestEventNoUpdate();
@@ -47,7 +47,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             int creatorIndex = 0;
             var creatorSpelling = "Creator";
             string creatorProfile = "Unable to get creator(s)";
-            string thumbnailUrl = _data.Guild.IconUrl;
+            string thumbnailUrl = _dataService.Guild.IconUrl;
 
             try
             {
@@ -59,7 +59,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     $"[{testEvent.Creators[0].Username}](https://discordapp.com/users/{testEvent.Creators[0].Id})";
                 if (testEvent.Creators.Count > 1)
                 {
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Multiple Test Creators found for embed [{testEvent.Creators.Count}]",
                             false, color: LOG_COLOR);
 
@@ -81,7 +81,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             
 
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage(
                     $"Creators string\n{creatorProfile}\nUsing creator index {creatorIndex} of {testEvent.Creators.Count - 1} (0 Index!)",
                     false, color: LOG_COLOR);
@@ -106,13 +106,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 countdownString = countdown.ToString("d'D 'h'H 'm'M'").TrimStart(' ', 'D', 'H', '0');
 
             //What image should be displayed
-            var embedImageUrl = _data.RSettings.General.FallbackTestImageUrl;
+            var embedImageUrl = _dataService.RSettings.General.FallbackTestImageUrl;
             if (testEvent.CanUseGallery)
             {
                 var randomIndex = _random.Next(testEvent.GalleryImages.Count);
                 while (_lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count);
 
-                if (_data.RSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
                         false, color: LOG_COLOR);
 
@@ -126,13 +126,13 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (isCasual)
             {
-                displayedConnectionInfo = $"`connect {testEvent.ServerLocation}; password {_data.RSettings.General.CasualPassword}`";
+                displayedConnectionInfo = $"`connect {testEvent.ServerLocation}; password {_dataService.RSettings.General.CasualPassword}`";
                 footer = "All players welcome to join";
             }
             else
             {
                 displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play. 15 minutes before start time, you can use the following to check the level out in a sandbox server:*\n" +
-                                          $"`connect {_calendar.GetTestEventNoUpdate().CompCasualServer}; password {_data.RSettings.General.CasualPassword}`";
+                                          $"`connect {_calendar.GetTestEventNoUpdate().CompCasualServer}; password {_dataService.RSettings.General.CasualPassword}`";
                 footer = "Connection info hidden due to competitive test";
             }
 
@@ -150,9 +150,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             playtestEmbed.AddField("Moderator",
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
 
-            if (_data.IncludePlayerCount)
+            if (_dataService.IncludePlayerCount)
             {
-                playtestEmbed.AddField("Players Connected", _data.PlayerCount, true);
+                playtestEmbed.AddField("Players Connected", _dataService.PlayerCount, true);
             }
 
             playtestEmbed.AddField("Connect to",
@@ -165,7 +165,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 playtestEmbed.ThumbnailUrl = embedImageUrl;
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
                               $"[Testing Information](https://www.tophattwaffle.com/playtesting) | " +
-                              $"[More Information](https://discordapp.com/channels/{_data.Guild.Id}/{_data.AnnouncementChannel.Id}/{fullMessage})";
+                              $"[More Information](https://discordapp.com/channels/{_dataService.Guild.Id}/{_dataService.AnnouncementChannel.Id}/{fullMessage})";
             }
             else
             {

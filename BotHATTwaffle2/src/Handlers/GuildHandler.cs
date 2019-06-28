@@ -10,7 +10,7 @@ namespace BotHATTwaffle2.Handlers
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkGreen;
         private readonly DiscordSocketClient _client;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly ScheduleHandler _schedule;
         private static bool attemptingReconnect = false;
@@ -20,7 +20,7 @@ namespace BotHATTwaffle2.Handlers
             Console.WriteLine("Setting up GuildHandler...");
 
             _log = log;
-            _data = data;
+            _dataService = data;
             _client = client;
             _schedule = schedule;
 
@@ -33,7 +33,7 @@ namespace BotHATTwaffle2.Handlers
         private async Task GuildAvailableEventHandler(SocketGuild guild)
         {
             await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LOG_COLOR);
-            await _data.DeserializeConfig();
+            await _dataService.DeserializeConfig();
 
             _schedule.AddRequiredJobs();
         }

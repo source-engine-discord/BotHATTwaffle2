@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.Util;
 using Discord.WebSocket;
 
 namespace BotHATTwaffle2.Services.Calendar
@@ -9,7 +10,7 @@ namespace BotHATTwaffle2.Services.Calendar
     public class PlaytestEvent
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly LogHandler _log;
 
         public bool IsCasual;
@@ -17,7 +18,7 @@ namespace BotHATTwaffle2.Services.Calendar
         public PlaytestEvent(DataService data, LogHandler log)
         {
             _log = log;
-            _data = data;
+            _dataService = data;
             Creators = new List<SocketUser>();
             GalleryImages = new List<string>();
             VoidEvent();
@@ -45,8 +46,8 @@ namespace BotHATTwaffle2.Services.Calendar
             if (input.Contains("comp", StringComparison.OrdinalIgnoreCase))
             {
                 IsCasual = false;
-                var i = new Random().Next(_data.RSettings.General.CompPasswords.Length);
-                CompPassword = _data.RSettings.General.CompPasswords[i];
+                var i = new Random().Next(_dataService.RSettings.General.CompPasswords.Length);
+                CompPassword = _dataService.RSettings.General.CompPasswords[i];
 
                 _ = _log.LogMessage($"Competitive password for `{Title}` is: `{CompPassword}`");
             }
@@ -61,8 +62,8 @@ namespace BotHATTwaffle2.Services.Calendar
         /// </summary>
         private void SetCompCasualServer()
         {
-            var destServer = DatabaseHandler.GetTestServer(_data.GetServerCode(ServerLocation));
-            var allServers = DatabaseHandler.GetAllTestServers();
+            var destServer = DatabaseUtil.GetTestServer(GeneralUtil.GetServerCode(ServerLocation));
+            var allServers = DatabaseUtil.GetAllTestServers();
 
             //If for some reason the DB does not contain servers, abort.
             if (destServer == null || allServers == null)
@@ -78,7 +79,7 @@ namespace BotHATTwaffle2.Services.Calendar
                 {
                     CompCasualServer = selectedServer.Address;
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Casual server to mirror competitive is {CompCasualServer}", false, color: LOG_COLOR);
 
                     return;
@@ -101,11 +102,11 @@ namespace BotHATTwaffle2.Services.Calendar
                 {
                     CanUseGallery = true;
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Can use image gallery for test event", false, color: LOG_COLOR);
                 }
 
-                if (_data.RSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LOG_COLOR);
 
                 SetCompCasualServer();
@@ -115,7 +116,7 @@ namespace BotHATTwaffle2.Services.Calendar
                 return true;
             }
 
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Test even is not valid!\n{ToString()}", false, color: LOG_COLOR);
 
             IsValid = false;
@@ -129,7 +130,7 @@ namespace BotHATTwaffle2.Services.Calendar
         /// </summary>
         public void VoidEvent()
         {
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Voiding test event", false, color: LOG_COLOR);
 
             IsValid = false;

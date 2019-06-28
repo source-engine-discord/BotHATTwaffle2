@@ -8,6 +8,7 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.Steam;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -63,7 +64,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Check if the user already has a reservation
-            var hasServer = DatabaseHandler.GetTestServerFromReservationUserId(Context.User.Id);
+            var hasServer = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
             if (hasServer != null)
             {
                 var hasServerEmbed = new EmbedBuilder()
@@ -77,10 +78,10 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            string formattedServer = _dataService.GetServerCode(serverCode);
+            string formattedServer = GeneralUtil.GetServerCode(serverCode);
 
             //Attempt add, see if successful
-            var success = DatabaseHandler.AddServerReservation(new ServerReservation
+            var success = DatabaseUtil.AddServerReservation(new ServerReservation
             {
                 UserId = Context.User.Id,
                 ServerId = formattedServer,
@@ -108,7 +109,7 @@ namespace BotHATTwaffle2.Commands
             embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
                 s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
 
-            var server = DatabaseHandler.GetTestServerFromReservationUserId(Context.User.Id);
+            var server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
 
             var rconCommand = $"sv_password {_dataService.RSettings.General.CasualPassword}";
 
@@ -146,7 +147,7 @@ namespace BotHATTwaffle2.Commands
         public async Task PublicAnnounceAsync()
         {
             //Check if the user already has a reservation
-            var reservation = DatabaseHandler.GetServerReservation(Context.User.Id);
+            var reservation = DatabaseUtil.GetServerReservation(Context.User.Id);
             if (reservation == null)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
@@ -158,14 +159,14 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            var server = DatabaseHandler.GetTestServer(reservation.ServerId);
+            var server = DatabaseUtil.GetTestServer(reservation.ServerId);
 
             string mention = null;
             if (!reservation.Announced)
             {
                 await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = true; });
                 mention = _dataService.CommunityTesterRole.Mention;
-                DatabaseHandler.UpdateAnnouncedServerReservation(Context.User.Id);
+                DatabaseUtil.UpdateAnnouncedServerReservation(Context.User.Id);
             }
 
             var reply = await _dataService.RconCommand(server.Address, "host_map");
@@ -257,7 +258,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Check if the user already has a reservation
-            var server = DatabaseHandler.GetTestServerFromReservationUserId(Context.User.Id);
+            var server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
             if (server == null)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
@@ -318,7 +319,7 @@ namespace BotHATTwaffle2.Commands
                     _dataService.Guild.IconUrl)
                 .WithColor(new Color(55, 165, 55));
 
-            foreach (var serverReservation in DatabaseHandler.GetAllServerReservation())
+            foreach (var serverReservation in DatabaseUtil.GetAllServerReservation())
             {
                 var user = "" + serverReservation.UserId;
 
@@ -332,7 +333,7 @@ namespace BotHATTwaffle2.Commands
                 }
 
                 var timeLeft = serverReservation.StartTime.AddHours(2).Subtract(DateTime.Now);
-                embed.AddField(DatabaseHandler.GetTestServer(serverReservation.ServerId).Address,
+                embed.AddField(DatabaseUtil.GetTestServer(serverReservation.ServerId).Address,
                     $"User: `{user}`\nTime Left: `{timeLeft:h\'H \'m\'M \'s\'S'}`");
             }
 
@@ -353,7 +354,7 @@ namespace BotHATTwaffle2.Commands
         public async Task ReleaseServerReservationAsync()
         {
             //Check if the user already has a reservation
-            var hasServer = DatabaseHandler.GetTestServerFromReservationUserId(Context.User.Id);
+            var hasServer = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
             if (hasServer == null)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
@@ -374,7 +375,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Displays all playtest servers.")]
         public async Task ServersAsync()
         {
-            var foundServers = DatabaseHandler.GetAllTestServers();
+            var foundServers = DatabaseUtil.GetAllTestServers();
             var embed = new EmbedBuilder()
                 .WithAuthor("Source Engine Discord CS:GO Test Servers")
                 .WithFooter($"Total of {foundServers.Count()} servers.")

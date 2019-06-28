@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.src.Models;
+using BotHATTwaffle2.Util;
 using Discord.WebSocket;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Calendar.v3;
@@ -148,10 +149,10 @@ namespace BotHATTwaffle2.Services.Calendar
             _testEvent.Creators = _dataService.GetSocketUser(description.ElementAtOrDefault(0), ',');
 
             //Imgur Album
-            _testEvent.ImageGallery = _dataService.ValidateUri(description.ElementAtOrDefault(1));
+            _testEvent.ImageGallery = GeneralUtil.ValidateUri(description.ElementAtOrDefault(1));
 
             //Workshop URL
-            _testEvent.WorkshopLink = _dataService.ValidateUri(description.ElementAtOrDefault(2));
+            _testEvent.WorkshopLink = GeneralUtil.ValidateUri(description.ElementAtOrDefault(2));
 
             //Game mode
             _testEvent.SetGameMode(description.ElementAtOrDefault(3));
@@ -163,7 +164,7 @@ namespace BotHATTwaffle2.Services.Calendar
             _testEvent.Description = description.ElementAtOrDefault(5);
 
             //Gallery Images
-            _testEvent.GalleryImages = _dataService.GetImgurAlbum(_testEvent.ImageGallery.ToString());
+            _testEvent.GalleryImages = GeneralUtil.GetImgurAlbum(_testEvent.ImageGallery.ToString());
 
             //Test the even to see if the information is valid.
             if (!_testEvent.TestValid())

@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.ConstrainedExecution;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
-using Discord.Commands;
+using BotHATTwaffle2.Util;
 using Discord.WebSocket;
-using FluentScheduler;
-using HtmlAgilityPack;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Newtonsoft.Json;
@@ -69,18 +67,18 @@ namespace BotHATTwaffle2.Services
             PlayerCount = "0";
 
             try
-            { 
+            {
                 AlertUser = _client.GetUser(RSettings.ProgramSettings.AlertUser);
             }
             catch
             {
                 Console.WriteLine($"Unable to find a user with ID {RSettings.ProgramSettings.AlertUser}.\n" +
-                                  $"I need this user to function properly. Please set the connect user in settings.json " +
-                                  $"and restart.");
+                                  "I need this user to function properly. Please set the connect user in settings.json " +
+                                  "and restart.");
                 Console.ReadLine();
                 Environment.Exit(0);
             }
-            
+
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("SETTINGS HAVE BEEN LOADED");
             Console.ForegroundColor = ConsoleColor.Red;
@@ -185,7 +183,7 @@ namespace BotHATTwaffle2.Services
 
             async Task<SocketTextChannel> ParseChannel(string key)
             {
-                var channel = await Commands.Readers.ChannelTypeReader<SocketTextChannel>.GetBestResultAsync(Guild, key);
+                var channel = await ChannelTypeReader<SocketTextChannel>.GetBestResultAsync(Guild, key);
 
                 if (channel == null)
                     throw new InvalidOperationException($"The value of key '{key}' could not be parsed as a channel.");
@@ -195,7 +193,8 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        ///     Retrieves role socket entities from the IDs in the <see>
+        ///     Retrieves role socket entities from the IDs in the
+        ///     <see>
         ///         <cref>Role</cref>
         ///     </see>
         ///     enum.
@@ -298,10 +297,7 @@ namespace BotHATTwaffle2.Services
                         user = _client.GetUser(id);
                 }
 
-                if (user == null)
-                {
-                    _ = _log.LogMessage($"Error Setting SocketUser for string `{input}`");
-                }
+                if (user == null) _ = _log.LogMessage($"Error Setting SocketUser for string `{input}`");
             }
             catch (Exception e)
             {
@@ -321,59 +317,10 @@ namespace BotHATTwaffle2.Services
             return users;
         }
 
-        /// <summary>
-        ///     Validates a URI as good
-        /// </summary>
-        /// <param name="input">Input string</param>
-        /// <returns>Returns URI object, or null.</returns>
-        public Uri ValidateUri(string input)
-        {
-            try
-            {
-                if (Uri.IsWellFormedUriString(input, UriKind.Absolute))
-                    return new Uri(input, UriKind.Absolute);
-
-                throw new UriFormatException($"Unable to create URI for input {input}");
-            }
-            catch (UriFormatException e)
-            {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: LOG_COLOR);
-            }
-
-            return null;
-        }
+        
 
         /// <summary>
-        ///     Provides a list or URLs for each image in an imgur album, or null if not possible
-        /// </summary>
-        /// <param name="albumUrl">URL of imgur album</param>
-        /// <returns>List or URLs, or null</returns>
-        public List<string> GetImgurAlbum(string albumUrl)
-        {
-            try
-            {
-                var albumId = albumUrl.Replace(@"/gallery/", @"/a/").Substring(albumUrl.IndexOf(@"/a/", StringComparison.Ordinal) + 3);
-                var client = new ImgurClient(RSettings.ProgramSettings.ImgurApi);
-                var endpoint = new AlbumEndpoint(client);
-
-                var images = endpoint.GetAlbumAsync(albumId).Result.Images.Select(i => i.Link).ToList();
-
-                _ = _log.LogMessage("Getting Imgur Info from Imgur API" +
-                                    $"\nAlbum URL: {albumUrl}" +
-                                    $"\nAlbum ID: {albumId}" +
-                                    $"\nClient Credits Remaining: {client.RateLimit.ClientRemaining} of {client.RateLimit.ClientLimit}" +
-                                    $"\nImages Found:\n{string.Join("\n", images)}", false, color: LOG_COLOR);
-
-                return images;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Sends a RCON command to a playtest server.
+        ///     Sends a RCON command to a playtest server.
         /// </summary>
         /// <param name="serverId">ID of server to send command to</param>
         /// <param name="command">RCON Command to send</param>
@@ -381,8 +328,8 @@ namespace BotHATTwaffle2.Services
         public async Task<string> RconCommand(string serverId, string command)
         {
             string reply = null;
-            
-            var server = DatabaseHandler.GetTestServer(serverId);
+
+            var server = DatabaseUtil.GetTestServer(serverId);
 
             if (server == null)
                 return null;
@@ -393,14 +340,15 @@ namespace BotHATTwaffle2.Services
                 iPHostEntry = Dns.GetHostEntry(server.Address);
 
                 if (RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Server Address: {iPHostEntry.AddressList.FirstOrDefault()}", false, color: LOG_COLOR);
+                    _ = _log.LogMessage($"Server Address: {iPHostEntry.AddressList.FirstOrDefault()}", false,
+                        color: LOG_COLOR);
             }
             catch
             {
                 //No address
             }
 
-            int retryCount = 0;
+            var retryCount = 0;
             var client = new RemoteConClient();
 
             client.Connect(iPHostEntry.AddressList.FirstOrDefault().ToString(), 27015);
@@ -411,9 +359,10 @@ namespace BotHATTwaffle2.Services
                 await Task.Delay(50);
                 client.Authenticate(server.RconPassword);
                 retryCount++;
-                
+
                 if (RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.", false, color: LOG_COLOR);
+                    _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.",
+                        false, color: LOG_COLOR);
             }
 
             //Are we connected and authenticated?
@@ -424,7 +373,7 @@ namespace BotHATTwaffle2.Services
                 //As a result we will wait for a proper reply below.
                 client.SendCommand(command, result => { reply = result; });
 
-                await _log.LogMessage($"Sending RCON command:\n`{command}`\nTo server: `{server.Address}`", channel: true,
+                await _log.LogMessage($"Sending RCON command:\n`{command}`\nTo server: `{server.Address}`", true,
                     color: LOG_COLOR);
 
                 retryCount = 0;
@@ -443,9 +392,11 @@ namespace BotHATTwaffle2.Services
                 client.Disconnect();
             }
             else
+            {
                 reply = $"Unable to connect or authenticate to RCON server with the ID of {serverId}.";
+            }
 
-            string finalReply = FormatRconServerReply(reply);
+            var finalReply = FormatRconServerReply(reply);
 
             if (string.IsNullOrWhiteSpace(finalReply))
                 return $"{command} was sent, but provided no reply.";
@@ -458,19 +409,24 @@ namespace BotHATTwaffle2.Services
             if (input == null)
                 return "No response from server, but the command may still have been sent.";
 
-            string[] replyArray = input.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var replyArray = input.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
             input = string.Join("\n", replyArray.Where(x => !x.Trim().StartsWith("L ")));
 
             return input;
         }
 
+        /// <summary>
+        /// Gets status from server, then sets a parameter containing the player count of the server.
+        /// </summary>
+        /// <param name="serverId">SeverId to get status from</param>
+        /// <returns></returns>
         public async Task GetPlayCountFromServer(string serverId)
         {
             var returned = await RconCommand(serverId, "status");
-            string[] replyArray = returned.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var replyArray = returned.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
 
             //Only get the line with player count
-            IEnumerable<string> results = replyArray.Where(l => l.StartsWith("players"));
+            var results = replyArray.Where(l => l.StartsWith("players"));
 
             //Remove extra information from string
             var formatted = results.FirstOrDefault()?.Substring(10);
@@ -478,29 +434,15 @@ namespace BotHATTwaffle2.Services
             PlayerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
         }
 
-        public string GetServerCode(string fullServerAddress)
-        {
-            if (fullServerAddress.Contains('.'))
-                return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
-
-            return fullServerAddress;
-        }
-
         /// <summary>
-        /// Gets the workshop ID from a FQDN workshop link
+        /// Takes a user ID and attempts to unmute them
         /// </summary>
-        /// <param name="workshopUrl">FQDN of workshop link</param>
-        /// <returns>Workshop ID</returns>
-        public string GetWorkshopIdFromFqdn(string workshopUrl)
-        {
-            return Regex.Match(workshopUrl, @"(\d+)").Value;
-        }
-
+        /// <param name="userId">UserID to unmute</param>
+        /// <returns>True if unmuted, false otherwise</returns>
         public async Task<bool> UnmuteUser(ulong userId)
         {
-            var dbResult = DatabaseHandler.UnmuteUser(userId);
+            var dbResult = DatabaseUtil.UnmuteUser(userId);
             if (dbResult)
-            {
                 try
                 {
                     var guildUser = Guild.GetUser(userId);
@@ -510,10 +452,11 @@ namespace BotHATTwaffle2.Services
                 }
                 catch (Exception e)
                 {
-                    await _log.LogMessage($"Failed to unmute ID `{userId}`, they likely left the server.\n```{e.Message}```");
+                    await _log.LogMessage(
+                        $"Failed to unmute ID `{userId}`, they likely left the server.\n```{e.Message}```");
                     return false;
                 }
-            }
+
             await _log.LogMessage($"Failed to unmute ID `{userId}` because no mute was found in the database.");
             return false;
         }
