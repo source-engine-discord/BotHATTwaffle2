@@ -16,10 +16,10 @@ namespace BotHATTwaffle2.Services.Sheets
     public class Sheets
     {
         private readonly SheetsService _sheets;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         public Sheets(DataService data)
         {
-            _data = data;
+            _dataService = data;
             Console.Write("Getting or checking Sheets OAuth Credentials... ");
             _sheets = new SheetsService(new BaseClientService.Initializer()
             {
@@ -51,7 +51,7 @@ namespace BotHATTwaffle2.Services.Sheets
             var list = new List<PlaytestRequest>();
 
             // Define request parameters.
-            String spreadsheetId = _data.RSettings.ProgramSettings.SheetID;
+            String spreadsheetId = _dataService.RSettings.ProgramSettings.SheetID;
 
             //Grab 50 rows, basically all of them.
             String range = "Playtesting Scheduling Queue";
@@ -135,7 +135,7 @@ namespace BotHATTwaffle2.Services.Sheets
                 var deleteRequest = new BatchUpdateSpreadsheetRequest {Requests = new List<Request>(new[]{ request })};
 
                 //Create the batch.
-                var delete = _sheets.Spreadsheets.BatchUpdate(deleteRequest, _data.RSettings.ProgramSettings.SheetID);
+                var delete = _sheets.Spreadsheets.BatchUpdate(deleteRequest, _dataService.RSettings.ProgramSettings.SheetID);
 
                 //Execute
                 var response = await delete.ExecuteAsync();

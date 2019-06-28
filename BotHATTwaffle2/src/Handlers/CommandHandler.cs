@@ -16,7 +16,7 @@ namespace BotHATTwaffle2.Handlers
     {
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
         private readonly Workshop _workshop = new Workshop();
@@ -28,7 +28,7 @@ namespace BotHATTwaffle2.Handlers
             _commands = commands;
             _client = client;
             _service = service;
-            _data = data;
+            _dataService = data;
             _log = log;
         }
 
@@ -62,7 +62,7 @@ namespace BotHATTwaffle2.Handlers
             var argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix(_data.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
+            if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
                 {
@@ -100,11 +100,11 @@ namespace BotHATTwaffle2.Handlers
                     // be empty if somehow no match is found.
                     var commandName =
                         Regex.Match(context.Message.Content,
-                                _data.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)", RegexOptions.IgnoreCase)
+                                _dataService.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)", RegexOptions.IgnoreCase)
                             .Groups[1].Value;
 
                     await context.Channel.SendMessageAsync(
-                        $"You provided too {determiner} parameters! Please consult `{_data.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
+                        $"You provided too {determiner} parameters! Please consult `{_dataService.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
 
                     break;
                 case CommandError.UnmetPrecondition:
@@ -114,10 +114,10 @@ namespace BotHATTwaffle2.Handlers
                     switch (result.ErrorReason)
                     {
                         case "User requires channel permission UseExternalEmojis.":
-                            reason = $"This command requires you to have the `{_data.ActiveRole.Name}` role.";
+                            reason = $"This command requires you to have the `{_dataService.ActiveRole.Name}` role.";
                             break;
                         case "User requires guild permission KickMembers.":
-                            reason = $"This command requires you to have the `{_data.ModeratorRole.Name}` role.";
+                            reason = $"This command requires you to have the `{_dataService.ModeratorRole.Name}` role.";
                             break;
                         case "User requires guild permission Administrator.":
                             reason = $"This command requires you be a server Administrator.";
@@ -132,7 +132,7 @@ namespace BotHATTwaffle2.Handlers
                 case CommandError.Exception:
                     alert = true;
                     await context.Channel.SendMessageAsync(
-                        $"Something bad happened, I told {_data.AlertUser.Username}.");
+                        $"Something bad happened, I told {_dataService.AlertUser.Username}.");
 
                     var e = ((ExecuteResult) result).Exception;
                     logMessage +=
@@ -140,7 +140,7 @@ namespace BotHATTwaffle2.Handlers
                     break;
                 default:
                     await context.Channel.SendMessageAsync(
-                        $"Something bad happened, I told {_data.AlertUser.Username}.");
+                        $"Something bad happened, I told {_dataService.AlertUser.Username}.");
                     break;
             }
 
@@ -157,7 +157,7 @@ namespace BotHATTwaffle2.Handlers
         internal async void Listen(SocketMessage message)
         {
             //Process webhooks
-            if (message.Channel == _data.WebhookChannel && message.Author.IsWebhook)
+            if (message.Channel == _dataService.WebhookChannel && message.Author.IsWebhook)
             {
                 if (message.Content.StartsWith("PT"))
                     await PlaytestRequest();
@@ -172,34 +172,34 @@ namespace BotHATTwaffle2.Handlers
             if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                await _workshop.SendWorkshopEmbed(message, _data);
+                await _workshop.SendWorkshopEmbed(message, _dataService);
                 return;
             }
 
             // Listen for specific user questions, then answer them if we can
             // Listen for carve messages
-            if (_data.RSettings.AutoReplies.Carve.Any(s => message.Content.ToLower().Contains(s)))
+            if (_dataService.RSettings.AutoReplies.Carve.Any(s => message.Content.ToLower().Contains(s)))
             {
                 await Carve();
                 return;
             }
 
             // Listen for packing questions
-            if (_data.RSettings.AutoReplies.Packing.Any(s => message.Content.ToLower().Contains(s)))
+            if (_dataService.RSettings.AutoReplies.Packing.Any(s => message.Content.ToLower().Contains(s)))
             {
                 await Packing();
                 return;
             }
 
             // Tell users that pakrat is bad
-            if (_data.RSettings.AutoReplies.Pakrat.Any(s => message.Content.ToLower().Contains(s)))
+            if (_dataService.RSettings.AutoReplies.Pakrat.Any(s => message.Content.ToLower().Contains(s)))
             {
                 await Pakrat();
                 return;
             }
 
             // Recommend WallWorm over propper
-            if (_data.RSettings.AutoReplies.Propper.Any(s => message.Content.ToLower().Contains(s)))
+            if (_dataService.RSettings.AutoReplies.Propper.Any(s => message.Content.ToLower().Contains(s)))
             {
                 await Propper();
                 return;
@@ -213,11 +213,11 @@ namespace BotHATTwaffle2.Handlers
                 var input = message.Content.Split('|').Select(s => s.Trim()).ToArray();
 
                 //Get the creator
-                var creator = _data.GetSocketUser(input[1]);
+                var creator = _dataService.GetSocketUser(input[1]);
                 string creatorMention = creator != null ? creator.Mention : input[1];
 
-                await _data.TestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
-                    (await _workshop.HandleWorkshopEmbeds(message, _data, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
+                await _dataService.TestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
+                    (await _workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
                     .Build());
             }
 

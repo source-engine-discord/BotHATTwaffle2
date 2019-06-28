@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
@@ -13,7 +14,7 @@ namespace BotHATTwaffle2.Handlers
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkMagenta;
         private readonly DiscordSocketClient _client;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
         private readonly UserHandler _userHandler;
@@ -27,7 +28,7 @@ namespace BotHATTwaffle2.Handlers
             Console.WriteLine("Setting up ScheduleHandler...");
             _playtestService = playtestService;
             _log = log;
-            _data = data;
+            _dataService = data;
             _client = client;
             _userHandler = userHandler;
             _random = random;
@@ -78,12 +79,12 @@ namespace BotHATTwaffle2.Handlers
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
-            foreach (var user in DatabaseHandler.GetAllUserJoins())
+            foreach (var user in DatabaseUtil.GetAllUserJoins())
             {
                 try
                 {
                     //Test getting user in a try catch, if we can't they left the server.
-                    var validUser = _data.Guild.GetUser(user.UserId);
+                    var validUser = _dataService.Guild.GetUser(user.UserId);
 
                     //Send welcome message right away, or wait?
                     if (DateTime.Now > user.JoinTime.AddMinutes(10))
@@ -102,41 +103,41 @@ namespace BotHATTwaffle2.Handlers
                 catch
                 {
                     //If we cannot get a user, that means that user left the server. So remove them.
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Cannot re-add user join for ID {user.UserId}" +
                                             $"because they left the server.", false, color: LOG_COLOR);
 
-                    DatabaseHandler.RemoveJoinedUser(user.UserId);
+                    DatabaseUtil.RemoveJoinedUser(user.UserId);
                 }
             }
 
             //Re-add user mutes
-            foreach (var user in DatabaseHandler.GetAllActiveUserMutes())
+            foreach (var user in DatabaseUtil.GetAllActiveUserMutes())
             {
 
                 //Send welcome message right away, or wait?
                 if (DateTime.Now > user.MuteTime.AddMinutes(user.Duration))
                 {
                     //Timer expired, schedule now
-                    JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
+                    JobManager.AddJob(async () => await _dataService.UnmuteUser(user.UserId), s => s
                         .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceIn(20).Seconds());
                 }
                 else
                 {
                     //Not passed, scheduled ahead
-                    JobManager.AddJob(async () => await _data.UnmuteUser(user.UserId), s => s
+                    JobManager.AddJob(async () => await _dataService.UnmuteUser(user.UserId), s => s
                         .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceAt(user.MuteTime.AddMinutes(user.Duration)));
                 }
             }
 
             //Re-add server reservations.
-            foreach (var reservation in DatabaseHandler.GetAllServerReservation())
+            foreach (var reservation in DatabaseUtil.GetAllServerReservation())
             {
                 string mention = null;
 
                 try
                 {
-                    mention = _data.Guild.GetUser(reservation.UserId).Mention;
+                    mention = _dataService.Guild.GetUser(reservation.UserId).Mention;
                 }
                 catch
                 {
@@ -147,16 +148,16 @@ namespace BotHATTwaffle2.Handlers
                 if (DateTime.Now > reservation.StartTime.AddHours(2))
                 {
                     //Timer expired, schedule now
-                    JobManager.AddJob(async () => await _data.TestingChannel.SendMessageAsync($"{mention}",
+                    JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{mention}",
                             embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
-                        s => s.WithName($"[TSRelease_{_data.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceIn(15).Seconds());
+                        s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceIn(15).Seconds());
                 }
                 else
                 {
                     //Not passed, scheduled ahead
-                    JobManager.AddJob(async () => await _data.TestingChannel.SendMessageAsync($"{mention}",
+                    JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{mention}",
                             embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
-                        s => s.WithName($"[TSRelease_{_data.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceAt(reservation.StartTime.AddHours(2)));
+                        s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceAt(reservation.StartTime.AddHours(2)));
                 }
             }
 
@@ -170,19 +171,19 @@ namespace BotHATTwaffle2.Handlers
 
         private void FluentJobStart(JobStartInfo info)
         {
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB STARTED:{info.Name}", false, color: LOG_COLOR);
         }
 
         private void FluentJobEnd(JobEndInfo info)
         {
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB ENDED:{info.Name}", false, color: LOG_COLOR);
         }
 
         private void FluentJobException(JobExceptionInfo info)
         {
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB EXCEPTION:\n{info.Exception}", false, color: LOG_COLOR);
         }
 
@@ -192,7 +193,7 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         private async Task UpdatePlaying()
         {
-            string playing = _data.RSettings.Lists.Playing[_random.Next(_data.RSettings.Lists.Playing.Count)];
+            string playing = _dataService.RSettings.Lists.Playing[_random.Next(_dataService.RSettings.Lists.Playing.Count)];
 
             if (playing == "[TestCount]")
                 playing = $"{_playtestCount} Playtests Run";
@@ -207,7 +208,7 @@ namespace BotHATTwaffle2.Handlers
         {
             try
             {
-                _playtestCount = Directory.GetFiles(_data.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem", SearchOption.AllDirectories).Length;
+                _playtestCount = Directory.GetFiles(_dataService.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem", SearchOption.AllDirectories).Length;
             }
             catch (Exception e)
             {
@@ -215,7 +216,7 @@ namespace BotHATTwaffle2.Handlers
                 throw;
             }
 
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"{_playtestService} playtest files found!", false, color: LOG_COLOR);
         }
     }

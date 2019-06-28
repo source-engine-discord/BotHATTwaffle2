@@ -12,14 +12,14 @@ namespace BotHATTwaffle2.Services.Playtesting
     {
         private readonly SocketCommandContext _context;
         private readonly InteractiveService _interactive;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly LogHandler _log;
 
         public KickUserRcon(SocketCommandContext context, InteractiveService interactive, DataService data, LogHandler log)
         {
             _context = context;
             _interactive = interactive;
-            _data = data;
+            _dataService = data;
             _log = log;
         }
 
@@ -34,7 +34,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             string description = null;
 
             //Get the raw status data
-            string input = await _data.RconCommand(serverAddress, "status");
+            string input = await _dataService.RconCommand(serverAddress, "status");
 
             //Format the raw data into an array and do some cleanup
             var players = input.Replace('\r', '\0').Split('\n').Where(x => x.StartsWith("#")).Select(y => y.Trim('#').Trim()).ToList();
@@ -64,7 +64,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             var choice = await _interactive.NextMessageAsync(_context);
             if (choice != null && !choice.Content.Equals("0"))
             {
-                string kickMessage = await _data.RconCommand(serverAddress, $"kickid {choice.Content}");
+                string kickMessage = await _dataService.RconCommand(serverAddress, $"kickid {choice.Content}");
                 await _context.Channel.SendMessageAsync($"```{kickMessage}```");
                 await choice.DeleteAsync();
                 await _log.LogMessage($"`{_context.User.Username}` kicked a user from a playtest.```{kickMessage}```");

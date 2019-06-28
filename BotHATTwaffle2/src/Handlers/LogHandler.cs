@@ -9,13 +9,13 @@ namespace BotHATTwaffle2.Handlers
     public class LogHandler
     {
         private readonly DiscordSocketClient _client;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
 
         public LogHandler(DataService data, DiscordSocketClient client)
         {
             Console.WriteLine("Setting up LogHandler...");
 
-            _data = data;
+            _dataService = data;
             _client = client;
 
             _client.Log += LogEventHandler;
@@ -31,13 +31,13 @@ namespace BotHATTwaffle2.Handlers
             ConsoleColor color = ConsoleColor.White)
         {
             if (alert)
-                msg = _data.AlertUser.Mention + "\n" + msg;
+                msg = _dataService.AlertUser.Mention + "\n" + msg;
 
             if (msg.Length > 1950)
                 msg = msg.Substring(0, 1950);
 
             if (channel)
-                await _data.LogChannel.SendMessageAsync(msg);
+                await _dataService.LogChannel.SendMessageAsync(msg);
 
 
             if (console)

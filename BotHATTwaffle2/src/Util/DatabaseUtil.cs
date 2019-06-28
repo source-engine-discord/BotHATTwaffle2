@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Security;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using Discord;
 using LiteDB;
 
-namespace BotHATTwaffle2.Handlers
+namespace BotHATTwaffle2.Util
 {
-    internal class DatabaseHandler
+    static class DatabaseUtil
     {
         private const string DBPATH = @"MasterDB.db";
         private const string COLLECTION_ANNOUNCEMENT = "announcement";
@@ -20,11 +19,11 @@ namespace BotHATTwaffle2.Handlers
         private const string COLLECTION_RESERVATIONS = "serverReservations";
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private static LogHandler _log;
-        private static DataService _data;
+        private static DataService _dataService;
 
         public static void SetHandlers(LogHandler log, DataService data)
         {
-            _data = data;
+            _dataService = data;
             _log = log;
         }
 
@@ -33,6 +32,7 @@ namespace BotHATTwaffle2.Handlers
         ///     Creates if it does not exist.
         /// </summary>
         /// <param name="message">Message to store</param>
+        /// <param name="eventEditTime">The last time the event was edited</param>
         /// <returns>True if successful, false otherwise</returns>
         public static bool StoreAnnouncement(IUserMessage message, DateTime eventEditTime)
         {
@@ -48,13 +48,13 @@ namespace BotHATTwaffle2.Handlers
                     //If not null, we need to remove the old record first.
                     if (foundMessage != null)
                     {
-                        if (_data.RSettings.ProgramSettings.Debug)
+                        if (_dataService.RSettings.ProgramSettings.Debug)
                             _ = _log.LogMessage("Old announcement record found, deleting", false, color: LOG_COLOR);
 
                         announcement.Delete(1);
                     }
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
                                             $"\n{message.Id} at {eventEditTime}", false, color: LOG_COLOR);
 
@@ -120,7 +120,7 @@ namespace BotHATTwaffle2.Handlers
                     //If not null, we need to remove the old record first.
                     if (commandInfo != null)
                     {
-                        if (_data.RSettings.ProgramSettings.Debug)
+                        if (_dataService.RSettings.ProgramSettings.Debug)
                             _ = _log.LogMessage("Old playtest command info record found, deleting", false, color: LOG_COLOR);
 
                         collection.Delete(1);
@@ -142,7 +142,7 @@ namespace BotHATTwaffle2.Handlers
 
         public static PlaytestCommandInfo GetPlaytestCommandInfo()
         {
-            if (_data.RSettings.ProgramSettings.Debug)
+            if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Getting old playtest command information...", false, color: LOG_COLOR);
 
             PlaytestCommandInfo commandInfo = null;
@@ -175,7 +175,7 @@ namespace BotHATTwaffle2.Handlers
         public static Server GetTestServer(string serverId)
         {
             //If the server ID contains a period, it can be assumed that it is a FQDN, and we should trim it down.
-            serverId = _data.GetServerCode(serverId);
+            serverId = GeneralUtil.GetServerCode(serverId);
 
             Server foundServer = null;
             try
@@ -188,7 +188,7 @@ namespace BotHATTwaffle2.Handlers
                     foundServer = servers.FindOne(Query.EQ("ServerId", serverId));
                 }
 
-                if (_data.RSettings.ProgramSettings.Debug && foundServer != null)
+                if (_dataService.RSettings.ProgramSettings.Debug && foundServer != null)
                     _ = _log.LogMessage(foundServer.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)
@@ -213,7 +213,7 @@ namespace BotHATTwaffle2.Handlers
 
             if (foundServer == null)
             {
-                if (_data.RSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No server found, so cannot remove anything", false, color: LOG_COLOR);
                 return false;
             }
@@ -228,7 +228,7 @@ namespace BotHATTwaffle2.Handlers
                     servers.Delete(foundServer.Id);
                 }
 
-                if (_data.RSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage(foundServer.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)
@@ -279,7 +279,7 @@ namespace BotHATTwaffle2.Handlers
         {
             if (GetTestServer(server.ServerId) != null)
             {
-                if (_data.RSettings.ProgramSettings.Debug)
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("Unable to add test server since one was found.", false, color: LOG_COLOR);
                 //We found an entry under the same name as this server.
                 return false;
@@ -293,7 +293,7 @@ namespace BotHATTwaffle2.Handlers
                     var servers = db.GetCollection<Server>(COLLECTION_SERVERS);
                     servers.EnsureIndex(x => x.ServerId);
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Inserting new server into DB", false, color: LOG_COLOR);
                 }
             }
@@ -321,7 +321,7 @@ namespace BotHATTwaffle2.Handlers
 
                     userJoins.EnsureIndex(x => x.UserId);
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Inserting new user join into DB", false, color: LOG_COLOR);
 
                     userJoins.Insert(new UserJoinMessage
@@ -352,7 +352,7 @@ namespace BotHATTwaffle2.Handlers
                     var userJoins = db.GetCollection<UserJoinMessage>(COLLECTION_USER_JOIN);
                     userJoins.EnsureIndex(x => x.UserId);
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Deleting new user join from DB", false, color: LOG_COLOR);
 
                     //Have to cast the user ID to a long
@@ -413,7 +413,7 @@ namespace BotHATTwaffle2.Handlers
                     foundMute = collection.FindOne(Query.And(Query.EQ("UserId", (long)userId), Query.EQ("Expired",false)));
                 }
 
-                if (_data.RSettings.ProgramSettings.Debug && foundMute != null)
+                if (_dataService.RSettings.ProgramSettings.Debug && foundMute != null)
                     _ = _log.LogMessage(foundMute.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)
@@ -446,7 +446,7 @@ namespace BotHATTwaffle2.Handlers
                     
                     collection.EnsureIndex(x => x.UserId);
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Inserting new user mute into DB", false, color: LOG_COLOR);
 
                     collection.Insert(userMute);
@@ -481,7 +481,7 @@ namespace BotHATTwaffle2.Handlers
                 {
                     var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Unmuting user from DB", false, color: LOG_COLOR);
 
                     user.Expired = true;
@@ -581,7 +581,7 @@ namespace BotHATTwaffle2.Handlers
 
                     collection.EnsureIndex(x => x.UserId);
 
-                    if (_data.RSettings.ProgramSettings.Debug)
+                    if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Inserting new server reservation into DB", false, color: LOG_COLOR);
 
                     collection.Insert(serverReservation);
@@ -613,10 +613,10 @@ namespace BotHATTwaffle2.Handlers
                     //Grab our collection
                     var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
 
-                    serverReservation = collection.FindOne(x => x.ServerId == _data.GetServerCode(server));
+                    serverReservation = collection.FindOne(x => x.ServerId == GeneralUtil.GetServerCode(server));
                 }
 
-                if (_data.RSettings.ProgramSettings.Debug && serverReservation != null)
+                if (_dataService.RSettings.ProgramSettings.Debug && serverReservation != null)
                     _ = _log.LogMessage(serverReservation.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)
@@ -642,7 +642,7 @@ namespace BotHATTwaffle2.Handlers
                     serverReservation = collection.FindOne(Query.EQ("UserId", (long)userId));
                 }
 
-                if (_data.RSettings.ProgramSettings.Debug && serverReservation != null)
+                if (_dataService.RSettings.ProgramSettings.Debug && serverReservation != null)
                     _ = _log.LogMessage(serverReservation.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)

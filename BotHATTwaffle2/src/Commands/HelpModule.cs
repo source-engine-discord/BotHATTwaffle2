@@ -17,7 +17,7 @@ namespace BotHATTwaffle2.Commands
     {
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly IHelpService _help;
 
         public HelpModule(DiscordSocketClient client, CommandService commands, IHelpService help, DataService data)
@@ -25,7 +25,7 @@ namespace BotHATTwaffle2.Commands
             _client = client;
             _commands = commands;
             _help = help;
-            _data = data;
+            _dataService = data;
         }
 
         [Command("Help")]
@@ -42,8 +42,8 @@ namespace BotHATTwaffle2.Commands
                 Color = new Color(47, 111, 146),
                 Title = "\u2753 Command Help",
                 Description =
-                    $"A command can be invoked by prefixing its name with `{_data.RSettings.ProgramSettings.CommandPrefix}`. To see usage " +
-                    $"details for a command, use `{_data.RSettings.ProgramSettings.CommandPrefix}help [command]`.\n\nThe following is a " +
+                    $"A command can be invoked by prefixing its name with `{_dataService.RSettings.ProgramSettings.CommandPrefix}`. To see usage " +
+                    $"details for a command, use `{_dataService.RSettings.ProgramSettings.CommandPrefix}help [command]`.\n\nThe following is a " +
                     "list of available commands:"
             };
 
@@ -187,7 +187,7 @@ namespace BotHATTwaffle2.Commands
             string thanksTo = null;
 
             bool tick = true;
-            foreach (var users in _data.PatreonsRole.Members)
+            foreach (var users in _dataService.PatreonsRole.Members)
             {
                 if (tick)
                 {

@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using System.Linq;
 using System.Net;
 using BotHATTwaffle2.Models.JSON.Steam;
+using BotHATTwaffle2.Util;
 
 namespace BotHATTwaffle2.Services.Steam
 {
@@ -46,12 +47,12 @@ namespace BotHATTwaffle2.Services.Steam
             return true;
         }
 
-        public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message, DataService _data, string images = null, string testType = null, string inputId = null)
+        public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message, DataService _dataService, string images = null, string testType = null, string inputId = null)
         {
             // Cut down the message to grab just the first URL
             Match regMatch = Regex.Match(message.Content, @"\b((https?|ftp|file)://|(www|ftp)\.)(steamcommunity)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]", RegexOptions.IgnoreCase);
             string workshopLink = regMatch.ToString();
-            string apiKey = _data.RSettings.ProgramSettings.SteamworksAPI;
+            string apiKey = _dataService.RSettings.ProgramSettings.SteamworksAPI;
 
             // Send the POST request for item info
             using (var clientItem = new HttpClient())
@@ -65,7 +66,7 @@ namespace BotHATTwaffle2.Services.Steam
                     kvp2 = new KeyValuePair<string, string>("publishedfileids[0]", inputId);
                 else
                     kvp2 = new KeyValuePair<string, string>("publishedfileids[0]",
-                        _data.GetWorkshopIdFromFqdn(workshopLink));
+                        GeneralUtil.GetWorkshopIdFromFqdn(workshopLink));
                 
                 var contentItem = new FormUrlEncodedContent(new[]
                 {
@@ -149,9 +150,9 @@ namespace BotHATTwaffle2.Services.Steam
             }
         }
 
-        public async Task SendWorkshopEmbed(SocketMessage message, DataService _data)
+        public async Task SendWorkshopEmbed(SocketMessage message, DataService _dataService)
         {
-            var embed = await HandleWorkshopEmbeds(message, _data);
+            var embed = await HandleWorkshopEmbeds(message, _dataService);
 
             if(embed != null)
                 await message.Channel.SendMessageAsync(embed: embed.Build());

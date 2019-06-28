@@ -11,6 +11,7 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.Sheets;
 using BotHATTwaffle2.Services.Steam;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -26,7 +27,7 @@ namespace BotHATTwaffle2.Commands
         private static PlaytestCommandInfo _playtestCommandInfo;
         private readonly GoogleCalendar _calendar;
         private readonly DiscordSocketClient _client;
-        private readonly DataService _data;
+        private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
@@ -40,7 +41,7 @@ namespace BotHATTwaffle2.Commands
         {
             _playtestService = playtestService;
             _calendar = calendar;
-            _data = data;
+            _dataService = data;
             _client = client;
             _log = log;
             _interactive = interactive;
@@ -69,7 +70,7 @@ namespace BotHATTwaffle2.Commands
                     var info = "Creator(s): ";
                     foreach (var creator in v.CreatorsDiscord)
                     {
-                        var user = _data.GetSocketUser(creator);
+                        var user = _dataService.GetSocketUser(creator);
                         if (user != null)
                             info += $"`{user.Username}`, ";
                         else
@@ -120,7 +121,7 @@ namespace BotHATTwaffle2.Commands
                 string creators = null;
                 foreach (var creator in result[id].CreatorsDiscord)
                 {
-                    var user = _data.GetSocketUser(creator);
+                    var user = _dataService.GetSocketUser(creator);
                     if (user != null)
                         creators += $"{user}, ";
                     else
@@ -128,7 +129,7 @@ namespace BotHATTwaffle2.Commands
                 }
 
                 //Get server, and if we can set the full location
-                var server = DatabaseHandler.GetTestServer(result[id].Preferredserver);
+                var server = DatabaseUtil.GetTestServer(result[id].Preferredserver);
                 if (server != null)
                     result[id].Preferredserver = server.Address;
 
@@ -292,12 +293,12 @@ namespace BotHATTwaffle2.Commands
 
                     string mention = null;
                     foreach (var creator in result[id].CreatorsDiscord)
-                        mention += _data.GetSocketUser(creator).Mention + " ";
+                        mention += _dataService.GetSocketUser(creator).Mention + " ";
 
                     var ws = new Workshop();
-                    var wbEmbed = await ws.HandleWorkshopEmbeds(Context.Message, _data, result[id].ImgurAlbum,
-                        result[id].TestType, _data.GetWorkshopIdFromFqdn(result[id].WorkshopURL));
-                    await _data.TestingChannel.SendMessageAsync(
+                    var wbEmbed = await ws.HandleWorkshopEmbeds(Context.Message, _dataService, result[id].ImgurAlbum,
+                        result[id].TestType, GeneralUtil.GetWorkshopIdFromFqdn(result[id].WorkshopURL));
+                    await _dataService.TestingChannel.SendMessageAsync(
                         $"{mention} your playtest has been scheduled for `{result[id].TestDate}` (CT Timezone)",
                         embed: wbEmbed.Build());
                     return;
@@ -337,7 +338,7 @@ namespace BotHATTwaffle2.Commands
             var embed = new EmbedBuilder();
 
             //This is all for a shitpost on mods trying to mute admins
-            if (user.Roles.Contains(_data.AdminRole) || user.IsBot)
+            if (user.Roles.Contains(_dataService.AdminRole) || user.IsBot)
             {
                 user = Context.User as SocketGuildUser;
                 muteLength = new TimeSpan(0, 69, 0);
@@ -350,7 +351,7 @@ namespace BotHATTwaffle2.Commands
                 //Set the reason string
                 reason = modReason;
 
-                added = DatabaseHandler.AddMute(new Mute
+                added = DatabaseUtil.AddMute(new Mute
                 {
                     UserId = Context.User.Id,
                     Username = Context.User.Username,
@@ -367,7 +368,7 @@ namespace BotHATTwaffle2.Commands
             if (reason.StartsWith("e ", StringComparison.OrdinalIgnoreCase))
             {
                 //Get the old mute, and make sure it exists before removing it. Also need some data from it.
-                var oldMute = DatabaseHandler.GetActiveMute(user.Id);
+                var oldMute = DatabaseUtil.GetActiveMute(user.Id);
 
                 if (oldMute != null)
                 {
@@ -376,7 +377,7 @@ namespace BotHATTwaffle2.Commands
                     muteStartTime = oldMute.MuteTime;
 
                     //Unmute inside the DB
-                    var result = DatabaseHandler.UnmuteUser(user.Id);
+                    var result = DatabaseUtil.UnmuteUser(user.Id);
 
                     //Remove old mute from job manager
                     JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
@@ -387,7 +388,7 @@ namespace BotHATTwaffle2.Commands
 
             //If a mod mute didn't bring us here
             if (!added)
-                added = DatabaseHandler.AddMute(new Mute
+                added = DatabaseUtil.AddMute(new Mute
                 {
                     UserId = user.Id,
                     Username = user.Username,
@@ -402,9 +403,9 @@ namespace BotHATTwaffle2.Commands
             {
                 try
                 {
-                    await user.AddRoleAsync(_data.MuteRole);
+                    await user.AddRoleAsync(_dataService.MuteRole);
 
-                    JobManager.AddJob(async () => await _data.UnmuteUser(user.Id), s => s
+                    JobManager.AddJob(async () => await _dataService.UnmuteUser(user.Id), s => s
                         .WithName($"[UnmuteUser_{user.Id}]").ToRunOnceAt(DateTime.Now.Add(muteLength)));
                 }
                 catch
@@ -476,7 +477,7 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task UnmuteAsync([Summary("User to unmute")] SocketGuildUser user)
         {
-            var result = await _data.UnmuteUser(user.Id);
+            var result = await _dataService.UnmuteUser(user.Id);
 
             if (result)
             {
@@ -516,7 +517,7 @@ namespace BotHATTwaffle2.Commands
             {
                 embed.WithAuthor("Active Mutes in Server").WithColor(new Color(165, 55, 55));
 
-                var allMutes = DatabaseHandler.GetAllActiveUserMutes();
+                var allMutes = DatabaseUtil.GetAllActiveUserMutes();
                 foreach (var mute in allMutes)
                     embed.AddField(mute.Username,
                         $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod ID: `{mute.ModeratorId}`");
@@ -529,7 +530,7 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
-                var allMutes = DatabaseHandler.GetAllUserMutes(user.Id);
+                var allMutes = DatabaseUtil.GetAllUserMutes(user.Id);
 
                 embed.WithAuthor($"All Mutes for {user.Username} - {user.Id}").WithColor(new Color(165, 55, 55));
 
@@ -621,7 +622,7 @@ namespace BotHATTwaffle2.Commands
         {
             //Reload the last used playtest if the current event is null
             if (_playtestCommandInfo == null)
-                _playtestCommandInfo = DatabaseHandler.GetPlaytestCommandInfo();
+                _playtestCommandInfo = DatabaseUtil.GetPlaytestCommandInfo();
 
 
             //Make sure we have a valid event, if not, abort.
@@ -633,8 +634,8 @@ namespace BotHATTwaffle2.Commands
 
             //Setup a few variables we'll need later
             var config = _calendar.GetTestEventNoUpdate().IsCasual
-                ? _data.RSettings.General.CasualConfig
-                : _data.RSettings.General.CompConfig;
+                ? _dataService.RSettings.General.CasualConfig
+                : _dataService.RSettings.General.CompConfig;
 
             switch (command.ToLower())
             {
@@ -653,28 +654,28 @@ namespace BotHATTwaffle2.Commands
                                    $"_{_calendar.GetTestEventNoUpdate().Title.Substring(0, _calendar.GetTestEventNoUpdate().Title.IndexOf(' '))}" +
                                    $"_{gameMode}",
                         WorkshopId =
-                            _data.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString()),
+                            GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString()),
                         ServerAddress = _calendar.GetTestEventNoUpdate().ServerLocation,
                         Title = _calendar.GetTestEventNoUpdate().Title,
                         ThumbNailImage = _calendar.GetTestEventNoUpdate().CanUseGallery
                             ? _calendar.GetTestEventNoUpdate().GalleryImages[0]
-                            : _data.RSettings.General.FallbackTestImageUrl,
+                            : _dataService.RSettings.General.FallbackTestImageUrl,
                         ImageAlbum = _calendar.GetTestEventNoUpdate().ImageGallery.ToString(),
                         CreatorMentions = mentions,
                         StartDateTime = _calendar.GetTestEventNoUpdate().StartDateTime.Value
                     };
 
                     //Write to the DB so we can restore this info next boot
-                    DatabaseHandler.StorePlaytestCommandInfo(_playtestCommandInfo);
+                    DatabaseUtil.StorePlaytestCommandInfo(_playtestCommandInfo);
 
                     await ReplyAsync($"Pre-start playtest of **{_playtestCommandInfo.Title}**" +
                                      $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
                                      $"\nWith config of **{config}**" +
                                      $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**");
 
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
                     await Task.Delay(1000);
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
                     break;
 
@@ -685,18 +686,18 @@ namespace BotHATTwaffle2.Commands
                                      $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**" +
                                      $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
 
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
                     await Task.Delay(3000);
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"tv_record {_playtestCommandInfo.DemoName}; say Recording {_playtestCommandInfo.DemoName}");
                     await Task.Delay(1000);
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
                     await Task.Delay(1000);
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
                     await Task.Delay(1000);
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
                     break;
 
@@ -715,28 +716,28 @@ namespace BotHATTwaffle2.Commands
 
                 case "pause":
                 case "p":
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         @"mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!");
                     await ReplyAsync($"```Pausing playtest on {_playtestCommandInfo.ServerAddress}!```");
                     break;
 
                 case "unpause":
                 case "u":
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         @"mp_unpause_match;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!");
                     await ReplyAsync($"```Unpausing playtest on {_playtestCommandInfo.ServerAddress}!```");
                     break;
 
                 case "scramble":
                 case "s":
-                    await _data.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
-                                                                                ";say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
+                                                                                       ";say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
                     await ReplyAsync($"```Scrambling teams on {_playtestCommandInfo.ServerAddress}!```");
                     break;
 
                 case "kick":
                 case "k":
-                    var kick = new KickUserRcon(Context, _interactive, _data, _log);
+                    var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
                     await kick.KickPlaytestUser(_playtestCommandInfo.ServerAddress);
                     break;
 
@@ -758,11 +759,11 @@ namespace BotHATTwaffle2.Commands
         /// <param name="playtestCommandInfo"></param>
         internal async void PlaytestPostTasks(PlaytestCommandInfo playtestCommandInfo)
         {
-            await _data.RconCommand(playtestCommandInfo.ServerAddress,
+            await _dataService.RconCommand(playtestCommandInfo.ServerAddress,
                 $"host_workshop_map {playtestCommandInfo.WorkshopId}");
             await Task.Delay(15000); //Wait for map to change
-            await _data.RconCommand(playtestCommandInfo.ServerAddress,
-                $"sv_cheats 1; bot_stop 1;exec {_data.RSettings.General.PostgameConfig};sv_voiceenable 0;" +
+            await _dataService.RconCommand(playtestCommandInfo.ServerAddress,
+                $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0;" +
                 "say Please join the level testing voice channel for feedback!;" +
                 "say Please join the level testing voice channel for feedback!;" +
                 "say Please join the level testing voice channel for feedback!;" +
@@ -774,13 +775,15 @@ namespace BotHATTwaffle2.Commands
             const string demoUrl = "http://demos.tophattwaffle.com";
 
             var embed = new EmbedBuilder()
-                .WithAuthor($"Download playtest demo for {playtestCommandInfo.Title}", _data.Guild.IconUrl, demoUrl)
+                .WithAuthor($"Download playtest demo for {playtestCommandInfo.Title}", _dataService.Guild.IconUrl,
+                    demoUrl)
                 .WithThumbnailUrl(playtestCommandInfo.ThumbNailImage)
                 .WithColor(new Color(243, 128, 72))
                 .WithDescription(
                     $"[Download Demo Here]({demoUrl}) | [Map Images]({playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
 
-            await _data.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions, embed: embed.Build());
+            await _dataService.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions,
+                embed: embed.Build());
         }
 
         [Command("Active")]
@@ -789,15 +792,15 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task ActiveAsync([Summary("User to give role to.")] SocketGuildUser user)
         {
-            await _log.LogMessage($"{user} has been given {_data.ActiveRole.Mention} by {Context.User}");
+            await _log.LogMessage($"{user} has been given {_dataService.ActiveRole.Mention} by {Context.User}");
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"{user.Username} is now an active member!")
                 .WithDescription(
-                    $"The {_data.ActiveRole.Mention} is given to users who are active and helpful in our community. " +
+                    $"The {_dataService.ActiveRole.Mention} is given to users who are active and helpful in our community. " +
                     "Thanks for contributing!")
                 .WithColor(new Color(241, 196, 15))
                 .Build());
-            await user.AddRoleAsync(_data.ActiveRole);
+            await user.AddRoleAsync(_dataService.ActiveRole);
         }
 
         [Command("CompetitiveTester")]
@@ -807,24 +810,24 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task CompetitiveTesterAsync([Summary("User to give role to")] SocketGuildUser user)
         {
-            if (user.Roles.Contains(_data.CompetitiveTesterRole))
+            if (user.Roles.Contains(_dataService.CompetitiveTesterRole))
             {
                 await Context.Message.DeleteAsync();
-                await user.RemoveRoleAsync(_data.CompetitiveTesterRole);
-                await _log.LogMessage($"{user} has {_data.CompetitiveTesterRole} removed by {Context.User}");
+                await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
+                await _log.LogMessage($"{user} has {_dataService.CompetitiveTesterRole} removed by {Context.User}");
             }
             else
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"{user.Username} is now a Competitive Tester!")
                     .WithDescription(
-                        $"The {_data.CompetitiveTesterRole.Mention} is given to users who contribute positively to the playtesting service. " +
+                        $"The {_dataService.CompetitiveTesterRole.Mention} is given to users who contribute positively to the playtesting service. " +
                         "Such as attending tests, giving valid feedback, and making smart plays.")
                     .WithColor(new Color(52, 152, 219))
                     .Build());
 
-                await user.AddRoleAsync(_data.CompetitiveTesterRole);
-                await _log.LogMessage($"{user} has been given {_data.CompetitiveTesterRole} by {Context.User}");
+                await user.AddRoleAsync(_dataService.CompetitiveTesterRole);
+                await _log.LogMessage($"{user} has been given {_dataService.CompetitiveTesterRole} by {Context.User}");
             }
         }
 
@@ -884,7 +887,7 @@ namespace BotHATTwaffle2.Commands
                 else
                 {
                     await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                        .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
                         .WithDescription(
                             "will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
                         .WithColor(new Color(55, 165, 55)).Build());
@@ -892,7 +895,7 @@ namespace BotHATTwaffle2.Commands
                 }
 
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                    .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
                     .WithDescription($"will be sent to `{targetServer}`")
                     .WithColor(new Color(55, 165, 55)).Build());
                 return;
@@ -901,12 +904,12 @@ namespace BotHATTwaffle2.Commands
             //Set server mode
             if (command.StartsWith("set", StringComparison.OrdinalIgnoreCase))
             {
-                var server = DatabaseHandler.GetTestServer(command.Substring(3).Trim());
+                var server = DatabaseUtil.GetTestServer(command.Substring(3).Trim());
 
                 if (server == null)
                 {
                     await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor("Cannot set RCON server", _data.Guild.IconUrl)
+                        .WithAuthor("Cannot set RCON server", _dataService.Guild.IconUrl)
                         .WithDescription($"No server found with the name {command.Substring(3).Trim()}")
                         .WithColor(new Color(165, 55, 55)).Build());
                     return;
@@ -916,7 +919,7 @@ namespace BotHATTwaffle2.Commands
                 if (ServerDictionary.ContainsKey(Context.User.Id)) ServerDictionary.Remove(Context.User.Id);
                 ServerDictionary.Add(Context.User.Id, command.Substring(3).Trim());
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                    .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
                     .WithDescription($"will be sent to `{ServerDictionary[Context.User.Id]}`")
                     .WithColor(new Color(55, 165, 55)).Build());
                 return;
@@ -927,7 +930,7 @@ namespace BotHATTwaffle2.Commands
             {
                 if (ServerDictionary.ContainsKey(Context.User.Id)) ServerDictionary.Remove(Context.User.Id);
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"RCON commands sent by {Context.User}", _data.Guild.IconUrl)
+                    .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
                     .WithDescription(
                         "will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
                     .WithColor(new Color(55, 165, 55)).Build());
@@ -947,7 +950,7 @@ namespace BotHATTwaffle2.Commands
                 {
                     //No playtest event, we cannot do anything.
                     await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor("No playtest server found.", _data.Guild.IconUrl)
+                        .WithAuthor("No playtest server found.", _dataService.Guild.IconUrl)
                         .WithDescription("Set your target server using `>rcon set [serverId]`.")
                         .WithColor(new Color(55, 165, 55)).Build());
                     return;
@@ -962,14 +965,14 @@ namespace BotHATTwaffle2.Commands
             //Quick kick feature
             if (command.StartsWith("kick", StringComparison.OrdinalIgnoreCase))
             {
-                var kick = new KickUserRcon(Context, _interactive, _data, _log);
+                var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
                 await kick.KickPlaytestUser(targetServer);
                 return;
             }
 
             await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor($"Command sent to {targetServer}", _data.Guild.IconUrl)
-                .WithDescription($"```{await _data.RconCommand(targetServer, command)}```")
+                .WithAuthor($"Command sent to {targetServer}", _dataService.Guild.IconUrl)
+                .WithDescription($"```{await _dataService.RconCommand(targetServer, command)}```")
                 .WithColor(new Color(55, 165, 55)).Build());
         }
 
@@ -985,7 +988,7 @@ namespace BotHATTwaffle2.Commands
         {
             if (serverId != null)
             {
-                var reservation = DatabaseHandler.GetServerReservation(serverId);
+                var reservation = DatabaseUtil.GetServerReservation(serverId);
 
                 if (reservation != null)
                 {
@@ -993,19 +996,19 @@ namespace BotHATTwaffle2.Commands
                         "A moderator has cleared your reservation."));
 
                     await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor($"{DatabaseHandler.GetTestServer(serverId).Address} has been released.",
-                            _data.Guild.IconUrl)
+                        .WithAuthor($"{DatabaseUtil.GetTestServer(serverId).Address} has been released.",
+                            _dataService.Guild.IconUrl)
                         .WithColor(new Color(55, 165, 55)).Build());
                     return;
                 }
 
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor("No server reservation found to release", _data.Guild.IconUrl)
+                    .WithAuthor("No server reservation found to release", _dataService.Guild.IconUrl)
                     .WithColor(new Color(165, 55, 55)).Build());
             }
 
             await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor("Clearing all reservations", _data.Guild.IconUrl)
+                .WithAuthor("Clearing all reservations", _dataService.Guild.IconUrl)
                 .WithColor(new Color(165, 55, 55)).Build());
 
             await _reservationService.ClearAllServerReservations();
@@ -1067,7 +1070,7 @@ namespace BotHATTwaffle2.Commands
                         return;
                 }
 
-                if (DatabaseHandler.AddTestServer(new Server
+                if (DatabaseUtil.AddTestServer(new Server
                 {
                     ServerId = serverValues[0],
                     Description = serverValues[1],
@@ -1094,7 +1097,7 @@ namespace BotHATTwaffle2.Commands
                 var reply = $"No server found with server code {values}";
                 if (values != null && !values.Equals("all", StringComparison.OrdinalIgnoreCase))
                 {
-                    var testServer = DatabaseHandler.GetTestServer(values);
+                    var testServer = DatabaseUtil.GetTestServer(values);
 
                     if (testServer != null)
                         reply = $"Found the following server:\n{testServer}\n\n" +
@@ -1111,12 +1114,12 @@ namespace BotHATTwaffle2.Commands
                                 $"\n{testServer.FtpType}" +
                                 "```";
 
-                    await _data.AlertUser.SendMessageAsync(reply);
+                    await _dataService.AlertUser.SendMessageAsync(reply);
                 }
                 //Get all servers instead
                 else
                 {
-                    var testServers = DatabaseHandler.GetAllTestServers();
+                    var testServers = DatabaseUtil.GetAllTestServers();
 
                     if (testServers != null)
                     {
@@ -1128,16 +1131,16 @@ namespace BotHATTwaffle2.Commands
                         reply = "Could not get all servers because the request returned null.";
                     }
 
-                    await _data.AlertUser.SendMessageAsync(reply);
+                    await _dataService.AlertUser.SendMessageAsync(reply);
                 }
 
                 await ReplyAsync(
-                    $"Server information contains passwords, as a result I have DM'd it to {_data.AlertUser}.");
+                    $"Server information contains passwords, as a result I have DM'd it to {_dataService.AlertUser}.");
             }
             //Remove server
             else if (action.StartsWith("r"))
             {
-                if (DatabaseHandler.RemoveTestServer(values))
+                if (DatabaseUtil.RemoveTestServer(values))
                     await ReplyAsync($"Server with the ID: `{values}` was removed.");
                 else
                     await ReplyAsync(
@@ -1193,25 +1196,25 @@ namespace BotHATTwaffle2.Commands
             if (status == null)
             {
                 await Context.Channel.SendMessageAsync(
-                    $"Current debug status is: `{_data.RSettings.ProgramSettings.Debug}`");
+                    $"Current debug status is: `{_dataService.RSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("t", StringComparison.OrdinalIgnoreCase))
             {
-                _data.RSettings.ProgramSettings.Debug = true;
-                await _data.UpdateRolesAndUsers();
+                _dataService.RSettings.ProgramSettings.Debug = true;
+                await _dataService.UpdateRolesAndUsers();
                 await Context.Channel.SendMessageAsync(
-                    $"Changed debug status to: `{_data.RSettings.ProgramSettings.Debug}`");
+                    $"Changed debug status to: `{_dataService.RSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("f", StringComparison.OrdinalIgnoreCase))
             {
-                _data.RSettings.ProgramSettings.Debug = false;
-                await _data.UpdateRolesAndUsers();
+                _dataService.RSettings.ProgramSettings.Debug = false;
+                await _dataService.UpdateRolesAndUsers();
                 await Context.Channel.SendMessageAsync(
-                    $"Changed debug status to: `{_data.RSettings.ProgramSettings.Debug}`");
+                    $"Changed debug status to: `{_dataService.RSettings.ProgramSettings.Debug}`");
             }
             else if (status.StartsWith("r", StringComparison.OrdinalIgnoreCase))
             {
-                await _data.DeserializeConfig();
+                await _dataService.DeserializeConfig();
                 await Context.Channel.SendMessageAsync(
                     "Deserializing configuration...");
             }

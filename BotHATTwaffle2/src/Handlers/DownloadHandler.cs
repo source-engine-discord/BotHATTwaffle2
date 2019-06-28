@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Util;
 using Discord;
 using Renci.SshNet;
 using Renci.SshNet.Sftp;
@@ -19,22 +20,22 @@ namespace BotHATTwaffle2.Handlers
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
         private static LogHandler _log;
-        private static DataService _data;
+        private static DataService _dataService;
 
         public static void SetHandlers(LogHandler log, DataService data)
         {
-            _data = data;
+            _dataService = data;
             _log = log;
         }
 
         public static async void DownloadPlaytestDemo(PlaytestCommandInfo playtestCommandInfo)
         {
-            var server = DatabaseHandler.GetTestServer(playtestCommandInfo.ServerAddress);
+            var server = DatabaseUtil.GetTestServer(playtestCommandInfo.ServerAddress);
 
             if (server == null)
                 return;
 
-            string localPath = $"{_data.RSettings.ProgramSettings.PlaytestDemoPath}\\{playtestCommandInfo.StartDateTime:yyyy}" +
+            string localPath = $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{playtestCommandInfo.StartDateTime:yyyy}" +
                                $"\\{playtestCommandInfo.StartDateTime:MM} - {playtestCommandInfo.StartDateTime:MMMM}\\{playtestCommandInfo.DemoName}";
 
             switch (server.FtpType.ToLower())
