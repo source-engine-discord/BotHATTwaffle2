@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Util;
 using Discord.WebSocket;
-using Imgur.API.Authentication.Impl;
-using Imgur.API.Endpoints.Impl;
 using Newtonsoft.Json;
 using RCONServerLib;
 
@@ -373,7 +370,9 @@ namespace BotHATTwaffle2.Services
                 //As a result we will wait for a proper reply below.
                 client.SendCommand(command, result => { reply = result; });
 
-                await _log.LogMessage($"Sending RCON command:\n`{command}`\nTo server: `{server.Address}`", true,
+                //Ignore logging status requests
+                if(command != "status")
+                    await _log.LogMessage($"Sending RCON command: `{command}` To server: `{server.Address}`", true,
                     color: LOG_COLOR);
 
                 retryCount = 0;

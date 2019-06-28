@@ -37,7 +37,7 @@ namespace BotHATTwaffle2.Handlers
                 msg = msg.Substring(0, 1950);
 
             if (channel)
-                await _dataService.LogChannel.SendMessageAsync(msg);
+                await _dataService.LogChannel.SendMessageAsync($"`{DateTime.Now}`\n{msg}");
 
 
             if (console)

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
-using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;

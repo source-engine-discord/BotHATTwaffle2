@@ -26,7 +26,6 @@ namespace BotHATTwaffle2.Commands
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
         private static PlaytestCommandInfo _playtestCommandInfo;
         private readonly GoogleCalendar _calendar;
-        private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
@@ -35,14 +34,13 @@ namespace BotHATTwaffle2.Commands
         private readonly ReservationService _reservationService;
         private readonly Sheets _sheets;
 
-        public ModerationModule(DataService data, DiscordSocketClient client, LogHandler log, GoogleCalendar calendar,
+        public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
             Random random, Sheets sheets)
         {
             _playtestService = playtestService;
             _calendar = calendar;
             _dataService = data;
-            _client = client;
             _log = log;
             _interactive = interactive;
             _reservationService = reservationService;

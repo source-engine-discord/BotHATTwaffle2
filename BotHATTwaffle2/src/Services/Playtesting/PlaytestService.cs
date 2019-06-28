@@ -314,6 +314,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                         color: LOG_COLOR);
                 }
             }
+
+            
         }
 
         /// <summary>
@@ -322,8 +324,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         public async Task PlaytestStartingInTask()
         {
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting playtest announcement", false, color: LOG_COLOR);
+            _ = _log.LogMessage("Running playtesting starting in X minutes task...", true, color: LOG_COLOR);
     
             //Disable reservations on servers
             await _reservationService.DisableReservations();
@@ -398,17 +399,28 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PlaytestFifteenMinuteTask()
         {
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LOG_COLOR);
+            _ = _log.LogMessage("Running playtesting starting in 15 minutes task...", true, color: LOG_COLOR);
 
             //Disable reservations on servers
             await _reservationService.DisableReservations();
+
+            var embed = new EmbedBuilder()
+                .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
+                .WithTitle("Workshop Link")
+                .WithUrl(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())
+                .WithThumbnailUrl(_calendar.GetTestEventNoUpdate().CanUseGallery ? _calendar.GetTestEventNoUpdate().GalleryImages[0] : _dataService.RSettings.General.FallbackTestImageUrl)
+                .WithDescription($"{DatabaseUtil.GetTestServer(_calendar.GetTestEventNoUpdate().ServerLocation).Description}" +
+                                 $"\n{_calendar.GetTestEventNoUpdate().Description}")
+                .WithColor(new Color(51, 100, 173));
 
             //Set password as needed, again just in case RCON wasn't listening / server wasn't ready.
             if (_calendar.GetTestEvent().IsCasual)
             {
                 await _dataService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_dataService.RSettings.General.CasualPassword}");
+
+                embed.AddField("Connect To",
+                    $"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_dataService.RSettings.General.CasualPassword}`");
             }
             else
             {
@@ -437,15 +449,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _dataService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
                 $"exec {_dataService.RSettings.General.PostgameConfig}; bot_stop 1");
 
-            var embed = new EmbedBuilder()
-                .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
-                .WithTitle("Workshop Link")
-                .WithUrl(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())
-                .WithThumbnailUrl(_calendar.GetTestEventNoUpdate().CanUseGallery ? _calendar.GetTestEventNoUpdate().GalleryImages[0] : _dataService.RSettings.General.FallbackTestImageUrl)
-                .WithDescription($"{DatabaseUtil.GetTestServer(_calendar.GetTestEventNoUpdate().ServerLocation).Description}" +
-                                 $"\n{_calendar.GetTestEventNoUpdate().Description}")
-                .WithColor(new Color(51,100,173));
-            
             await _dataService.TestingChannel.SendMessageAsync(embed: embed.Build());
         }
 
@@ -455,8 +458,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PlaytestStartingTask()
         {
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting playtest start announcement", false, color: LOG_COLOR);
+            _ = _log.LogMessage("Running playtesting starting now task...", false, color: LOG_COLOR);
 
             //Disable reservations on servers
             await _reservationService.DisableReservations();
