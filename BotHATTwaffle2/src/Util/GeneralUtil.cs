@@ -4,8 +4,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using Google.Apis.Sheets.v4.Data;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
+using System.Drawing;
+using Color = Discord.Color;
 
 namespace BotHATTwaffle2.Util
 {
@@ -79,8 +82,11 @@ namespace BotHATTwaffle2.Util
         /// <returns>Server code</returns>
         public static string GetServerCode(string fullServerAddress)
         {
+            fullServerAddress = fullServerAddress.ToLower();
             if (fullServerAddress.Contains('.'))
                 return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
+            if (fullServerAddress.Length > 3)
+                return fullServerAddress.Substring(0,3);
 
             return fullServerAddress;
         }
@@ -93,6 +99,34 @@ namespace BotHATTwaffle2.Util
         public static string GetWorkshopIdFromFqdn(string workshopUrl)
         {
             return Regex.Match(workshopUrl, @"(\d+)").Value;
+        }
+
+        /// <summary>
+        /// Converts a ConsoleColor into a Discord.Color
+        /// </summary>
+        /// <param name="c">Input color</param>
+        /// <returns>DiscordColor</returns>
+        public static Color ColorFromConsoleColor(ConsoleColor c)
+        {
+            uint[] cColors = {   0x000000, //Black = 0
+                0x000080, //DarkBlue = 1
+                0x008000, //DarkGreen = 2
+                0x008080, //DarkCyan = 3
+                0x800000, //DarkRed = 4
+                0x800080, //DarkMagenta = 5
+                0x808000, //DarkYellow = 6
+                0xC0C0C0, //Gray = 7
+                0x808080, //DarkGray = 8
+                0x0000FF, //Blue = 9
+                0x00FF00, //Green = 10
+                0x00FFFF, //Cyan = 11
+                0xFF0000, //Red = 12
+                0xFF00FF, //Magenta = 13
+                0xFFFF00, //Yellow = 14
+                0xFFFFFF  //White = 15
+            };
+
+            return new Color(cColors[(int)c]);
         }
     }
 }

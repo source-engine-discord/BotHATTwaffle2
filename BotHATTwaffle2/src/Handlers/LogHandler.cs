@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;
 
@@ -37,7 +38,11 @@ namespace BotHATTwaffle2.Handlers
                 msg = msg.Substring(0, 1950);
 
             if (channel)
-                await _dataService.LogChannel.SendMessageAsync($"`{DateTime.Now}`\n{msg}");
+                await _dataService.LogChannel.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithDescription(msg)
+                    .WithColor(GeneralUtil.ColorFromConsoleColor(color))
+                    .WithCurrentTimestamp()
+                    .Build());
 
 
             if (console)

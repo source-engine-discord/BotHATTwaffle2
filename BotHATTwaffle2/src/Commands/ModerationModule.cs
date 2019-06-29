@@ -298,10 +298,10 @@ namespace BotHATTwaffle2.Commands
                         mention += _dataService.GetSocketUser(creator).Mention + " ";
 
                     var ws = new Workshop();
-                    var wbEmbed = await ws.HandleWorkshopEmbeds(Context.Message, _dataService, result[id].ImgurAlbum,
+                    var wbEmbed = await ws.HandleWorkshopEmbeds(Context.Message, _dataService, $"[Map Images]({result[id].ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                         result[id].TestType, GeneralUtil.GetWorkshopIdFromFqdn(result[id].WorkshopURL));
                     await _dataService.TestingChannel.SendMessageAsync(
-                        $"{mention} your playtest has been scheduled for `{result[id].TestDate}` (CT Timezone)",
+                        $"{mention.Trim()} your playtest has been scheduled for `{result[id].TestDate}` (CT Timezone)",
                         embed: wbEmbed.Build());
                     return;
                 }
@@ -309,7 +309,8 @@ namespace BotHATTwaffle2.Commands
                 embed.WithColor(new Color(165, 55, 55));
                 await display.ModifyAsync(x => x.Embed = embed.Build());
                 await instructions.ModifyAsync(x =>
-                    x.Content = "An error occured working with the Google APIs, consult the logs.");
+                    x.Content = "An error occured working with the Google APIs, consult the logs.\n" +
+                                "The playtest event may have been created. Please manually double check the calendar and spreadsheet.");
             }
             embed.WithColor(new Color(25, 25, 25));
             await display.ModifyAsync(x => x.Embed = embed.Build());
