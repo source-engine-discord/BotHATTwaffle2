@@ -137,8 +137,9 @@ namespace BotHATTwaffle2.Services.Steam
                     workshopItemEmbed.AddField("Test Type", testType, false);
                 }
 
-                //TODO: perhaps strip BBcodes from description?
-                workshopItemEmbed.AddField("Description", workshopJsonItem.response.publishedfiledetails[0].description.Length > 497 ? workshopJsonItem.response.publishedfiledetails[0].description.Substring(0,497) + "..." : workshopJsonItem.response.publishedfiledetails[0].description);
+                // TODO: Strip BB Codes
+                string shortDescription = Regex.Replace(workshopJsonItem.response.publishedfiledetails[0].description, @"\t|\n|\r", " ");
+                workshopItemEmbed.AddField("Description", shortDescription.Length > 497 ? shortDescription.Substring(0,497) + "..." : shortDescription);
 
                 // If images is null or empty, it will not be included in the embed (bot only)
                 if (!string.IsNullOrEmpty(images))
