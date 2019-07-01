@@ -17,6 +17,7 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
+using Google.Apis.Http;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -84,7 +85,13 @@ namespace BotHATTwaffle2.Commands
                     tick++;
                 }
             else
-                embed.WithDescription("No tests found in the queue");
+            {
+                embed.WithDescription("No tests found in the queue")
+                .WithColor(new Color(25, 25, 25));
+
+                await ReplyAsync(embed: embed.Build());
+                return;
+            }
 
             var display = await ReplyAsync(embed: embed.Build());
             var instructions = await ReplyAsync("Type the ID of the playtest to schedule, or `cancel` to exit");
@@ -866,7 +873,7 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
-        [Command("rcon")]
+        [Command("rcon", RunMode = RunMode.Async)]
         [Alias("r")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         [RequireContext(ContextType.Guild)]
@@ -890,10 +897,19 @@ namespace BotHATTwaffle2.Commands
                 }
                 else
                 {
+                    targetServer = "No playtest server found";
+                    if (_calendar.GetTestEventNoUpdate().IsValid)
+                    {
+                        //There is a playtest event, get the server ID from the test event
+                        var serverAddress = _calendar.GetTestEventNoUpdate().ServerLocation;
+                        targetServer = serverAddress.Substring(0, serverAddress.IndexOf('.'));
+                    }
+
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
                         .WithDescription(
-                            "will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
+                            "Will be sent using `Auto mode`. Which is the active playtest server, if there is one.\n" +
+                            $"Current test server: `{targetServer}`")
                         .WithColor(new Color(55, 165, 55)).Build());
                     return;
                 }

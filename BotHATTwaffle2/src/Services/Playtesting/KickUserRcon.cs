@@ -57,18 +57,26 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             var embed = new EmbedBuilder()
-                .WithAuthor("Type ID of player to kick, or 0 to cancel")
+                .WithAuthor("Type ID of player to kick, or exit to cancel")
                 .WithColor(new Color(165, 55, 55)).WithDescription(description);
 
-            await _context.Channel.SendMessageAsync(embed: embed.Build());
+            var display = await _context.Channel.SendMessageAsync(embed: embed.Build());
             var choice = await _interactive.NextMessageAsync(_context);
             if (choice != null && !choice.Content.Equals("0"))
             {
                 string kickMessage = await _dataService.RconCommand(serverAddress, $"kickid {choice.Content}");
-                await _context.Channel.SendMessageAsync($"```{kickMessage}```");
                 await choice.DeleteAsync();
+
+                embed.WithColor(new Color(55, 165, 55)).WithAuthor(kickMessage).WithDescription("");
+
+                await display.ModifyAsync(x => x.Embed = embed.Build());
+
                 await _log.LogMessage($"`{_context.User.Username}` kicked a user from a playtest.```{kickMessage}```");
+                return;
             }
+
+            await display.DeleteAsync();
+            await choice.DeleteAsync();
         }
     }
 }
