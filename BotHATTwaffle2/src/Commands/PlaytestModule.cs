@@ -129,8 +129,8 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Check if the user already has a reservation
-            var hasServer = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
-            if (hasServer != null)
+            var server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
+            if (server != null)
             {
                 var hasServerEmbed = new EmbedBuilder()
                     .WithAuthor("You already have a server reservation", _dataService.Guild.IconUrl)
@@ -138,7 +138,7 @@ namespace BotHATTwaffle2.Commands
                     .WithColor(new Color(165, 55, 55));
 
                 hasServerEmbed.AddField("Connect With",
-                    $"`connect {hasServer.Address}; password {_dataService.RSettings.General.CasualPassword}`", true);
+                    $"`connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`", true);
                 await ReplyAsync(embed: hasServerEmbed.Build());
                 return;
             }
@@ -169,12 +169,13 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            //Since we've inserted, get the new entry.
+            server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
+
             //Add the job to release the server
             JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{Context.User.Mention}",
             embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
                 s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
-
-            var server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
 
             var rconCommand = $"sv_password {_dataService.RSettings.General.CasualPassword}";
 
@@ -200,6 +201,8 @@ namespace BotHATTwaffle2.Commands
             embed.AddField("End Reservation Early", "`>RS` or\n`>ReleaseServer`", true);
 
             await ReplyAsync(embed: embed.Build());
+
+            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has reserved `{server.Address}`", color:LOG_COLOR);
         }
 
         [Command("PublicAnnounce")]
@@ -261,6 +264,8 @@ namespace BotHATTwaffle2.Commands
 
             if (!reservation.Announced)
                 await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
+
+            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` alerted for their community playtest on `{server.Address}`", color: LOG_COLOR);
         }
 
         [Command("PublicCommand", RunMode = RunMode.Async)]
@@ -433,6 +438,8 @@ namespace BotHATTwaffle2.Commands
             await ReplyAsync(embed: _reservationService.ReleaseServer(Context.User.Id,
                 $"{Context.User} has released the " +
                 "server reservation manually."));
+
+            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually", color: LOG_COLOR);
         }
 
         [Command("Servers")]

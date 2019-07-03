@@ -493,6 +493,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task CancelRequest()
         {
             await _context.Channel.SendMessageAsync("Request cancelled!");
+            await _embedMessage.DeleteAsync();
             await _instructionsMessage.DeleteAsync();
         }
 

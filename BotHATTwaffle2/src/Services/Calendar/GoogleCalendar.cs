@@ -185,8 +185,8 @@ namespace BotHATTwaffle2.Services.Calendar
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
             request.ShowDeleted = false;
             request.SingleEvents = true;
-            request.TimeMin = testTime.Date;
-            request.TimeMax = testTime.Date.AddMonths(1); //Sets to 23:59:59 same day
+            request.TimeMin = testTime;
+            request.TimeMax = testTime.Date.AddMonths(1);
 
             // Executes the request for events and retrieves the first event in the resulting items.
             var events = await request.ExecuteAsync();
