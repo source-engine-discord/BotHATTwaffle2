@@ -15,6 +15,7 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
+using Google.Apis.YouTube.v3.Data;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -237,21 +238,19 @@ namespace BotHATTwaffle2.Commands
                 DatabaseUtil.UpdateAnnouncedServerReservation(Context.User.Id);
             }
 
-            var reply = await _dataService.RconCommand(server.Address, "host_map");
-            reply = reply.Substring(14, reply.IndexOf(".bsp", StringComparison.Ordinal) - 14);
-            var result = reply.Split('/');
+            var result = await _playtestService.GetRunningLevelAsync(server.Address);
 
             var embed = new EmbedBuilder();
 
             Console.WriteLine(string.Join("\n", result));
 
+            //Length 3 means workshop
             if (result.Length == 3)
             {
-                reply = result[2];
                 embed = await new Workshop().HandleWorkshopEmbeds(Context.Message, _dataService, inputId: result[1]);
 
                 await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                   $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                                   $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
                                                                    $"\nType `>roleme Community Tester` to get this role.",
                     embed: embed.Build());
             }
@@ -259,13 +258,91 @@ namespace BotHATTwaffle2.Commands
             {
                 //No embed
                 await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                   $"needs players to help test `{reply}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
+                                                                   $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
             }
 
             if (!reservation.Announced)
                 await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
 
             await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` alerted for their community playtest on `{server.Address}`", color: LOG_COLOR);
+        }
+
+        [Command("PublicDemo", RunMode = RunMode.Async)]
+        [Alias("pd")]
+        [Summary("Starts or stops demo recording in a public test")]
+        [Remarks("Starts recording a GOTV demo in a public test. To start recording, type `>PublicDemo start`. " +
+                 "Make sure the desired gamemode is active before starting a recording!\n\nOnce you're done recording " +
+                 "type `>PublicDemo stop` to stop the recording and download it from the server.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
+        public async Task PublicDemoAsync(string command)
+        {
+            var reservation = DatabaseUtil.GetServerReservation(Context.User.Id);
+            if (reservation == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("You don't have a server reservation", _dataService.Guild.IconUrl)
+                    .WithDescription("Get one using the `>PublicServer` command.")
+                    .WithColor(new Color(165, 55, 55))
+                    .Build());
+                return;
+            }
+
+            var levelInfo = await _playtestService.GetRunningLevelAsync(reservation.ServerId);
+            if (levelInfo.Length != 3)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Unable to use PublicDemo", _dataService.Guild.IconUrl)
+                    .WithDescription("You can only record playtest demos on workshop levels.")
+                    .WithColor(new Color(165, 55, 55))
+                    .Build());
+                return;
+            }
+
+            //Populate a test event that will get sent to the download.
+            var testInfo = new PlaytestCommandInfo
+            {
+                DemoName = $"{levelInfo[2]}_Community",
+                WorkshopId = levelInfo[1],
+                ServerAddress = reservation.ServerId,
+            };
+
+            switch (command.ToLower())
+            {
+                case"start":
+                    var demoReply = await _dataService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord; tv_record {testInfo.DemoName}" +
+                                                                                           $";say {testInfo.DemoName} now recording!");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Command sent to {testInfo.ServerAddress}", _dataService.Guild.IconUrl)
+                        .WithDescription($"```{demoReply}```")
+                        .WithColor(new Color(55, 165, 55)).Build());
+                    break;
+
+                case "stop":
+                    var stopReply = await _dataService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
+
+                    //Download demo, don't wait.
+                    _ = Task.Run(() =>
+                    {
+                        DownloadHandler.DownloadPlaytestDemo(testInfo);
+                    });
+                    
+                    const string demoUrl = "http://demos.tophattwaffle.com";
+                    var embed = new EmbedBuilder()
+                        .WithAuthor($"Download playtest demo for {testInfo.DemoName}", _dataService.Guild.IconUrl, demoUrl)
+                        .WithThumbnailUrl(_client.CurrentUser.GetAvatarUrl())
+                        .WithColor(new Color(243, 128, 72))
+                        .WithDescription(
+                            $"[Download Demo Here]({demoUrl}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
+
+                    await _dataService.TestingChannel.SendMessageAsync(Context.User.Mention, embed: embed.Build());
+                    break;
+
+                default:
+                    await ReplyAsync("Invalid command. Consult `>Help PublicDemo`");
+                    break;
+            }
+
         }
 
         [Command("PublicCommand", RunMode = RunMode.Async)]
