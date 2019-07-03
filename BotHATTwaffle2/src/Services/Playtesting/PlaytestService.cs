@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Net.NetworkInformation;
+using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -16,15 +16,16 @@ namespace BotHATTwaffle2.Services.Playtesting
         private static AnnouncementMessage _announcementMessage;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
+        private readonly int _failedRetryCount = 60;
         private readonly LogHandler _log;
         private readonly ReservationService _reservationService;
-        private readonly int _failedRetryCount = 60;
         private int _failedToFetch;
         private DateTime _lastSeenEditTime;
         private AnnounceMessage _oldMessage;
         public bool PlaytestStartAlert = true;
 
-        public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random, ReservationService reservationService)
+        public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random,
+            ReservationService reservationService)
         {
             _dataService = data;
             _log = log;
@@ -85,6 +86,86 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await PostNewAnnouncement();
             else
                 await UpdateAnnouncementMessage();
+        }
+
+        /// <summary>
+        /// Builds an embed that shows upcoming playtest events and events from the queue
+        /// </summary>
+        /// <param name="getSchedule">Get events from Queue</param>
+        /// <param name="getCalendar">Get events from Calendar</param>
+        /// <returns>Built embed with events</returns>
+        public async Task<EmbedBuilder> GetUpcomingEvents(bool getSchedule, bool getCalendar)
+        {
+            string author = "Current ";
+            var embed = new EmbedBuilder().WithColor(new Color(55,55,165))
+                .WithFooter($"Current CT Time: {DateTime.Now}")
+                .WithDescription("[View Testing Calendar](http://playtesting.tophattwaffle.com) " +
+                                 "| [View Testing Requirements](https://www.tophattwaffle.com/playtesting) " +
+                                 "| View Queue with `>Schedule`");
+
+            if (getSchedule)
+            {
+                author += "Playtest Requests";
+                var testQueue = DatabaseUtil.GetAllPlaytestRequests().ToList();
+                //No tests found - do nothing
+                if (testQueue.Count == 0)
+                {
+                    embed.AddField("No playtest requests found!", "Submit your own with: `>request`");
+                }
+                else
+                    for (var i = 0; i < testQueue.Count; i++)
+                    {
+                        //Don't have more than 24
+                        if (embed.Fields.Count >= 24)
+                            break;
+
+                        var info = "Creator(s): ";
+                        foreach (var creator in testQueue[i].CreatorsDiscord)
+                        {
+                            var user = _dataService.GetSocketGuildUser(creator);
+                            if (user != null)
+                                info += $"`{user.Username}`, ";
+                            else
+                                info += $"Could not get user `{creator}`, ";
+                        }
+
+                        info = info.Trim(',', ' ');
+                        info += $"\nRequested Time: `{testQueue[i].TestDate}`\n" +
+                                $"[Map Images]({testQueue[i].ImgurAlbum}) - " +
+                                $"[Workshop Link]({testQueue[i].WorkshopURL})\n";
+
+                        embed.AddField($"[{i}] - {testQueue[i].MapName} - {testQueue[i].TestType}", info, true);
+                    }
+            }
+
+            if (getCalendar)
+            {
+                //If we added requests, toss "and" in there.
+                author += getSchedule ? " and " : "";
+
+                author += "Scheduled Playtests";
+                var testEvents = await _calendar.GetNextMonthAsync(DateTime.Now);
+                if (testEvents.Items.Count  == 0)
+                {
+                    embed.AddField("No scheduled playtests found!", "Submit yours with: `>request`");
+                }
+                else
+                {
+                    foreach (var item in testEvents.Items)
+                    {
+                        if (embed.Fields.Count >= 24)
+                            break;
+
+                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime}`\nEnd Time: `{item.End.DateTime}`", true);
+                    }
+                }
+            }
+
+            if (embed.Fields.Count >= 24)
+                embed.AddField("Max Fields Added","Somehow there are more items than Discord embeds allow. Some items omitted.");
+
+            embed.WithAuthor(author);
+            return embed;
         }
 
         /// <summary>
@@ -159,9 +240,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             //We posted a new announcement, meaning we can allow reservations again.
             _reservationService.AllowReservations();
 
-            //Default the server password
-            await _dataService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation, $"sv_password {_dataService.RSettings.General.CasualPassword}");
-
             try
             {
                 //Make the announcement and store to a variable
@@ -228,7 +306,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 try
                 {
                     PlaytestAnnouncementMessage =
-                        await _dataService.AnnouncementChannel.GetMessageAsync(_oldMessage.AnnouncementId) as IUserMessage;
+                        await _dataService.AnnouncementChannel.GetMessageAsync(_oldMessage.AnnouncementId) as
+                            IUserMessage;
 
                     if (PlaytestAnnouncementMessage != null)
                         _ = _log.LogMessage($"Retrieved old announcement! ID: {PlaytestAnnouncementMessage.Id}", false,
@@ -263,6 +342,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             JobManager.RemoveJob("[Playtest1Hour]");
             JobManager.RemoveJob("[Playtest15Minute]");
+            JobManager.RemoveJob("[Playtest20Minute]");
             JobManager.RemoveJob("[PlaytestStarting]");
             JobManager.RemoveJob("[QueryPlayerCount]");
         }
@@ -272,59 +352,62 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Clear old jobs, if any.
             ClearScheduledAnnouncements();
 
-            if (PlaytestAnnouncementMessage != null && _calendar.GetTestEventNoUpdate().TestValid())
+            if (PlaytestAnnouncementMessage == null || !_calendar.GetTestEventNoUpdate().TestValid())
+                return;
+
+            var startDateTime = _calendar.GetTestEventNoUpdate().StartDateTime;
+            _ = _log.LogMessage($"Playtest scheduled for: {startDateTime}", false, color: LOG_COLOR);
+
+            if (startDateTime != null && DateTime.Compare(DateTime.Now.AddMinutes(60), startDateTime.Value) < 0)
             {
-                var singleHour = new TimeSpan(1, 0, 0);
-                var fifteenMinutes = new TimeSpan(0, 15, 0);
+                //Subtract 60.1 minutes. If .1 isn't added the announcement states wrong time.
+                JobManager.AddJob(async () => await PlaytestStartingInTask(), s => s
+                    .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-60.1)));
 
-                var adjusted = DateTime.Now.Add(singleHour);
-                var startDateTime = _calendar.GetTestEventNoUpdate().StartDateTime;
-                _ = _log.LogMessage($"Playtest scheduled for: {startDateTime}", false, color: LOG_COLOR);
+                _ = _log.LogMessage("1 hour playtest announcement scheduled for:" +
+                                    $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false,
+                    color: LOG_COLOR);
+            }
 
-                if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
-                {
-                    //Have to set the alert to be -61 minutes from start time, otherwise the announcement says
-                    //that the test starts in 59 minutes.
-                    JobManager.AddJob(async () => await PlaytestStartingInTask(), s => s
-                        .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-61)));
+            if (startDateTime != null && DateTime.Compare(DateTime.Now.AddMinutes(15), startDateTime.Value) < 0)
+            {
+                JobManager.AddJob(async () => await PlaytestFifteenMinuteTask(), s => s
+                    .WithName("[Playtest15Minute]").ToRunOnceAt(startDateTime.Value.AddMinutes(-15)));
 
-                    _ = _log.LogMessage("1 hour playtest announcement scheduled for:" +
-                                        $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false,
-                        color: LOG_COLOR);
-                }
+                _ = _log.LogMessage("15 minute playtest announcement scheduled for:" +
+                                    $"\n{JobManager.GetSchedule("[Playtest15Minute]").NextRun}", false,
+                    color: LOG_COLOR);
+            }
 
-                adjusted = DateTime.Now.Add(fifteenMinutes);
-                if (startDateTime != null && DateTime.Compare(adjusted, startDateTime.Value) < 0)
-                {
-                    JobManager.AddJob(async () => await PlaytestFifteenMinuteTask(), s => s
-                        .WithName("[Playtest15Minute]").ToRunOnceAt(startDateTime.Value.AddMinutes(-15)));
+            if (startDateTime != null && DateTime.Compare(DateTime.Now.AddMinutes(20), startDateTime.Value) < 0)
+            {
+                JobManager.AddJob(async () => await PlaytestTwentyMinuteTask(), s => s
+                    .WithName("[Playtest20Minute]").ToRunOnceAt(startDateTime.Value.AddMinutes(-20)));
 
-                    _ = _log.LogMessage("15 minute playtest announcement scheduled for:" +
-                                        $"\n{JobManager.GetSchedule("[Playtest15Minute]").NextRun}", false,
-                        color: LOG_COLOR);
-                }
+                _ = _log.LogMessage("20 minute playtest announcement scheduled for:" +
+                                    $"\n{JobManager.GetSchedule("[Playtest20Minute]").NextRun}", false,
+                    color: LOG_COLOR);
+            }
 
-                if (startDateTime != null && DateTime.Compare(DateTime.Now, startDateTime.Value) < 0)
-                {
-                    JobManager.AddJob(async () => await PlaytestStartingTask(), s => s
-                        .WithName("[PlaytestStarting]").ToRunOnceAt(startDateTime.Value));
+            if (startDateTime != null && DateTime.Compare(DateTime.Now, startDateTime.Value) < 0)
+            {
+                JobManager.AddJob(async () => await PlaytestStartingTask(), s => s
+                    .WithName("[PlaytestStarting]").ToRunOnceAt(startDateTime.Value));
 
-                    _ = _log.LogMessage("Starting playtest announcement scheduled for:" +
-                                        $"\n{JobManager.GetSchedule("[PlaytestStarting]").NextRun}", false,
-                        color: LOG_COLOR);
-                }
+                _ = _log.LogMessage("Starting playtest announcement scheduled for:" +
+                                    $"\n{JobManager.GetSchedule("[PlaytestStarting]").NextRun}", false,
+                    color: LOG_COLOR);
             }
         }
 
         /// <summary>
-        /// Posts a new announcement message and alerts playtester role
+        ///     Posts a new announcement message and alerts playtester role
         /// </summary>
         /// <returns></returns>
         public async Task PlaytestStartingInTask()
         {
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting playtest announcement", false, color: LOG_COLOR);
-    
+            _ = _log.LogMessage("Running playtesting starting in X minutes task...", true, color: LOG_COLOR);
+
             //Disable reservations on servers
             await _reservationService.DisableReservations();
 
@@ -332,16 +415,19 @@ namespace BotHATTwaffle2.Services.Playtesting
             _dataService.IncludePlayerCount = true;
 
             //Start asking for player counts
-            JobManager.AddJob(async () => await _dataService.GetPlayCountFromServer(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation)),
+            JobManager.AddJob(
+                async () => await _dataService.GetPlayCountFromServer(
+                    GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation)),
                 s => s.WithName("[QueryPlayerCount]").ToRunEvery(60).Seconds());
 
             //Figure out how long until the event starts
             var countdown = _calendar.GetTestEventNoUpdate().StartDateTime.GetValueOrDefault().Subtract(DateTime.Now);
             var countdownString =
-                countdown.ToString("d'D 'h' Hour 'm' Minutes'").TrimStart(' ', 'D', 'H','o','u','r', '0').Replace(" 0 Minutes","");
-            
+                countdown.ToString("d'D 'h' Hour 'm' Minutes'").TrimStart(' ', 'D', 'H', 'o', 'u', 'r', '0')
+                    .Replace(" 0 Minutes", "");
+
             var mentionRole = _dataService.PlayTesterRole;
-            string unsubInfo = "";
+            var unsubInfo = "";
 
             //Handle comp or casual
             if (_calendar.GetTestEvent().IsCasual)
@@ -358,7 +444,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 await _dataService.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
                     .WithAuthor(_calendar.GetTestEventNoUpdate().Title)
-                    .AddField("Connect Information", $"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}`")
+                    .AddField("Connect Information",
+                        $"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}`")
                     .WithColor(new Color(55, 55, 165))
                     .Build());
             }
@@ -372,97 +459,112 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
             await _dataService.TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
-                                                        $"There is a playtest starting in {countdownString}." +
-                                                        $"{unsubInfo}",
+                                                               $"There is a playtest starting in {countdownString}." +
+                                                               $"{unsubInfo}",
                 embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
                     true, PlaytestAnnouncementMessage.Id));
 
             //DM users about their test
             foreach (var creator in _calendar.GetTestEventNoUpdate().Creators)
-            {
                 try
                 {
-                    await creator.SendMessageAsync($"Don't forget that you have a playtest for __**{_calendar.GetTestEventNoUpdate().Title}**__ in __**{countdownString}**__");
+                    await creator.SendMessageAsync(
+                        $"Don't forget that you have a playtest for __**{_calendar.GetTestEventNoUpdate().Title}**__ in __**{countdownString}**__");
                 }
                 catch
                 {
                     //Could not DM creator about their test.
                 }
-            }
+
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
         }
-        
+
         /// <summary>
-        /// Server setup tasks for 15 minutes before a test
+        ///     Server setup tasks for 20 minutes before a test
+        /// </summary>
+        /// <returns></returns>
+        private async Task PlaytestTwentyMinuteTask()
+        {
+           _ = _log.LogMessage("Running playtesting starting in 20 minutes task...", true, color: LOG_COLOR);
+
+           await _dataService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
+               $"host_workshop_map {GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())}");
+
+           //Setup the mirror server for comp
+           if (!_calendar.GetTestEvent().IsCasual)
+           {
+               //Setup a casual server for people who aren't in the comp test group
+               await _dataService.RconCommand(
+                   GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
+                   $"host_workshop_map {GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())}");
+           }
+        }
+
+        /// <summary>
+        ///     Server setup tasks for 15 minutes before a test
         /// </summary>
         /// <returns></returns>
         private async Task PlaytestFifteenMinuteTask()
         {
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Playtest 15 minute setup running...", false, color: LOG_COLOR);
+            _ = _log.LogMessage("Running playtesting starting in 15 minutes task...", true, color: LOG_COLOR);
 
             //Disable reservations on servers
             await _reservationService.DisableReservations();
+
+            var embed = new EmbedBuilder()
+                .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
+                .WithTitle("Workshop Link")
+                .WithUrl(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())
+                .WithThumbnailUrl(_calendar.GetTestEventNoUpdate().CanUseGallery
+                    ? _calendar.GetTestEventNoUpdate().GalleryImages[0]
+                    : _dataService.RSettings.General.FallbackTestImageUrl)
+                .WithDescription(
+                    $"{DatabaseUtil.GetTestServer(_calendar.GetTestEventNoUpdate().ServerLocation).Description}" +
+                    $"\n{_calendar.GetTestEventNoUpdate().Description}")
+                .WithColor(new Color(51, 100, 173));
 
             //Set password as needed, again just in case RCON wasn't listening / server wasn't ready.
             if (_calendar.GetTestEvent().IsCasual)
             {
                 await _dataService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_dataService.RSettings.General.CasualPassword}");
+
+                embed.AddField("Connect To",
+                    $"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_dataService.RSettings.General.CasualPassword}`");
             }
             else
             {
                 await _dataService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
 
-
-                //Setup a casual server for people who aren't in the comp test group
-                await _dataService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
-                    $"host_workshop_map {GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())}");
-
                 //Delay to make sure level has actually changed
                 await Task.Delay(10000);
-                await _dataService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
+                await _dataService.RconCommand(
+                    GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
                     $"exec {_dataService.RSettings.General.PostgameConfig}; sv_password {_dataService.RSettings.General.CasualPassword}; bot_stop 1");
             }
-
-            //Delay to make sure password is set.
-            await Task.Delay(1000);
-
-            await _dataService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
-                $"host_workshop_map {GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())}");
-
+            
             //Delay to make sure level has actually changed
             await Task.Delay(10000);
             await _dataService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
                 $"exec {_dataService.RSettings.General.PostgameConfig}; bot_stop 1");
 
-            var embed = new EmbedBuilder()
-                .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
-                .WithTitle("Workshop Link")
-                .WithUrl(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())
-                .WithThumbnailUrl(_calendar.GetTestEventNoUpdate().CanUseGallery ? _calendar.GetTestEventNoUpdate().GalleryImages[0] : _dataService.RSettings.General.FallbackTestImageUrl)
-                .WithDescription($"{DatabaseUtil.GetTestServer(_calendar.GetTestEventNoUpdate().ServerLocation).Description}" +
-                                 $"\n{_calendar.GetTestEventNoUpdate().Description}")
-                .WithColor(new Color(51,100,173));
-            
             await _dataService.TestingChannel.SendMessageAsync(embed: embed.Build());
         }
 
         /// <summary>
-        /// Announcement for playtest starting
+        ///     Announcement for playtest starting
         /// </summary>
         /// <returns></returns>
         private async Task PlaytestStartingTask()
         {
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Posting playtest start announcement", false, color: LOG_COLOR);
+            _ = _log.LogMessage("Running playtesting starting now task...", false, color: LOG_COLOR);
 
             //Disable reservations on servers
             await _reservationService.DisableReservations();
 
             var mentionRole = _dataService.PlayTesterRole;
-            string unsubInfo = "";
+            var unsubInfo = "";
             //Handle comp or casual
             if (_calendar.GetTestEvent().IsCasual)
             {
@@ -487,7 +589,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
 
             await _dataService.TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
-                                                        $"There is a playtest starting __now__! {unsubInfo}",
+                                                               $"There is a playtest starting __now__! {unsubInfo}",
                 embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
                     true, PlaytestAnnouncementMessage.Id));
 
@@ -498,7 +600,8 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             await _dataService.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
 
-            await _dataService.TestingChannel.SendMessageAsync($"Currently looking for {neededPlayers} players. {_dataService.PlayTesterRole.Mention}",
+            await _dataService.TestingChannel.SendMessageAsync(
+                $"Currently looking for {neededPlayers} players. {_dataService.PlayTesterRole.Mention}",
                 embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
                     true, PlaytestAnnouncementMessage.Id));
 

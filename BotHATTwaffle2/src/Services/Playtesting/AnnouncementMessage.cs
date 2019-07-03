@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services.Calendar;
 using Discord;

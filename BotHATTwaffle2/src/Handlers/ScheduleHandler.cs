@@ -160,11 +160,15 @@ namespace BotHATTwaffle2.Handlers
                         s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceAt(reservation.StartTime.AddHours(2)));
                 }
             }
+            DisplayScheduledJobs();
+        }
 
+        public void DisplayScheduledJobs()
+        {
             //Display what jobs we have scheduled
             foreach (var allSchedule in JobManager.AllSchedules)
             {
-                _ = _log.LogMessage($"{allSchedule.Name} runs at: {allSchedule.NextRun}", 
+                _ = _log.LogMessage($"{allSchedule.Name} runs at: {allSchedule.NextRun}",
                     false, color: LOG_COLOR);
             }
         }

@@ -17,6 +17,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_PLAYTEST_COMMAND = "ptCommandInfo";
         private const string COLLECTION_MUTES = "mutes";
         private const string COLLECTION_RESERVATIONS = "serverReservations";
+        private const string COLLECTION_PTREQUESTS = "playtestRequests";
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -800,6 +801,92 @@ namespace BotHATTwaffle2.Util
                 return false;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Adds a playtest request to the database
+        /// </summary>
+        /// <param name="playtestRequest">PlaytestRequest to add</param>
+        /// <returns>True if added, false otherwise</returns>
+        public static bool AddPlaytestRequests(PlaytestRequest playtestRequest)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<PlaytestRequest>(COLLECTION_PTREQUESTS);
+                    collection.EnsureIndex(x => x.Timestamp);
+
+                    //Stamp the current time on the insert
+                    playtestRequest.Timestamp = DateTime.Now;
+                    //Insert new entry with ID of 1, and our values.
+                    collection.Insert(playtestRequest);
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened storing playtest request\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Gets all playtest requests from the DB
+        /// </summary>
+        /// <returns>IEnumerable of PlaytestRequests</returns>
+        public static IEnumerable<PlaytestRequest> GetAllPlaytestRequests()
+        {
+            IEnumerable<PlaytestRequest> foundRequests = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<PlaytestRequest>(COLLECTION_PTREQUESTS);
+                    
+                    foundRequests = collection.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting all playtest requests\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundRequests;
+            }
+            return foundRequests;
+        }
+
+        /// <summary>
+        /// Removes a PlaytestRequest from the Database
+        /// </summary>
+        /// <param name="playtestRequest">PlaytestRequest to remove</param>
+        /// <returns>True if removed, false otherwise</returns>
+        public static bool RemovePlaytestRequest(PlaytestRequest playtestRequest)
+        {
+            
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<PlaytestRequest>(COLLECTION_PTREQUESTS);
+
+                    collection.Delete(playtestRequest.Id);
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: Don't actually know what exceptions can happen here, catch all for now.
+                _ = _log.LogMessage("Something happened getting all playtest requests\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+            return true;
         }
     }
 }

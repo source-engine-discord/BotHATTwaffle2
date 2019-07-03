@@ -39,7 +39,6 @@ namespace BotHATTwaffle2.Commands
             "Toggleable roles typically display possession of a skill, such as 3D modelling or level design. To send multiple " +
             "roles in one invocation, separate the names with a space. Invoking without any parameters displays a list of " +
             "all toggleable roles.")]
-        [RequireContext(ContextType.Guild)]
         public async Task RolemeAsync(
             [Summary("A case-insensitive, space-delimited list of roles to toggle.")] [Remainder]
             string roles = null)
@@ -96,9 +95,9 @@ namespace BotHATTwaffle2.Commands
 
             // Finds all SocketRoles from roleNames.
             var rolesValid =
-                Context.Guild.Roles.Where(r => roleNames.Contains(r.Name, StringComparer.InvariantCultureIgnoreCase));
+                _dataService.Guild.Roles.Where(r => roleNames.Contains(r.Name, StringComparer.InvariantCultureIgnoreCase));
 
-            var user = (SocketGuildUser) Context.User;
+            var user = _dataService.GetSocketGuildUser(Context.User.Id);
             var rolesAdded = new List<SocketRole>();
             var rolesRemoved = new List<SocketRole>();
 
@@ -106,12 +105,12 @@ namespace BotHATTwaffle2.Commands
             foreach (var role in rolesValid)
                 if (user.Roles.Contains(role))
                 {
-                    await ((IGuildUser) user).RemoveRoleAsync(role);
+                    await user.RemoveRoleAsync(role);
                     rolesRemoved.Add(role);
                 }
                 else
                 {
-                    await ((IGuildUser) user).AddRoleAsync(role);
+                    await user.AddRoleAsync(role);
                     rolesAdded.Add(role);
                 }
 
@@ -119,22 +118,29 @@ namespace BotHATTwaffle2.Commands
             var logMessage = new StringBuilder();
 
             var embed = new EmbedBuilder();
-            embed.WithTitle("`roleme` Results");
-            embed.WithDescription($"Results of toggled roles for {Context.User.Mention}:");
+            embed.WithTitle("`roleme` Results")
+            .WithDescription($"Results of toggled roles for {Context.User.Mention}:")
+            .WithColor(55,55,165);
 
             if (rolesAdded.Any())
             {
                 var name = $"Added ({rolesAdded.Count})";
 
-                embed.AddField(name, string.Join("\n", rolesAdded.Select(r => r.Mention)), true);
+                if(Context.IsPrivate)
+                    embed.AddField(name, string.Join("\n", rolesAdded.Select(r => r.Name)), true);
+                else
+                    embed.AddField(name, string.Join("\n", rolesAdded.Select(r => r.Mention)), true);
+
                 logMessage.AppendLine($"{name}\n    " + string.Join("\n    ", rolesAdded.Select(r => r.Name)));
             }
 
             if (rolesRemoved.Any())
             {
                 var name = $"Removed ({rolesRemoved.Count})";
-
-                embed.AddField(name, string.Join("\n", rolesRemoved.Select(r => r.Mention)), true);
+                if (Context.IsPrivate)
+                    embed.AddField(name, string.Join("\n", rolesRemoved.Select(r => r.Name)), true);
+                else
+                    embed.AddField(name, string.Join("\n", rolesRemoved.Select(r => r.Mention)), true);
                 logMessage.AppendLine($"{name}\n    " + string.Join("\n    ", rolesRemoved.Select(r => r.Name)));
             }
 

@@ -76,10 +76,10 @@ namespace BotHATTwaffle2.Handlers
             string description = $"Now that the verification time has ended, there are a few things I wanted to tell you! Feel free to ask a question in " +
                                  $"any of the relevant channels you see. Just try to keep things on topic. Please spend a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
                                  $"\n\nAdditionally, you've been given a role called `Playtester`. This role is used to notify you when we have a playtest starting. You can remove yourself from the " +
-                                 $"notifications by typing: `>playtester` in any channel." +
+                                 $"notifications by typing: `>playtester` in a DM with me, or in any channel." +
                                  $"\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!" +
                                  $"\n\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme`" +
-                                 $" inside inside {(_dataService.Guild.Channels.FirstOrDefault(x => x.Name == "bot-channel") as SocketTextChannel).Mention}." +
+                                 $" in a DM with me, or in any channel." +
                                  $"\n\nGLHF, and enjoy your stay.";
 
             var embed = new EmbedBuilder()

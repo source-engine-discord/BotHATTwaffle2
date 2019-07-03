@@ -156,6 +156,10 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         internal async void Listen(SocketMessage message)
         {
+            //Ignore users who are inside interactive sessions
+            if (_dataService.IgnoreListenList.Contains(message.Author))
+                return;
+
             //Process webhooks
             if (message.Channel == _dataService.WebhookChannel && message.Author.IsWebhook)
             {

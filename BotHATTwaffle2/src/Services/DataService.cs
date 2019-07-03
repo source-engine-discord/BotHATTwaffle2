@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Util;
+using Discord;
 using Discord.WebSocket;
-using Imgur.API.Authentication.Impl;
-using Imgur.API.Endpoints.Impl;
 using Newtonsoft.Json;
 using RCONServerLib;
 
@@ -30,7 +28,6 @@ namespace BotHATTwaffle2.Services
         }
 
         public RootSettings RSettings { get; set; }
-
         public SocketGuild Guild { get; set; }
 
         // Channels
@@ -56,6 +53,8 @@ namespace BotHATTwaffle2.Services
 
         public bool IncludePlayerCount { get; set; }
         public string PlayerCount { get; set; }
+
+        public List<SocketUser> IgnoreListenList = new List<SocketUser>();
 
         public async Task DeserializeConfig()
         {
@@ -307,6 +306,12 @@ namespace BotHATTwaffle2.Services
             return user;
         }
 
+        /// <summary>
+        /// Converts a string of users to a list of socket users
+        /// </summary>
+        /// <param name="input">String containing users</param>
+        /// <param name="splitChar">Char to split with</param>
+        /// <returns>List of SocketUsers</returns>
         public List<SocketUser> GetSocketUser(string input, char splitChar)
         {
             var users = new List<SocketUser>();
@@ -317,7 +322,63 @@ namespace BotHATTwaffle2.Services
             return users;
         }
 
-        
+        /// <summary>
+        /// Finds a user in the Guild. If the input type is unknown, this method can be used.
+        /// </summary>
+        /// <param name="input">String with user#1234 or ID</param>
+        /// <returns>SocketGuildUser that was found</returns>
+        public SocketGuildUser GetSocketGuildUser(string input)
+        {
+            SocketGuildUser user = null;
+            try
+            {
+                //Check if username#1234 was provided
+                if (input.Contains('#'))
+                {
+                    var split = input.Split('#');
+                    ushort.TryParse(split[1], out var disc);
+                    user = Guild.Users.FirstOrDefault(x => x.Username.Equals(split[0],StringComparison.OrdinalIgnoreCase)
+                                                           && x.DiscriminatorValue == disc);
+                }
+                //Check if ID was provided instead
+                else
+                {
+                    if (ulong.TryParse(input, out var id))
+                        user = Guild.GetUser(id);
+                }
+
+                if (user == null) _ = _log.LogMessage($"Error Setting SocketGuildUser for string `{input}`");
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage(e.ToString(), alert: false, color: LOG_COLOR);
+            }
+
+            return user;
+        }
+
+        /// <summary>
+        /// Gets a socketGuildUser based on ID. Useful for converting a user from SocketUser to SocketGuildUser
+        /// for use outside of the Guild.
+        /// </summary>
+        /// <param name="input">user ID</param>
+        /// <returns>SocketGuildUser that was found</returns>
+        public SocketGuildUser GetSocketGuildUser(ulong input)
+        {
+            SocketGuildUser user = null;
+            try
+            {
+                user = Guild.GetUser(input);
+
+                if (user == null) _ = _log.LogMessage($"Error Setting SocketGuildUser for string `{input}`");
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage(e.ToString(), alert: false, color: LOG_COLOR);
+            }
+
+            return user;
+        }
 
         /// <summary>
         ///     Sends a RCON command to a playtest server.
@@ -373,7 +434,9 @@ namespace BotHATTwaffle2.Services
                 //As a result we will wait for a proper reply below.
                 client.SendCommand(command, result => { reply = result; });
 
-                await _log.LogMessage($"Sending RCON command:\n`{command}`\nTo server: `{server.Address}`", true,
+                //Ignore logging status requests
+                if(command != "status")
+                    await _log.LogMessage($"Sending RCON command: `{command}` To server: `{server.Address}`", true,
                     color: LOG_COLOR);
 
                 retryCount = 0;
