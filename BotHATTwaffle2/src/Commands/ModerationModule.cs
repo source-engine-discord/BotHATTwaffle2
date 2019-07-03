@@ -9,14 +9,12 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
-using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
-using Google.Apis.Http;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -177,7 +175,7 @@ namespace BotHATTwaffle2.Commands
                     .Build());
 
                 await _log.LogMessage(
-                    $"`{Context.User}` muted `{user.Username}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",
+                    $"`{Context.User}` muted `{user}` `{user.Id}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",
                     color: LOG_COLOR);
 
                 try
@@ -198,7 +196,7 @@ namespace BotHATTwaffle2.Commands
             {
                 await ReplyAsync(embed: embed
                     .WithAuthor($"Unable to mute {user.Username}")
-                    .WithDescription($"I could not mute `{user.Username}` because they are already muted.")
+                    .WithDescription($"I could not mute `{user.Username}` `{user.Id}` because they are already muted.")
                     .WithColor(new Color(165, 55, 55))
                     .Build());
             }
@@ -210,24 +208,24 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task UnmuteAsync([Summary("User to unmute")] SocketGuildUser user)
         {
-            var result = await _dataService.UnmuteUser(user.Id);
+            var result = await _dataService.UnmuteUser(user.Id, $"{Context.User} removed the mute manually.");
 
             if (result)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"{user.Username}")
-                    .WithDescription($"`{user.Username}` has been unmuted by `{Context.User.Username}`.")
+                    .WithDescription($"`{user.Username}` `{user.Id}` has been unmuted by `{Context.User}`.")
                     .WithColor(new Color(165, 55, 55))
                     .Build());
 
-                await _log.LogMessage($"`{user.Username}` has been unmuted by `{Context.User.Username}`.");
+                await _log.LogMessage($"`{user.Username}` `{user.Id}` has been unmuted by `{Context.User}`.");
 
                 //Remove the scheduled job, because we are manually unmuting.
                 JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
             }
             else
             {
-                await ReplyAsync($"Failed to unmute `{user.Username}`");
+                await ReplyAsync($"Failed to unmute `{user.Username}` `{user.Id}`");
             }
         }
 
@@ -252,8 +250,12 @@ namespace BotHATTwaffle2.Commands
 
                 var allMutes = DatabaseUtil.GetAllActiveUserMutes();
                 foreach (var mute in allMutes)
+                {
+                    var mod = _dataService.GetSocketUser(mute.ModeratorId);
+                    string modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     embed.AddField(mute.Username,
-                        $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod ID: `{mute.ModeratorId}`");
+                        $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod: `{modString}`");
+                }
 
                 if (allMutes.ToArray().Length == 0)
                 {
@@ -293,10 +295,13 @@ namespace BotHATTwaffle2.Commands
                     fullListing = null;
                     foreach (var mutePage in allMutes.Reverse())
                     {
+                        var mod = _dataService.GetSocketUser(mutePage.ModeratorId);
+                        string modString = mod == null ? $"{mutePage.ModeratorId}" : mod.ToString();
+                        
                         fullListing += $"**{mutePage.MuteTime.ToString()}**" +
                                        $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
                                        $"\nReason: `{mutePage.Reason}`" +
-                                       $"\nMuting Mod ID: `{mutePage.ModeratorId}`\n\n";
+                                       $"\nMuting Mod: `{modString}`\n\n";
 
                         counter++;
                         if (counter >= 5)
@@ -317,10 +322,14 @@ namespace BotHATTwaffle2.Commands
                 }
 
                 foreach (var mute in allMutes.Reverse())
+                {
+                    var mod = _dataService.GetSocketUser(mute.ModeratorId);
+                    string modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     fullListing += $"**{mute.MuteTime.ToString()}**" +
                                    $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
                                    $"\nReason: `{mute.Reason}`" +
-                                   $"\nMuting Mod ID: `{mute.ModeratorId}`\n\n";
+                                   $"\nMuting Mod: `{modString}`\n\n";
+                }
 
                 embed.WithDescription(fullListing);
 
@@ -432,6 +441,16 @@ namespace BotHATTwaffle2.Commands
                     await Task.Delay(1000);
                     await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
+
+                    await Task.Delay(3000);
+                    var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
+                    GeneralUtil.Shuffle(patreonUsers);
+                    string thanks = "";
+                    foreach (var patreonsRoleMember in patreonUsers)
+                    {
+                        thanks += $"{patreonsRoleMember.Username}, ";
+                    }
+                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
                     break;
 
                 case "post":
@@ -519,12 +538,14 @@ namespace BotHATTwaffle2.Commands
                 embed: embed.Build());
 
             await Task.Delay(30000);
+            var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
+            GeneralUtil.Shuffle(patreonUsers);
             string thanks = "";
-            foreach (var patreonsRoleMember in _dataService.PatreonsRole.Members)
+            foreach (var patreonsRoleMember in patreonUsers)
             {
                 thanks += $"{patreonsRoleMember.Username}, ";
             }
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress, $"say Big thanks to these supporters: {thanks.TrimEnd(new []{',',' '})}");
+            await _dataService.RconCommand(playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
         }
 
         [Command("Active")]

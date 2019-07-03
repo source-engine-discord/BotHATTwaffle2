@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using Discord;
 using Discord.Commands;
@@ -14,12 +15,12 @@ namespace BotHATTwaffle2.Commands
 {
     public class UtilitiesModule : ModuleBase<SocketCommandContext>
     {
-        private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
+        private readonly LogHandler _log;
 
-        public UtilitiesModule(DiscordSocketClient client, DataService dataService)
+        public UtilitiesModule(LogHandler log, DataService dataService)
         {
-            _client = client;
+            _log = log;
             _dataService = dataService;
         }
 
@@ -154,6 +155,10 @@ namespace BotHATTwaffle2.Commands
             }
 
             await ReplyAsync(string.Empty, false, embed.Build());
+            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` used `RoleMe`:\n" +
+                                  $"**Added:**\n{string.Join("\n", rolesAdded.Select(r => r.Name))}\n\n" +
+                                  $"**Removed:**\n{string.Join("\n", rolesRemoved.Select(r => r.Name))}\n\n" +
+                                  $"**Invalid:**\n{string.Join("\n", rolesInvalid)}");
         }
     }
 }

@@ -300,7 +300,29 @@ namespace BotHATTwaffle2.Services
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: LOG_COLOR);
+                _ = _log.LogMessage(e.ToString(), color: LOG_COLOR);
+            }
+
+            return user;
+        }
+
+        /// <summary>
+        ///     Checks if a provided ulong is a valid user
+        /// </summary>
+        /// <param name="input">ulong ID of user</param>
+        /// <returns>Valid SocketUser</returns>
+        public SocketUser GetSocketUser(ulong input)
+        {
+            SocketUser user = null;
+            try
+            {
+                user = _client.GetUser(input);
+
+                if (user == null) _ = _log.LogMessage($"Error Setting SocketUser for string `{input}`");
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage(e.ToString(), color: LOG_COLOR);
             }
 
             return user;
@@ -501,8 +523,9 @@ namespace BotHATTwaffle2.Services
         /// Takes a user ID and attempts to unmute them
         /// </summary>
         /// <param name="userId">UserID to unmute</param>
+        /// <param name="reason">Reason for unmute</param>
         /// <returns>True if unmuted, false otherwise</returns>
-        public async Task<bool> UnmuteUser(ulong userId)
+        public async Task<bool> UnmuteUser(ulong userId, string reason = null)
         {
             var dbResult = DatabaseUtil.UnmuteUser(userId);
             if (dbResult)
@@ -510,7 +533,11 @@ namespace BotHATTwaffle2.Services
                 {
                     var guildUser = Guild.GetUser(userId);
                     await guildUser.RemoveRoleAsync(MuteRole);
-                    await _log.LogMessage($"Removed mute from `{guildUser.Username}`.");
+
+                    //If null, mute timed out
+                    reason = reason ?? "The mute timed out.";
+
+                    await _log.LogMessage($"Removed mute from `{guildUser.Username}` because {reason}.", color: LOG_COLOR);
                     return true;
                 }
                 catch (Exception e)

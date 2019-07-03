@@ -26,6 +26,122 @@ namespace BotHATTwaffle2.Commands
             _youTube = youTube;
         }
 
+        [Command("Tutorials")]
+        [Summary("Displays links to tutorial series.")]
+        [Remarks(
+            "`>tutorials [Optional series]` Example: `>tutorials` `>tutorials v2`\n" +
+            "Displays information about all tutorial series, or the specific one you're looking for\n\n" +
+            "`1` `V2Series` `v2`\n" +
+            "`2` `CSGOBootcamp` `bc` `csgobootcamp`\n" +
+            "`3` `3dsmax` `3ds`\n" +
+            "`4` `WrittenTutorials` `written`\n" +
+            "`5` `LegacySeries` `v1` `lg`\n" +
+            "`6` `HammerTroubleshooting` `ht`")]
+        [Alias("t")]
+        public async Task TutorialsAsync([Summary("The series for which to display.")] string series = "all")
+        {
+            string authTitle;
+            string bodyUrl;
+            string bodyDescription;
+
+            switch (series.ToLower())
+            {
+                case "v2series":
+                case "v2":
+                case "1":
+                    authTitle = "Version 2 Tutorial Series";
+                    bodyUrl = "https://goo.gl/XoVXzd";
+                    bodyDescription = "The Version 2 Tutorial series was created with the knowledge that I gained from " +
+                                      "creating the Version 1 (now legacy) series of tutorials. The goal is to help someone " +
+                                      "who hasn’t ever touched the tools get up and running in Source level design. You can " +
+                                      "watch them in any order, but they have been designed to build upon each other.";
+
+                    break;
+                case "csgobootcamp":
+                case "bc":
+                case "2":
+                    authTitle = "CSGO Level Design Bootcamp";
+                    bodyUrl = "https://goo.gl/srFBxe";
+                    bodyDescription = "The CSGO Boot Camp series was created for ECS to air during their Twitch streams " +
+                                      "between matches. It is created to help someone with no experience with the level " +
+                                      "design tools learn everything they need to create a competitive CSGO level. Most these " +
+                                      "tutorials apply to every Source game, but a handful are specific to CSGO.";
+
+                    break;
+                case "3dsmax":
+                case "3ds":
+                case "3":
+                    authTitle = "3ds Max Tutorials";
+                    bodyUrl = "https://goo.gl/JGg48X";
+                    bodyDescription = "There are a few sub series in the 3ds Max section. If you’re looking to create and " +
+                                      "export your very first Source prop, check out the **My First Prop** series.\n" +
+                                      "If you’re getting start with 3ds Max look at the **Beginners Guide** series, which is " +
+                                      "like the Version 2 Tutorial series but for 3ds Max.\nThere are a few one-off " +
+                                      "tutorials listed on the page as well covering WallWorm functions";
+
+                    break;
+                case "writtentutorials":
+                case "written":
+                case "4":
+                    authTitle = "Written Tutorials";
+                    bodyUrl = "https://goo.gl/i4aAqh";
+                    bodyDescription = "My library of written tutorials is typically about 1 off things that I want to cover. " +
+                                      "They are usually independent of any specific game.";
+
+                    break;
+                case "legacyseries":
+                case "v1":
+                case "lg":
+                case "5":
+                    authTitle = "Legacy Series";
+                    bodyUrl = "https://goo.gl/aHFcvX";
+                    bodyDescription = "Hammer Troubleshooting is a smaller series that is created off user questions that I " +
+                                      "see come up quite often.y are usually independent of any specific game.";
+
+                    break;
+                case "hammertroubleshooting":
+                case "ht":
+                case "6":
+                    authTitle = "Hammer Troubleshooting";
+                    bodyUrl = "https://goo.gl/tBh7jT";
+                    bodyDescription = "The First tutorial series was my launching point for getting better at mapping. Not " +
+                                      "only did I learn a lot from making it, but I like to think that many others learned " +
+                                      "something from the series as well. The series was flawed in that it was not " +
+                                      "structured, and lacked quality control. But you may notice that the further along in " +
+                                      "the series you are, the better quality they get. Example is the 100th tutorial, it " +
+                                      "heavily reflects how the V2 series was created. You can view the entire series below. " +
+                                      "Just be warned that some of the information in these videos may not be correct, or " +
+                                      "even work any longer. Please watch at your own risk. I attempt to support these " +
+                                      "tutorials, but cannot due to time. Please watch the V2 series";
+
+                    break;
+                case "all":
+                    authTitle = "All Tutorial Series Information";
+                    bodyUrl = "https://www.tophattwaffle.com/tutorials/";
+                    bodyDescription = "Over the years I've built up quite the collection of tutorial series!\n\n" +
+                                      "[Version 2 Series](https://goo.gl/XoVXzd)\n" +
+                                      "[CSGO Bootcamp](https://goo.gl/srFBxe)\n" +
+                                      "[3ds Max](https://goo.gl/JGg48X)\n" +
+                                      "[Written Tutorials](https://goo.gl/i4aAqh)\n" +
+                                      "[Hammer Troubleshooting](https://goo.gl/tBh7jT)\n" +
+                                      "[Legacy Series V1](https://goo.gl/aHFcvX)";
+
+                    break;
+                default:
+                    await ReplyAsync("Unknown series. Please try `>Help Tutorials` to see all options.");
+                    return;
+            }
+
+            var embed = new EmbedBuilder
+            {
+                Color = new Color(243, 128, 72),
+                Description = bodyDescription
+            };
+
+            embed.WithAuthor(authTitle, _client.CurrentUser.GetAvatarUrl(), bodyUrl);
+            await ReplyAsync(string.Empty, false, embed.Build());
+        }
+
         [Command("VDC", RunMode = RunMode.Async)]
         [Summary("Searches the VDC and replies with the results.")]
         [Remarks(

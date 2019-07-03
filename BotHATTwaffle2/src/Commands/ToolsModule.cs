@@ -1,13 +1,10 @@
-﻿using Discord;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BotHATTwaffle2.src.Commands
+namespace BotHATTwaffle2.Commands
 {
     /// <summary>
     /// Contains commands which provide links to various Source development tools.

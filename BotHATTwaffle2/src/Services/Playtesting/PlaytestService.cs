@@ -607,5 +607,19 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             await _dataService.PlayTesterRole.ModifyAsync(x => { x.Mentionable = false; });
         }
+
+        /// <summary>
+        /// Gets the current running level, and workshop ID from a test server.
+        /// If array.length == 3 it is a workshop map, with the ID in [1] and map name in [2]
+        /// Otherwise it is a stock level with the name in [0]
+        /// </summary>
+        /// <param name="server">Server to query</param>
+        /// <returns>An array populated with the result.</returns>
+        public async Task<string[]> GetRunningLevelAsync(string server)
+        {
+            var reply = await _dataService.RconCommand(server, "host_map");
+            reply = reply.Substring(14, reply.IndexOf(".bsp", StringComparison.Ordinal) - 14);
+            return reply.Split('/');
+        }
     }
 }

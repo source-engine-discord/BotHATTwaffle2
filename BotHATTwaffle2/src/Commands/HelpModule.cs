@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -186,22 +187,24 @@ namespace BotHATTwaffle2.Commands
 
             string thanksTo = null;
 
+            var users = _dataService.PatreonsRole.Members.ToArray();
+            GeneralUtil.Shuffle(users);
             bool tick = true;
-            foreach (var users in _dataService.PatreonsRole.Members)
+            foreach (var user in users)
             {
                 if (tick)
                 {
-                    thanksTo += $"`{users}`,    ";
+                    thanksTo += $"`{user}`,    ";
                     tick = false;
                 }
                 else
                 {
-                    thanksTo += $"`{users}`\n";
+                    thanksTo += $"`{user}`\n";
                     tick = true;
                 }
             }
 
-            embed.AddField($"Thanks to support from these Patreons",thanksTo.Trim(),true);
+            embed.AddField($"Thanks to support from these Patreons",thanksTo.TrimEnd(new[] {',',' '}),true);
 
             await ReplyAsync(string.Empty, false, embed.Build());
         }
