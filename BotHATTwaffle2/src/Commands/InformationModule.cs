@@ -1,22 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Enumeration;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
-using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.YouTube;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Google.Apis.YouTube.v3;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -24,14 +17,12 @@ namespace BotHATTwaffle2.Commands
     {
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
-        private readonly Random _random;
         private readonly YouTube _youTube;
 
-        public InformationModule(DiscordSocketClient client, DataService data, Random random, YouTube youTube)
+        public InformationModule(DiscordSocketClient client, DataService data, YouTube youTube)
         {
             _client = client;
             _dataService = data;
-            _random = random;
             _youTube = youTube;
         }
 
@@ -50,8 +41,7 @@ namespace BotHATTwaffle2.Commands
             // Scrub user input to make it safe for a link
             term = term.Replace(' ', '+');
             term = HttpUtility.UrlEncode(term);
-            Console.WriteLine($"ENCODED: {term}");
-
+            
             // Here's where we're putting all the data we get from the server (declared here for scoping reasons)
             string siteData = "";
 

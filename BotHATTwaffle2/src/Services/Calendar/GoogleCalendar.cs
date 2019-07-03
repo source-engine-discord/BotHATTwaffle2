@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.src.Models;
+using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Util;
 using Discord.WebSocket;
 using Google.Apis.Auth.OAuth2;
@@ -177,11 +177,35 @@ namespace BotHATTwaffle2.Services.Calendar
         /// </summary>
         /// <param name="testTime">DateTime to check with</param>
         /// <returns>True if event conflict found</returns>
+        public async Task<Events> GetNextMonthAsync(DateTime testTime)
+        {
+            var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
+
+            request.Q = " by ";
+            request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
+            request.ShowDeleted = false;
+            request.SingleEvents = true;
+            request.TimeMin = testTime.Date;
+            request.TimeMax = testTime.Date.AddMonths(1); //Sets to 23:59:59 same day
+
+            // Executes the request for events and retrieves the first event in the resulting items.
+            var events = await request.ExecuteAsync();
+
+            return events;
+        }
+
+        /// <summary>
+        /// Checks the testing calendar for if a test already exists for that date.
+        /// </summary>
+        /// <param name="testTime">DateTime to check with</param>
+        /// <returns>True if event conflict found</returns>
         public async Task<Events> CheckForScheduleConflict(DateTime testTime)
         {
             var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
-            request.Q = " by ";
-            request.TimeMin = DateTime.Now;
+
+            //Lets actually get closed days
+            //request.Q = " by ";
+            request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
             request.ShowDeleted = false;
             request.SingleEvents = true;
             request.TimeMin = testTime.Date;
@@ -192,7 +216,7 @@ namespace BotHATTwaffle2.Services.Calendar
 
             return events;
         }
-
+        
         /// <summary>
         /// Adds a test event to the testing calendar.
         /// </summary>
@@ -213,10 +237,9 @@ namespace BotHATTwaffle2.Services.Calendar
 
             //Create list and add the required attendee.
             var attendeeLists = new List<EventAttendee>();
-            attendeeLists.Add(new EventAttendee {Email = playtestRequest.Email});
-
+            
             //Add every other user's email
-            foreach (var email in playtestRequest.AdditionalEmail)
+            foreach (var email in playtestRequest.Emails)
             {
                 if(!string.IsNullOrWhiteSpace(email))
                     attendeeLists.Add(new EventAttendee { Email = email });
@@ -260,7 +283,7 @@ namespace BotHATTwaffle2.Services.Calendar
             
             return true;
         }
-
+        
         /// <summary>
         /// Gets the latest test event from Google
         /// </summary>

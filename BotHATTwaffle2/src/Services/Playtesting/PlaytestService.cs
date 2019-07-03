@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -85,6 +86,86 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await PostNewAnnouncement();
             else
                 await UpdateAnnouncementMessage();
+        }
+
+        /// <summary>
+        /// Builds an embed that shows upcoming playtest events and events from the queue
+        /// </summary>
+        /// <param name="getSchedule">Get events from Queue</param>
+        /// <param name="getCalendar">Get events from Calendar</param>
+        /// <returns>Built embed with events</returns>
+        public async Task<EmbedBuilder> GetUpcomingEvents(bool getSchedule, bool getCalendar)
+        {
+            string author = "Current ";
+            var embed = new EmbedBuilder().WithColor(new Color(55,55,165))
+                .WithFooter($"Current CT Time: {DateTime.Now}")
+                .WithDescription("[View Testing Calendar](http://playtesting.tophattwaffle.com) " +
+                                 "| [View Testing Requirements](https://www.tophattwaffle.com/playtesting) " +
+                                 "| View Queue with `>Schedule`");
+
+            if (getSchedule)
+            {
+                author += "Playtest Requests";
+                var testQueue = DatabaseUtil.GetAllPlaytestRequests().ToList();
+                //No tests found - do nothing
+                if (testQueue.Count == 0)
+                {
+                    embed.AddField("No playtest requests found!", "Submit your own with: `>request`");
+                }
+                else
+                    for (var i = 0; i < testQueue.Count; i++)
+                    {
+                        //Don't have more than 24
+                        if (embed.Fields.Count >= 24)
+                            break;
+
+                        var info = "Creator(s): ";
+                        foreach (var creator in testQueue[i].CreatorsDiscord)
+                        {
+                            var user = _dataService.GetSocketGuildUser(creator);
+                            if (user != null)
+                                info += $"`{user.Username}`, ";
+                            else
+                                info += $"Could not get user `{creator}`, ";
+                        }
+
+                        info = info.Trim(',', ' ');
+                        info += $"\nRequested Time: `{testQueue[i].TestDate}`\n" +
+                                $"[Map Images]({testQueue[i].ImgurAlbum}) - " +
+                                $"[Workshop Link]({testQueue[i].WorkshopURL})\n";
+
+                        embed.AddField($"[{i}] - {testQueue[i].MapName} - {testQueue[i].TestType}", info, true);
+                    }
+            }
+
+            if (getCalendar)
+            {
+                //If we added requests, toss "and" in there.
+                author += getSchedule ? " and " : "";
+
+                author += "Scheduled Playtests";
+                var testEvents = await _calendar.GetNextMonthAsync(DateTime.Now);
+                if (testEvents.Items.Count  == 0)
+                {
+                    embed.AddField("No scheduled playtests found!", "Submit yours with: `>request`");
+                }
+                else
+                {
+                    foreach (var item in testEvents.Items)
+                    {
+                        if (embed.Fields.Count >= 24)
+                            break;
+
+                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime}`\nEnd Time: `{item.End.DateTime}`", true);
+                    }
+                }
+            }
+
+            if (embed.Fields.Count >= 24)
+                embed.AddField("Max Fields Added","Somehow there are more items than Discord embeds allow. Some items omitted.");
+
+            embed.WithAuthor(author);
+            return embed;
         }
 
         /// <summary>

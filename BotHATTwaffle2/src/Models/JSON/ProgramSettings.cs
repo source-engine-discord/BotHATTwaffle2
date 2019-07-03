@@ -14,6 +14,5 @@ namespace BotHATTwaffle2
         public string ImgurApi { get; set; }
         public string PlaytestDemoPath { get; set; }
         public string SteamworksAPI { get; set; }
-        public string SheetID { get; set; }
     }
 }

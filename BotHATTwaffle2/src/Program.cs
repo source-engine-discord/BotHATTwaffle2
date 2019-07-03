@@ -4,14 +4,12 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
-using BotHATTwaffle2.Services.Sheets;
 using BotHATTwaffle2.Services.YouTube;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
-using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BotHATTwaffle2
@@ -43,11 +41,10 @@ namespace BotHATTwaffle2
                 .AddSingleton<Random>()
                 .AddSingleton<GoogleCalendar>()
                 .AddSingleton<YouTube>()
-                .AddSingleton<Sheets>()
                 .AddSingleton<ReservationService>()
                 .AddSingleton<PlaytestService>()
                 .AddSingleton<IHelpService, HelpService>()
-                .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromSeconds(20)))
+                .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(5)))
                 .BuildServiceProvider();
 
             _dataService = _services.GetRequiredService<DataService>();
@@ -60,7 +57,6 @@ namespace BotHATTwaffle2
             //Google APIs
             _services.GetRequiredService<GoogleCalendar>();
             _services.GetRequiredService<YouTube>();
-            _services.GetRequiredService<Sheets>();
 
             // Remember to keep token private or to read it from an 
             // external source! In this case, we are reading the token 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
@@ -24,16 +25,80 @@ namespace BotHATTwaffle2.Commands
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
         private readonly ReservationService _reservationService;
+        private readonly GoogleCalendar _calendar;
+        private readonly PlaytestService _playtestService;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService,
-            InteractiveService interactive, LogHandler log)
+            InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService)
         {
+            _playtestService = playtestService;
             _client = client;
             _dataService = dataService;
             _reservationService = reservationService;
             _interactive = interactive;
             _log = log;
+            _calendar = calendar;
+        }
+
+        [Command("Schedule", RunMode = RunMode.Async)]
+        [Alias("pts")]
+        [Summary("Allows users to view testing queue and schedule.")]
+        [Remarks("For members, displays test in the queue and scheduled on the calendar." +
+                 "If you're moderation staff, allows for officially scheduling the playtest event after making any needed changes.")]
+        public async Task ScheduleTestAsync([Summary("If `true`, displays scheduled tests as well.")][Optional]bool getAll)
+        {
+            var embed = await _playtestService.GetUpcomingEvents(true, getAll);
+            var display = await ReplyAsync(embed: embed.Build());
+
+            var user = _dataService.GetSocketGuildUser(Context.User.Id);
+
+            if (user.Roles.Contains(_dataService.ModeratorRole)
+            || user.Roles.Contains(_dataService.AdminRole))
+            {
+                _dataService.IgnoreListenList.Add(Context.User);
+
+                var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar);
+                await requestBuilder.SchedulePlaytestAsync(display);
+
+                _dataService.IgnoreListenList.Remove(Context.User);
+            }
+        }
+
+        [Command("Request", RunMode = RunMode.Async)]
+        [Alias("ptr")]
+        [Summary("Requests a playtest event.")]
+        [Remarks("Creates a playtest request using an interactive system. To start, type `>Request`\n\n" +
+                 "If you have a filled out template, you can send that with the command to skip the interactive builder. " +
+                 "An example of the filled out template is on the playtesting webpage.\n\nTemplate:" +
+                 "```>Request Date:\nEmails:\nMapName:\nDiscord:\nImgur:\nWorkshop:\nType:\nDescription:\nSpawns:\nPreviousTest:\nServer:```")]
+        public async Task PlaytestRequestAsync([Summary("A pre-built playtest event based on the template.")][Optional][Remainder]string playtestInformation)
+        {
+            _dataService.IgnoreListenList.Add(Context.User);
+            var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar);
+
+            if (playtestInformation != null)
+            {
+                //If we are here from a full dump, split it to handle
+                string[] split = playtestInformation.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+                if (split.Length != 11)
+                {
+                    await ReplyAsync("Invalid bulk playtest quest submission. Consult the help documents.");
+                    return;
+                }
+
+                await requestBuilder.BuildPlaytestRequestBulk(split);
+            }
+            else
+            {
+                var upcoming = await _playtestService.GetUpcomingEvents(true, true);
+                await ReplyAsync(embed: upcoming.Build());
+                await requestBuilder.BuildPlaytestRequestWizard();
+            }
+
+            _dataService.IgnoreListenList.Remove(Context.User);
         }
 
         [Command("PublicServer")]
@@ -371,7 +436,6 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Servers")]
-        [RequireContext(ContextType.Guild)]
         [Summary("Displays all playtest servers.")]
         public async Task ServersAsync()
         {
@@ -388,20 +452,20 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Playtester")]
-        [RequireContext(ContextType.Guild)]
         [Summary("Join or leave playtest notifications.")]
         [Remarks("Toggles your subscription to playtest notifications.")]
         public async Task PlaytesterAsync()
         {
-            if (((SocketGuildUser) Context.User).Roles.Contains(_dataService.PlayTesterRole))
+            var user = _dataService.GetSocketGuildUser(Context.User.Id);
+            if (user.Roles.Contains(_dataService.PlayTesterRole))
             {
                 await ReplyAsync($"Sorry to see you go from playtest notifications {Context.User.Mention}!");
-                await ((SocketGuildUser) Context.User).RemoveRoleAsync(_dataService.PlayTesterRole);
+                await user.RemoveRoleAsync(_dataService.PlayTesterRole);
             }
             else
             {
                 await ReplyAsync($"Thanks for subscribing to playtest notifications {Context.User.Mention}!");
-                await ((SocketGuildUser) Context.User).AddRoleAsync(_dataService.PlayTesterRole);
+                await user.AddRoleAsync(_dataService.PlayTesterRole);
             }
         }
     }

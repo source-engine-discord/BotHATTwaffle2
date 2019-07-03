@@ -9,7 +9,6 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
-using BotHATTwaffle2.Services.Sheets;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
@@ -33,11 +32,10 @@ namespace BotHATTwaffle2.Commands
         private readonly PlaytestService _playtestService;
         private readonly Random _random;
         private readonly ReservationService _reservationService;
-        private readonly Sheets _sheets;
 
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
-            Random random, Sheets sheets)
+            Random random)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -46,284 +44,8 @@ namespace BotHATTwaffle2.Commands
             _interactive = interactive;
             _reservationService = reservationService;
             _random = random;
-            _sheets = sheets;
         }
-
-        [Command("Schedule", RunMode = RunMode.Async)]
-        [Alias("pts")]
-        [Summary("Allows moderation staff to schedule playtests.")]
-        [RequireContext(ContextType.Guild)]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task ScheduleTestAsync()
-        {
-            var result = await _sheets.GetTestQueueEvents();
-            var embed = new EmbedBuilder()
-                .WithAuthor("Current playtests in queue")
-                .WithDescription($"All times are CT time zone, where it is currently: {DateTime.Now}")
-                .WithColor(new Color(55, 55, 165));
-            var tick = 0;
-            //Only if we have results
-            if (result.Count > 0)
-                foreach (var v in result)
-                {
-                    var info = "Creator(s): ";
-                    foreach (var creator in v.CreatorsDiscord)
-                    {
-                        var user = _dataService.GetSocketUser(creator);
-                        if (user != null)
-                            info += $"`{user.Username}`, ";
-                        else
-                            info += $"Could not get user `{creator}`, ";
-                    }
-
-                    info = info.Trim(',', ' ');
-                    info += $"\nRequested Time: `{v.TestDate}`\n" +
-                            $"[Map Images]({v.ImgurAlbum}) - " +
-                            $"[Workshop Link]({v.WorkshopURL})\n";
-
-                    embed.AddField($"[{tick}] - {v.MapName} - {v.TestType}", info, true);
-                    tick++;
-                }
-            else
-            {
-                embed.WithDescription("No tests found in the queue")
-                .WithColor(new Color(25, 25, 25));
-
-                await ReplyAsync(embed: embed.Build());
-                return;
-            }
-
-            var display = await ReplyAsync(embed: embed.Build());
-            var instructions = await ReplyAsync("Type the ID of the playtest to schedule, or `cancel` to exit");
-            var userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-            var id = 0;
-            while (true)
-            {
-                //abort
-                if (userInput.Content.Contains("cancel", StringComparison.OrdinalIgnoreCase))
-                {
-                    embed.WithColor(new Color(25, 25, 25));
-                    await display.ModifyAsync(x => x.Embed = embed.Build());
-                    await instructions.ModifyAsync(x => x.Content = "Cancelled!");
-                    return;
-                }
-
-                //Input is valid.
-                if (int.TryParse(userInput.Content, out id) && id >= 0 && id < result.Count)
-                    break;
-
-                await userInput.DeleteAsync();
-                await instructions.ModifyAsync(x =>
-                    x.Content = "Not going to tell you again...\n" +
-                                "Type the ID of the playtest to schedule, or `cancel` to exit");
-                userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-            }
-
-            var instructionsString = "Type the ID of the field to edit, `submit` to schedule, or `cancel` to exit";
-            await userInput.DeleteAsync();
-            embed = new EmbedBuilder();
-            while (userInput != null && !userInput.Content.Contains("cancel", StringComparison.OrdinalIgnoreCase))
-            {
-                retry:
-                string creators = null;
-                foreach (var creator in result[id].CreatorsDiscord)
-                {
-                    var user = _dataService.GetSocketUser(creator);
-                    if (user != null)
-                        creators += $"{user}, ";
-                    else
-                        creators += $"__**Unknown**__[{creator}], ";
-                }
-
-                //Get server, and if we can set the full location
-                var server = DatabaseUtil.GetTestServer(result[id].Preferredserver);
-                if (server != null)
-                    result[id].Preferredserver = server.Address;
-
-                embed = new EmbedBuilder();
-                embed.WithAuthor($"{result[id].MapName}")
-                    .WithDescription($"{result[id].TestGoals}")
-                    .AddField("[1] Creators", creators.TrimEnd(',', ' '))
-                    .AddField("[2] Workshop", result[id].WorkshopURL)
-                    .AddField("[3] Imgur Album", result[id].ImgurAlbum)
-                    .AddField("[4] Location", result[id].Preferredserver, true)
-                    .AddField("[5] Scheduled For", result[id].TestDate, true)
-                    .AddField("[6] Type", result[id].TestType, true)
-                    .AddField("Creator's Name", result[id].Name, true)
-                    .AddField("Moderator", Context.User, true)
-                    .AddField("Previous Test Date", result[id].PreviousTestDate, true)
-                    .AddField("Tested Radar", result[id].RadarTested, true)
-                    .AddField("Spawns", result[id].Spawns, true)
-                    .WithFooter($"Current CT Time: {DateTime.Now}")
-                    .WithColor(new Color(165, 55, 55));
-
-                //Display and check if another test exists.
-                var conflicts = await _calendar.CheckForScheduleConflict(result[id].TestDate);
-                if (conflicts.Items.Count > 0)
-                    foreach (var item in conflicts.Items)
-                        embed.AddField("FOUND ANOTHER TEST ON THIS DATE",
-                            $"{item.Summary}\nAt: `{item.Start.DateTime}`");
-
-                await display.ModifyAsync(x => x.Embed = embed.Build());
-
-                //Dispaly instructions, then reset them for next loop
-                await instructions.ModifyAsync(x => x.Content = instructionsString);
-                instructionsString = "Type the ID of the field to edit, `submit` to schedule, or `cancel` to exit.";
-
-                //Get user input
-                userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-
-                switch (userInput.Content.ToLower())
-                {
-                    //Creators
-                    case "1":
-                        await userInput.DeleteAsync();
-                        await instructions.ModifyAsync(x => x.Content = "Type the new string for creators." +
-                                                                        $"\nCurrent creators string: `{string.Join(", ", result[id].CreatorsDiscord)}`");
-                        userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-                        result[id].CreatorsDiscord = userInput.Content.Split(",").ToList();
-                        break;
-                    //Workshop URL
-                    case "2":
-                        await userInput.DeleteAsync();
-                        await instructions.ModifyAsync(x => x.Content = "Type the new string for workshop link" +
-                                                                        $"\nCurrent workshop string: `{result[id].WorkshopURL}`");
-                        userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-                        result[id].WorkshopURL = userInput.Content;
-                        break;
-                    //Imgur
-                    case "3":
-                        await userInput.DeleteAsync();
-                        await instructions.ModifyAsync(x => x.Content = "Type the new string for Imgur album link" +
-                                                                        $"\nCurrent ImgurAlbum string: `{result[id].ImgurAlbum}`");
-                        userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-                        result[id].ImgurAlbum = userInput.Content;
-                        break;
-                    //Server
-                    case "4":
-                        await userInput.DeleteAsync();
-                        await instructions.ModifyAsync(x => x.Content = "Type the new string for server location" +
-                                                                        $"\nCurrent server string: `{result[id].Preferredserver}`");
-                        userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-                        result[id].Preferredserver = userInput.Content;
-                        break;
-                    //Scheduled for
-                    case "5":
-                        await userInput.DeleteAsync();
-                        await instructions.ModifyAsync(x => x.Content = "Type the new string for test date" +
-                                                                        $"\nCurrent date string: `{result[id].TestDate}`." +
-                                                                        "\nFormatting is strict, copy the above string and edit it.");
-                        userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-                        result[id].TestDate = DateTime.TryParse(userInput.Content, out var newDt)
-                            ? newDt
-                            : result[id].TestDate;
-                        break;
-                    //Type
-                    case "6":
-                        await userInput.DeleteAsync();
-                        await instructions.ModifyAsync(x => x.Content = "Type the new string for type" +
-                                                                        $"\nCurrent type string: `{result[id].TestType}`.");
-                        userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-                        result[id].TestType = userInput.Content.Contains("comp", StringComparison.OrdinalIgnoreCase)
-                            ? "Competitive"
-                            : "Casual";
-                        break;
-                    case "cancel":
-                        embed.WithColor(new Color(25, 25, 25));
-                        await display.ModifyAsync(x => x.Embed = embed.Build());
-                        await instructions.ModifyAsync(x => x.Content = "Cancelled!");
-                        return;
-                }
-
-                //Validate before submitting
-                if (userInput.Content.Contains("submit", StringComparison.OrdinalIgnoreCase))
-                {
-                    await userInput.DeleteAsync();
-                    if (creators.Contains("Unknown["))
-                    {
-                        instructionsString =
-                            "**Unable to find creators by the provided input, please fix it before submitting.**\n" +
-                            $"Current creators string: `{string.Join(", ", result[id].CreatorsDiscord)}`" +
-                            "\nType the ID of the field to edit, or `cancel` to exit.";
-                        goto retry;
-                    }
-
-                    if (server == null)
-                    {
-                        instructionsString =
-                            "**Unable to find a server with that ID, please fix it before submitting.**\n" +
-                            $"Current Server string: {result[id].Preferredserver}" +
-                            "\nType the ID of the field to edit, or `cancel` to exit.";
-                        goto retry;
-                    }
-
-                    if (!result[id].WorkshopURL.Contains("https://steamcommunity.com/sharedfiles/filedetails",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        instructionsString =
-                            "**Invalid Workshop URL**\n" +
-                            $"Current workshop string: {result[id].WorkshopURL}" +
-                            "\nType the ID of the field to edit, or `cancel` to exit.";
-                        goto retry;
-                    }
-
-                    if (!result[id].ImgurAlbum.Contains("https://imgur.com",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        instructionsString =
-                            "**Invalid Imgur URL**\n" +
-                            $"Current workshop string: {result[id].ImgurAlbum}" +
-                            "\nType the ID of the field to edit, or `cancel` to exit.";
-                        goto retry;
-                    }
-
-                    //Made it to break, meaning required data is validated.
-                    break;
-                }
-
-                //Delete the message we last sent
-                await userInput.DeleteAsync();
-            }
-
-            embed.WithColor(new Color(55, 165, 55));
-            await display.ModifyAsync(x => x.Embed = embed.Build());
-            await instructions.ModifyAsync(x =>
-                x.Content = "Type `schedule` to officially schedule, or anything else to exit.");
-            userInput = await NextMessageAsync(timeout: TimeSpan.FromSeconds(120));
-
-            if (userInput.Content.Contains("schedule", StringComparison.OrdinalIgnoreCase))
-            {
-                if (await _calendar.AddTestEvent(result[id], Context.User) &&
-                    await _sheets.RemoveRequest(result[id].Timestamp))
-                {
-                    embed.WithColor(new Color(240, 240, 240));
-                    await display.ModifyAsync(x => x.Embed = embed.Build());
-                    await instructions.ModifyAsync(x => x.Content = "SCHEDULED!");
-
-                    string mention = null;
-                    foreach (var creator in result[id].CreatorsDiscord)
-                        mention += _dataService.GetSocketUser(creator).Mention + " ";
-
-                    var ws = new Workshop();
-                    var wbEmbed = await ws.HandleWorkshopEmbeds(Context.Message, _dataService, $"[Map Images]({result[id].ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
-                        result[id].TestType, GeneralUtil.GetWorkshopIdFromFqdn(result[id].WorkshopURL));
-                    await _dataService.TestingChannel.SendMessageAsync(
-                        $"{mention.Trim()} your playtest has been scheduled for `{result[id].TestDate}` (CT Timezone)",
-                        embed: wbEmbed.Build());
-                    return;
-                }
-
-                embed.WithColor(new Color(165, 55, 55));
-                await display.ModifyAsync(x => x.Embed = embed.Build());
-                await instructions.ModifyAsync(x =>
-                    x.Content = "An error occured working with the Google APIs, consult the logs.\n" +
-                                "The playtest event may have been created. Please manually double check the calendar and spreadsheet.");
-            }
-            embed.WithColor(new Color(25, 25, 25));
-            await display.ModifyAsync(x => x.Embed = embed.Build());
-            await instructions.ModifyAsync(x => x.Content = "Cancelled!");
-        }
-
+        
         [Command("Mute")]
         [Summary("Mutes a user.")]
         [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
@@ -795,6 +517,14 @@ namespace BotHATTwaffle2.Commands
 
             await _dataService.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions,
                 embed: embed.Build());
+
+            await Task.Delay(30000);
+            string thanks = "";
+            foreach (var patreonsRoleMember in _dataService.PatreonsRole.Members)
+            {
+                thanks += $"{patreonsRoleMember.Username}, ";
+            }
+            await _dataService.RconCommand(playtestCommandInfo.ServerAddress, $"say Big thanks to these supporters: {thanks.TrimEnd(new []{',',' '})}");
         }
 
         [Command("Active")]

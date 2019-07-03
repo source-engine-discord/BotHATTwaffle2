@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -61,7 +62,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 .WithColor(new Color(165, 55, 55)).WithDescription(description);
 
             var display = await _context.Channel.SendMessageAsync(embed: embed.Build());
-            var choice = await _interactive.NextMessageAsync(_context);
+            var choice = await _interactive.NextMessageAsync(_context, timeout:TimeSpan.FromSeconds(20));
             if (choice != null && !choice.Content.Equals("0"))
             {
                 string kickMessage = await _dataService.RconCommand(serverAddress, $"kickid {choice.Content}");

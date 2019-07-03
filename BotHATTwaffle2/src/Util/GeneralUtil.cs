@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
-using Google.Apis.Sheets.v4.Data;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using System.Drawing;
@@ -99,6 +98,16 @@ namespace BotHATTwaffle2.Util
         public static string GetWorkshopIdFromFqdn(string workshopUrl)
         {
             return Regex.Match(workshopUrl, @"(\d+)").Value;
+        }
+
+        /// <summary>
+        /// Validates if a string is a SteamWorkshop URL
+        /// </summary>
+        /// <param name="workshopUrl">String to validate</param>
+        /// <returns>True if valid, false otherwise</returns>
+        public static bool ValidateWorkshopURL(string workshopUrl)
+        {
+            return Regex.IsMatch(workshopUrl, @"^(https:\/\/steamcommunity.com/sharedfiles/filedetails/\?id=)\d+$");
         }
 
         /// <summary>
