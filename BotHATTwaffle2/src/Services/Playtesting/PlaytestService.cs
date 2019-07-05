@@ -349,6 +349,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             JobManager.RemoveJob("[Playtest20Minute]");
             JobManager.RemoveJob("[PlaytestStarting]");
             JobManager.RemoveJob("[QueryPlayerCount]");
+
+            //Stop getting server listen messages.
+            _logReceiverService.StopLogReceiver();
         }
 
         public void SchedulePlaytestAnnouncements()
@@ -521,9 +524,11 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task PlaytestFifteenMinuteTask()
         {
             _ = _log.LogMessage("Running playtesting starting in 15 minutes task...", true, color: LOG_COLOR);
-            _logReceiverService.StartLogReceiver(_calendar.GetTestEventNoUpdate().ServerLocation);
+
             //Disable reservations on servers
             await _reservationService.DisableReservations();
+
+            _logReceiverService.EnableFeedback();
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
@@ -573,7 +578,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task PlaytestStartingTask()
         {
             _ = _log.LogMessage("Running playtesting starting now task...", false, color: LOG_COLOR);
-            _logReceiverService.StartLogReceiver(_calendar.GetTestEventNoUpdate().ServerLocation);
+
             //Disable reservations on servers
             await _reservationService.DisableReservations();
 

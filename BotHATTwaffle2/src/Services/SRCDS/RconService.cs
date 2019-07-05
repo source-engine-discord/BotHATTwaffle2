@@ -16,6 +16,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         private LogHandler _log;
         private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
         private static Dictionary<string, RCON> _rconClients;
+        private static bool _running = false;
 
         public RconService(DataService dataService, LogHandler log)
         {
@@ -25,6 +26,11 @@ namespace BotHATTwaffle2.Services.SRCDS
             _rconClients = new Dictionary<string, RCON>();
         }
 
+        /// <summary>
+        /// Gets an already connect RCON client, or makes a new one
+        /// </summary>
+        /// <param name="serverId">Server ID to get client for</param>
+        /// <returns>RCON client</returns>
         private RCON GetOrCreateRconClient(string serverId)
         {
             if (!_rconClients.ContainsKey(serverId))
@@ -53,31 +59,81 @@ namespace BotHATTwaffle2.Services.SRCDS
             return _rconClients[serverId];
         }
 
+        /// <summary>
+        /// Sends an RCON command to a specific server. Will automatically retry, or display error messages if something
+        /// goes wrong.
+        /// </summary>
+        /// <param name="serverId">Server to send command to</param>
+        /// <param name="command">Command to send</param>
+        /// <returns>Server reply, if any</returns>
         public async Task<string> RconCommand(string serverId, string command)
         {
-            string reply;
+            //Spool all commands if one is in progress.
+            while(_running)
+            {
+                await _log.LogMessage($"Waiting for another instance of RCON to finish before sending\n" +
+                                      $"{command}\nTo: {serverId}", channel: false, color: LOG_COLOR);
+                await Task.Delay(250);
+            }
+            _running = true;
+
+            bool _requireRetry = false;
+            string reply = null;
             serverId = GeneralUtil.GetServerCode(serverId);
             var client = GetOrCreateRconClient(serverId);
-            var commandResult =  client.SendCommandOrRetry(command);
+
+            Console.WriteLine("Sending command awaiting reply");
+            var commandResult =  client.SendCommandAsync(command);
             if (commandResult == await Task.WhenAny(commandResult, Task.Delay(5000)))
             {
-                reply = await commandResult;
+                try
+                {
+                    reply = await commandResult;
+                }
+                catch
+                {
+                    await _log.LogMessage($"Failed to communicate with RCON server {serverId} on first try. Will try again.",
+                        channel:false, color:LOG_COLOR);
+                    client.Dispose();
+                    _requireRetry = true;
+                }
             }
             else
             {
-                //If we timed out, we can assume the server isn't going to reply on this session any more.
-                reply = "Timed out waiting for a reply, please try again";
                 client.Dispose();
-                _rconClients.Remove(serverId);
+                _requireRetry = true;
             }
+
+            if (_requireRetry)
+            {
+                //Backoff before retry.
+                await Task.Delay(1000);
+                client = GetOrCreateRconClient(serverId);
+                commandResult = client.SendCommandAsync(command);
+                if (commandResult == await Task.WhenAny(commandResult, Task.Delay(10000)))
+                {
+                    try
+                    {
+                        reply = await commandResult;
+                    }
+                    catch
+                    {
+                        reply = "Failed to communicate with RCON Server after 2 tries. This is likely due to a network issue.";
+                        await _log.LogMessage($"Failed to communicate with RCON server {serverId} after 2 tries."
+                            , color: LOG_COLOR);
+                    }
+                }
+            }
+            //Release the next instance
+            _running = false;
+            
+            reply = FormatRconServerReply(reply);
 
             if (string.IsNullOrWhiteSpace(reply))
                 return $"{command} was sent, but provided no reply.";
 
-            reply = FormatRconServerReply(reply);
-
             //Ignore logging status replies... This is a one off that just causes too much spam.
-            if(!command.Contains("status",StringComparison.OrdinalIgnoreCase))
+            if (!command.Contains("status",StringComparison.OrdinalIgnoreCase))
                 await _log.LogMessage($"**Sending:** `{command}`\n**To:** `{serverId}`\n**Response Was:** `{reply}`", color: LOG_COLOR);
 
             return reply;

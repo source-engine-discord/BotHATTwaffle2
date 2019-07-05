@@ -56,7 +56,7 @@ namespace BotHATTwaffle2.Commands
                  "send RCON commands to it. Regular users can use `>feedback [message]` to leave feedback on the map.")]
         public async Task StartServerListenAsync([Summary("Server to start listening on")]string server)
         {
-            if (_logReceiverService.enableLog)
+            if (_logReceiverService.EnableLog)
             {
                 await ReplyAsync(embed:new EmbedBuilder()
                     .WithAuthor("Unable to start new listener")
@@ -68,8 +68,7 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService.StartLogReceiver(server);
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor("Started new Listener")
-                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback and rcon commands" +
-                                 $" from ingame chat.")
+                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is now listening to ingame chat.")
                 .WithColor(new Color(55, 165, 55)).Build());
         }
 
@@ -78,7 +77,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Stops server listening to disallow ingame chat to call certain bot functions.")]
         public async Task StopServerListenAsync()
         {
-            if(!_logReceiverService.enableLog)
+            if(!_logReceiverService.EnableLog)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("A listener isn't started")
@@ -89,8 +88,7 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService.StopLogReceiver();
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor("Stopped Listener")
-                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is no longer listening for feedback or rcon commands" +
-                                 $" from ingame chat.")
+                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is no longer listening to ingame chat.")
                 .WithColor(new Color(165, 55, 55)).Build());
         }
 
@@ -463,6 +461,9 @@ namespace BotHATTwaffle2.Commands
                     //Start receiver if it isn't already
                     _logReceiverService.StartLogReceiver(_playtestCommandInfo.ServerAddress);
 
+                    //Start feedback capture
+                    _logReceiverService.EnableFeedback();
+
                     //Write to the DB so we can restore this info next boot
                     DatabaseUtil.StorePlaytestCommandInfo(_playtestCommandInfo);
 
@@ -592,13 +593,17 @@ namespace BotHATTwaffle2.Commands
 
             //Set the filename for this playtest again incase the bot restarted.
             _logReceiverService.SetFileName(_playtestCommandInfo.DemoName);
+            //Stop getting more feedback
+            _logReceiverService.DisableFeedback();
+
+            //Make sure the playtest file exists before trying to send it.
+            if (File.Exists(_logReceiverService.GetFilePath()))
+                await _dataService.TestingChannel.SendFileAsync(_logReceiverService.GetFilePath(), playtestCommandInfo.CreatorMentions,
+                    embed: embed.Build());
+            else
+                await _dataService.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions,
+                    embed: embed.Build());
             
-            await _dataService.TestingChannel.SendFileAsync(_logReceiverService.GetFilePath(), playtestCommandInfo.CreatorMentions,
-                embed: embed.Build());
-
-            //Stop the log receiver. Needs to be done after sending the playtest txt file.
-            _logReceiverService.StopLogReceiver();
-
             await Task.Delay(30000);
             var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
             GeneralUtil.Shuffle(patreonUsers);

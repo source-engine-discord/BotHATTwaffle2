@@ -149,44 +149,6 @@ namespace CoreRCON
             return await source.Task;
         }
 
-        public async Task<string> SendCommandOrRetry(string command)
-        {
-            if (!_tcp.Connected)
-                try
-                {
-                   
-                    await ConnectAsync();
-                }
-                catch
-                {
-                    Dispose();
-                    Log($"Failed to reconnect the TCP Socket for `{_endpoint}`. Client will be " +
-                        $"recreated next RCON attempt.");
-                    return "Failed to connect to RCON server, please try again.";
-                }
-
-            try
-            {
-                return await SendCommandAsync(command);
-            }
-            catch
-            {
-                Log($"Failed to send command to `{_endpoint}`, will attempt reconnect before trying again.");
-            }
-
-            try
-            {
-                await ConnectAsync();
-                return await SendCommandAsync(command);
-            }
-            catch
-            {
-                Dispose();
-                Log($"Failed to send command to `{_endpoint}` after 2 retries. Is the RCON server running?");
-                return "Failed to connect to RCON server after 2 retries, please try again later.";
-            }
-        }
-
         /// <summary>
         ///     Send a command to the server, and wait for the response before proceeding.  R
         /// </summary>

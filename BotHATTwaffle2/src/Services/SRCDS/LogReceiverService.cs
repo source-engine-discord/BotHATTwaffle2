@@ -18,7 +18,8 @@ namespace BotHATTwaffle2.Services.SRCDS
         private readonly DataService _dataService;
         private readonly RconService _rconService;
         private readonly LogHandler _logHandler;
-        public bool enableLog = false;
+        public bool EnableLog = false;
+        private bool _enableFeedback = false;
         public Server ActiveServer;
         private string path;
 
@@ -38,7 +39,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         public async void StartLogReceiver(string serverString)
         {
             //Cannot start another sessions while one is active
-            if (enableLog)
+            if (EnableLog)
                 return;
 
             ActiveServer = DatabaseUtil.GetTestServer(serverString);
@@ -47,39 +48,29 @@ namespace BotHATTwaffle2.Services.SRCDS
             if (ActiveServer == null)
                 return;
             
-            enableLog = true;
+            EnableLog = true;
             string externalip = new WebClient().DownloadString("http://icanhazip.com").Trim();
             await _rconService.RconCommand(ActiveServer.ServerId, $"logaddress_add {externalip}:{_dataService.RSettings.ProgramSettings.ListenPort}");
-            
-
 
             var ip = GeneralUtil.GetIPHost(ActiveServer.Address).AddressList.FirstOrDefault();
             var log = new LogReceiver(_dataService.RSettings.ProgramSettings.ListenPort, new IPEndPoint(ip, 27015));
 
-            await _logHandler.LogMessage($"Starting LogReceiver for {ActiveServer.Address} using:\n" +
-                                         "logaddress_add " + externalip + ":" + _dataService.RSettings.ProgramSettings.ListenPort);
-
-            //Seed the feedback log with the current timestamp
-            await HandleInGameFeedback(ActiveServer, new FeedbackMessage
-            {
-                Message = $"Log Started at {DateTime.Now} CT",
-                Player = new Player
-                {
-                    Name = "Ido",
-                    Team = "Bot"
-                }
-
-            });
+            await _logHandler.LogMessage($"Starting LogReceiver for `{ActiveServer.Address}` using:\n" +
+                                         "`logaddress_add " + externalip + ":" + _dataService.RSettings.ProgramSettings.ListenPort + "`");
 
             //Start the task and run it forever in a loop. The bool changes at a later time which breaks the loop
             //and removes this client so we can make another one later on.
             await Task.Run(async () =>
             {
-                log.Listen<FeedbackMessage>(chat => { _ = HandleInGameFeedback(ActiveServer, chat); });
+                log.Listen<FeedbackMessage>(chat =>
+                {
+                    if(_enableFeedback)
+                        _ = HandleInGameFeedback(ActiveServer, chat);
+                });
 
                 log.Listen<RconMessage>(rcon => { _ = InGameRcon(ActiveServer, rcon); });
 
-                while (enableLog)
+                while (EnableLog)
                 {
                     await Task.Delay(1000);
                 }
@@ -94,7 +85,35 @@ namespace BotHATTwaffle2.Services.SRCDS
         {
             //Reset path to something default incase sessions is started outside of a test.
             SetFileName("feedback");
-            enableLog = false;
+            EnableLog = false;
+            _enableFeedback = false;
+        }
+
+        public bool EnableFeedback()
+        {
+            if (EnableLog && !_enableFeedback)
+            {
+                _enableFeedback = true;
+                //Seed the feedback log with the current timestamp
+                _ = HandleInGameFeedback(ActiveServer, new FeedbackMessage
+                {
+                    Message = $"Log Started at {DateTime.Now} CT",
+                    Player = new Player
+                    {
+                        Name = "Ido",
+                        Team = "Bot"
+                    }
+
+                });
+
+                return true;
+            }
+            else return false;
+        }
+
+        public void DisableFeedback()
+        {
+            _enableFeedback = false;
         }
 
         /// <summary>
