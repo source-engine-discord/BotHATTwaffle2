@@ -41,12 +41,12 @@ namespace RCONServerLib
         /// <summary>
         ///     The TCP Client
         /// </summary>
-        private readonly TcpClient _client;
+        private TcpClient _client;
 
         /// <summary>
         ///     A list containing all requested commands for event handling
         /// </summary>
-        private readonly Dictionary<int, CommandResult> _requestedCommands;
+        private Dictionary<int, CommandResult> _requestedCommands;
 
         /// <summary>
         ///     A buffer containing the packet
@@ -71,7 +71,6 @@ namespace RCONServerLib
         public RemoteConClient()
         {
             _client = new TcpClient();
-
             _packetId = 0;
             _requestedCommands = new Dictionary<int, CommandResult>();
         }
@@ -148,6 +147,7 @@ namespace RCONServerLib
         /// </summary>
         public void Disconnect()
         {
+            Console.WriteLine("In Disconnect Method.");
             if (_client.Connected)
             {
                 _client.Client.Disconnect(false);
@@ -279,7 +279,7 @@ namespace RCONServerLib
                             Log("Authentication success.");
                             Authenticated = true;
                             if (OnAuthResult != null)
-                                OnAuthResult(false);
+                                OnAuthResult(true);
                         }
 
                     return;

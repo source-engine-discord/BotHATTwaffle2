@@ -4,6 +4,7 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.YouTube;
 using BotHATTwaffle2.Util;
 using Discord;
@@ -26,8 +27,14 @@ namespace BotHATTwaffle2
         {
             Console.Title = "Bot Ido";
 
+            //Always download users to make sure we can always get them
+            var config = new DiscordSocketConfig
+            {
+                AlwaysDownloadUsers = true
+            };
+
             // Dependency injection. All objects use constructor injection.
-            _client = new DiscordSocketClient();
+            _client = new DiscordSocketClient(config);
             _commands = new CommandService();
             _services = new ServiceCollection()
                 .AddSingleton(_client)
@@ -43,6 +50,8 @@ namespace BotHATTwaffle2
                 .AddSingleton<YouTube>()
                 .AddSingleton<ReservationService>()
                 .AddSingleton<PlaytestService>()
+                .AddSingleton<RconService>()
+                .AddSingleton<LogReceiverService>()
                 .AddSingleton<IHelpService, HelpService>()
                 .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(5)))
                 .BuildServiceProvider();

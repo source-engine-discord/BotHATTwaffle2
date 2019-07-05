@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
-using System.Drawing;
-using Discord.API;
-using RCONServerLib.Utils;
 using Color = Discord.Color;
 
 namespace BotHATTwaffle2.Util
@@ -154,6 +152,28 @@ namespace BotHATTwaffle2.Util
                 array[r] = array[i];
                 array[i] = t;
             }
+        }
+
+        /// <summary>
+        /// Gets a IPHostEntry from a FQDN or an IP address.
+        /// </summary>
+        /// <param name="address">FQDN or address</param>
+        /// <returns>Populated IPHostEntry object, null if not found</returns>
+        public static IPHostEntry GetIPHost(string address)
+        {
+            IPHostEntry iPHostEntry = null;
+            try
+            {
+                iPHostEntry = Dns.GetHostEntry(address);
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage($"Failed to get iPHostEntry for `{address}`", alert:true, color:LOG_COLOR);
+                Console.WriteLine(e);
+                throw;
+            }
+
+            return iPHostEntry;
         }
     }
 }

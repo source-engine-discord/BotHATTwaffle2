@@ -26,7 +26,7 @@
 </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RCONServerLib\RCONServerLib.csproj" />
+    <ProjectReference Include="..\CoreRCON\CoreRCON.csproj" />
   </ItemGroup>
 
   <ItemGroup>

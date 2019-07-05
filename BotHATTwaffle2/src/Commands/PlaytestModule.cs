@@ -8,6 +8,7 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
@@ -15,7 +16,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
-using Google.Apis.YouTube.v3.Data;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -28,10 +28,11 @@ namespace BotHATTwaffle2.Commands
         private readonly ReservationService _reservationService;
         private readonly GoogleCalendar _calendar;
         private readonly PlaytestService _playtestService;
+        private readonly RconService _rconService;
         private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
-            ReservationService reservationService,
+            ReservationService reservationService, RconService rconService,
             InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService)
         {
             _playtestService = playtestService;
@@ -41,6 +42,7 @@ namespace BotHATTwaffle2.Commands
             _interactive = interactive;
             _log = log;
             _calendar = calendar;
+            _rconService = rconService;
         }
 
         [Command("Schedule", RunMode = RunMode.Async)]
@@ -183,7 +185,7 @@ namespace BotHATTwaffle2.Commands
             if (workshopId != null)
                 rconCommand += $"; host_workshop_map {workshopId}";
 
-            await _dataService.RconCommand(server.Address, rconCommand);
+            await _rconService.RconCommand(server.Address, rconCommand);
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"{server.Address} is reserved for 2 hours!",
@@ -310,7 +312,7 @@ namespace BotHATTwaffle2.Commands
             switch (command.ToLower())
             {
                 case"start":
-                    var demoReply = await _dataService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord; tv_record {testInfo.DemoName}" +
+                    var demoReply = await _rconService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord; tv_record {testInfo.DemoName}" +
                                                                                            $";say {testInfo.DemoName} now recording!");
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Command sent to {testInfo.ServerAddress}", _dataService.Guild.IconUrl)
@@ -319,7 +321,7 @@ namespace BotHATTwaffle2.Commands
                     break;
 
                 case "stop":
-                    var stopReply = await _dataService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
+                    var stopReply = await _rconService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
 
                     //Download demo, don't wait.
                     _ = Task.Run(() =>
@@ -430,12 +432,12 @@ namespace BotHATTwaffle2.Commands
             {
                 if (command.Equals("kick", StringComparison.OrdinalIgnoreCase))
                 {
-                    var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
+                    var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                     await kick.KickPlaytestUser(server.Address);
                     return;
                 }
 
-                var result = await _dataService.RconCommand(server.Address, command);
+                var result = await _rconService.RconCommand(server.Address, command);
 
                 if (result.Length > 1000)
                     result = result.Substring(0, 1000) + "[OUTPUT OMITTED]";

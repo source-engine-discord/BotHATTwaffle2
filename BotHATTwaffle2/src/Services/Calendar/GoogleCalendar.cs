@@ -145,7 +145,7 @@ namespace BotHATTwaffle2.Services.Calendar
             _testEvent.EndDateTime = eventItem.End.DateTime;
 
             //Creators
-            _testEvent.Creators = _dataService.GetSocketUser(description.ElementAtOrDefault(0), ',');
+            _testEvent.Creators = _dataService.GetSocketUsers(description.ElementAtOrDefault(0), ',');
 
             //Imgur Album
             _testEvent.ImageGallery = GeneralUtil.ValidateUri(description.ElementAtOrDefault(1));
