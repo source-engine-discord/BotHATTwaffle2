@@ -9,6 +9,7 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -30,10 +31,12 @@ namespace BotHATTwaffle2.Commands
         private readonly PlaytestService _playtestService;
         private readonly Random _random;
         private readonly ReservationService _reservationService;
+        private readonly RconService _rconService;
+        private readonly LogReceiverService _logReceiverService;
 
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
-            Random random)
+            Random random, RconService rconService, LogReceiverService logReceiverService)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -42,8 +45,55 @@ namespace BotHATTwaffle2.Commands
             _interactive = interactive;
             _reservationService = reservationService;
             _random = random;
+            _rconService = rconService;
+            _logReceiverService = logReceiverService;
         }
-        
+
+        [Command("StartListen", RunMode = RunMode.Async)]
+        [Alias("startl")]
+        [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]
+        [Remarks("If you have been added to the Steam ID whitelist, you can use `>rcon [command]` in the server to " +
+                 "send RCON commands to it. Regular users can use `>feedback [message]` to leave feedback on the map.")]
+        public async Task StartServerListenAsync([Summary("Server to start listening on")]string server)
+        {
+            if (_logReceiverService.enableLog)
+            {
+                await ReplyAsync(embed:new EmbedBuilder()
+                    .WithAuthor("Unable to start new listener")
+                    .WithDescription($"You cannot start another log session until the existing session on " +
+                                     $"`{_logReceiverService.ActiveServer.Address}` is ended")
+                    .WithColor(new Color(55,55,165)).Build());
+                return;
+            }
+            _logReceiverService.StartLogReceiver(server);
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Started new Listener")
+                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback and rcon commands" +
+                                 $" from ingame chat.")
+                .WithColor(new Color(55, 165, 55)).Build());
+        }
+
+        [Command("StopListen", RunMode = RunMode.Async)]
+        [Alias("stopl")]
+        [Summary("Stops server listening to disallow ingame chat to call certain bot functions.")]
+        public async Task StopServerListenAsync()
+        {
+            if(!_logReceiverService.enableLog)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("A listener isn't started")
+                    .WithColor(new Color(55, 55, 165)).Build());
+                return;
+            }
+
+            _logReceiverService.StopLogReceiver();
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Stopped Listener")
+                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is no longer listening for feedback or rcon commands" +
+                                 $" from ingame chat.")
+                .WithColor(new Color(165, 55, 55)).Build());
+        }
+
         [Command("Mute")]
         [Summary("Mutes a user.")]
         [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
@@ -407,6 +457,12 @@ namespace BotHATTwaffle2.Commands
                         StartDateTime = _calendar.GetTestEventNoUpdate().StartDateTime.Value
                     };
 
+                    //Set the filename for this playtest
+                    _logReceiverService.SetFileName(_playtestCommandInfo.DemoName);
+
+                    //Start receiver if it isn't already
+                    _logReceiverService.StartLogReceiver(_playtestCommandInfo.ServerAddress);
+
                     //Write to the DB so we can restore this info next boot
                     DatabaseUtil.StorePlaytestCommandInfo(_playtestCommandInfo);
 
@@ -415,9 +471,9 @@ namespace BotHATTwaffle2.Commands
                                      $"\nWith config of **{config}**" +
                                      $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**");
 
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
                     await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
                     break;
 
@@ -428,18 +484,18 @@ namespace BotHATTwaffle2.Commands
                                      $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**" +
                                      $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
 
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
                     await Task.Delay(3000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"tv_record {_playtestCommandInfo.DemoName}; say Recording {_playtestCommandInfo.DemoName}");
                     await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
                     await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
                     await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
 
                     await Task.Delay(3000);
@@ -450,7 +506,7 @@ namespace BotHATTwaffle2.Commands
                     {
                         thanks += $"{patreonsRoleMember.Username}, ";
                     }
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
                     break;
 
                 case "post":
@@ -468,28 +524,28 @@ namespace BotHATTwaffle2.Commands
 
                 case "pause":
                 case "p":
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         @"mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!");
                     await ReplyAsync($"```Pausing playtest on {_playtestCommandInfo.ServerAddress}!```");
                     break;
 
                 case "unpause":
                 case "u":
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                         @"mp_unpause_match;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!");
                     await ReplyAsync($"```Unpausing playtest on {_playtestCommandInfo.ServerAddress}!```");
                     break;
 
                 case "scramble":
                 case "s":
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
                                                                                        ";say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
                     await ReplyAsync($"```Scrambling teams on {_playtestCommandInfo.ServerAddress}!```");
                     break;
 
                 case "kick":
                 case "k":
-                    var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
+                    var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                     await kick.KickPlaytestUser(_playtestCommandInfo.ServerAddress);
                     break;
 
@@ -511,10 +567,10 @@ namespace BotHATTwaffle2.Commands
         /// <param name="playtestCommandInfo"></param>
         internal async void PlaytestPostTasks(PlaytestCommandInfo playtestCommandInfo)
         {
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress,
+           await _rconService.RconCommand(playtestCommandInfo.ServerAddress,
                 $"host_workshop_map {playtestCommandInfo.WorkshopId}");
             await Task.Delay(15000); //Wait for map to change
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress,
+            await _rconService.RconCommand(playtestCommandInfo.ServerAddress,
                 $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0;" +
                 "say Please join the level testing voice channel for feedback!;" +
                 "say Please join the level testing voice channel for feedback!;" +
@@ -534,8 +590,14 @@ namespace BotHATTwaffle2.Commands
                 .WithDescription(
                     $"[Download Demo Here]({demoUrl}) | [Map Images]({playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
 
-            await _dataService.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions,
+            //Set the filename for this playtest again incase the bot restarted.
+            _logReceiverService.SetFileName(_playtestCommandInfo.DemoName);
+            
+            await _dataService.TestingChannel.SendFileAsync(_logReceiverService.GetFilePath(), playtestCommandInfo.CreatorMentions,
                 embed: embed.Build());
+
+            //Stop the log receiver. Needs to be done after sending the playtest txt file.
+            _logReceiverService.StopLogReceiver();
 
             await Task.Delay(30000);
             var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
@@ -545,7 +607,7 @@ namespace BotHATTwaffle2.Commands
             {
                 thanks += $"{patreonsRoleMember.Username}, ";
             }
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
+            await _rconService.RconCommand(playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
         }
 
         [Command("Active")]
@@ -736,14 +798,14 @@ namespace BotHATTwaffle2.Commands
             //Quick kick feature
             if (command.StartsWith("kick", StringComparison.OrdinalIgnoreCase))
             {
-                var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
+                var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                 await kick.KickPlaytestUser(targetServer);
                 return;
             }
 
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _dataService.Guild.IconUrl)
-                .WithDescription($"```{await _dataService.RconCommand(targetServer, command)}```")
+                .WithDescription($"```{await _rconService.RconCommand(targetServer, command)}```")
                 .WithColor(new Color(55, 165, 55)).Build());
         }
 
