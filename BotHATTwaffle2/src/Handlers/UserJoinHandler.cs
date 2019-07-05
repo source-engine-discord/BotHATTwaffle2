@@ -59,13 +59,13 @@ namespace BotHATTwaffle2.Handlers
         {
             try
             {
-                await _log.LogMessage($"Welcomed {user.Username} at {DateTime.Now}, and assigning them the Playtester role!");
+                await _log.LogMessage($"Welcomed `{user.Username}` `{user.Id}` at `{DateTime.Now}`, and assigning them the Playtester role!");
                 await user.AddRoleAsync(_dataService.PlayTesterRole);
                 await user.SendMessageAsync(embed:WelcomeEmbed(user));
             }
             catch
             {
-                await _log.LogMessage($"Attempted to send welcome message to {user.Username}, but failed. " +
+                await _log.LogMessage($"Attempted to send welcome message to `{user.Username}` `{user.Id}`, but failed. " +
                                       $"They either have DMs off, or left the server.");
             }
             DatabaseUtil.RemoveJoinedUser(user.Id);
