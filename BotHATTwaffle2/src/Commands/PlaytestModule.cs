@@ -185,7 +185,7 @@ namespace BotHATTwaffle2.Commands
             if (workshopId != null)
                 rconCommand += $"; host_workshop_map {workshopId}";
 
-            await _rconService.RconCommand(server.Address, rconCommand);
+            _ = _rconService.RconCommand(server.Address, rconCommand);
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"{server.Address} is reserved for 2 hours!",
@@ -243,8 +243,6 @@ namespace BotHATTwaffle2.Commands
             var result = await _playtestService.GetRunningLevelAsync(server.Address);
 
             var embed = new EmbedBuilder();
-
-            Console.WriteLine(string.Join("\n", result));
 
             //Length 3 means workshop
             if (result.Length == 3)

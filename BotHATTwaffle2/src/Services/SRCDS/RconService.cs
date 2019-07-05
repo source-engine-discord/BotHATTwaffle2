@@ -82,7 +82,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             serverId = GeneralUtil.GetServerCode(serverId);
             var client = GetOrCreateRconClient(serverId);
 
-            Console.WriteLine("Sending command awaiting reply");
+            //Execute sending the command, then have a 5second timeout. If no reply, we can assume this connection is broken.
             var commandResult =  client.SendCommandAsync(command);
             if (commandResult == await Task.WhenAny(commandResult, Task.Delay(5000)))
             {
@@ -129,13 +129,14 @@ namespace BotHATTwaffle2.Services.SRCDS
             
             reply = FormatRconServerReply(reply);
 
-            if (string.IsNullOrWhiteSpace(reply))
-                return $"{command} was sent, but provided no reply.";
-
             //Ignore logging status replies... This is a one off that just causes too much spam.
-            if (!command.Contains("status",StringComparison.OrdinalIgnoreCase))
+            if (!command.Contains("status", StringComparison.OrdinalIgnoreCase))
                 await _log.LogMessage($"**Sending:** `{command}`\n**To:** `{serverId}`\n**Response Was:** `{reply}`", color: LOG_COLOR);
 
+
+            if (string.IsNullOrWhiteSpace(reply))
+                return $"{command} was sent, but provided no reply.";
+            
             return reply;
         }
 

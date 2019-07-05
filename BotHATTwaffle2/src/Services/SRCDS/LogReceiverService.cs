@@ -157,7 +157,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 sw.WriteLine($"{message.Player.Name} ({message.Player.Team}): {message.Message}");
             }
 
-            await _rconService.RconCommand(server.ServerId, $"say Feedback from {message.Player.Name} captured!");
+            _ = _rconService.RconCommand(server.ServerId, $"say Feedback from {message.Player.Name} captured!");
         }
 
         public void SetFileName(string fileName)

@@ -508,6 +508,8 @@ namespace BotHATTwaffle2.Commands
                         thanks += $"{patreonsRoleMember.Username}, ";
                     }
                     await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
+                    await Task.Delay(2000);
+                    await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a support at https://www.patreon.com/tophattwaffle");
                     break;
 
                 case "post":
@@ -613,6 +615,8 @@ namespace BotHATTwaffle2.Commands
                 thanks += $"{patreonsRoleMember.Username}, ";
             }
             await _rconService.RconCommand(playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
+            await Task.Delay(2000);
+            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a support at https://www.patreon.com/tophattwaffle");
         }
 
         [Command("Active")]
