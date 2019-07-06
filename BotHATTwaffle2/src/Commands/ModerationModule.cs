@@ -707,7 +707,7 @@ namespace BotHATTwaffle2.Commands
                  "Then commands can be sent as normal without a server ID:\n" +
                  "Example: `>r sv_cheats 1`\n" +
                  "Provide no parameters to see what server you're current sending to.")]
-        public async Task RconAsync([Summary("Rcon command to send")] [Remainder] [Optional]
+        public async Task RconAsync([Summary("Rcon command to send")][Remainder][Optional]
             string command)
         {
             string targetServer = null;
@@ -812,10 +812,31 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            string reply;
+            IUserMessage delayed = null;
+            var rconCommand = _rconService.RconCommand(targetServer, command);
+            var waiting = Task.Delay(1000);
+            if(rconCommand == await Task.WhenAny(rconCommand,waiting))
+            {
+                reply = await rconCommand;
+            }
+            else
+            {
+                delayed = await ReplyAsync(embed:new EmbedBuilder()
+                    .WithDescription($"⏰RCON command to `{targetServer}` is taking longer than normal...\nSit tight while I'll " +
+                                     "try a few more times.")
+                    .WithColor(new Color(165,55,55)).Build());
+                reply = await rconCommand;
+            }
+
+
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _dataService.Guild.IconUrl)
-                .WithDescription($"```{await _rconService.RconCommand(targetServer, command)}```")
+                .WithDescription($"```{reply}```")
                 .WithColor(new Color(55, 165, 55)).Build());
+
+            if (delayed != null)
+                await delayed.DeleteAsync();
         }
 
         [Command("ClearReservation")]

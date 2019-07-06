@@ -435,15 +435,30 @@ namespace BotHATTwaffle2.Commands
                     return;
                 }
 
-                var result = await _rconService.RconCommand(server.Address, command);
-
-                if (result.Length > 1000)
-                    result = result.Substring(0, 1000) + "[OUTPUT OMITTED]";
+                string reply;
+                IUserMessage delayed = null;
+                var rconCommand = _rconService.RconCommand(server.Address, command);
+                var waiting = Task.Delay(1000);
+                if (rconCommand == await Task.WhenAny(rconCommand, waiting))
+                {
+                    reply = await rconCommand;
+                }
+                else
+                {
+                    delayed = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription($"⏰RCON command to `{server.Address}` is taking longer than normal...\nSit tight while I'll " +
+                                         "try a few more times.")
+                        .WithColor(new Color(165, 55, 55)).Build());
+                    reply = await rconCommand;
+                }
 
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"Command sent to {server.Address}", _dataService.Guild.IconUrl)
-                    .WithDescription($"```{result}```")
+                    .WithDescription($"```{reply}```")
                     .WithColor(new Color(55, 165, 55)).Build());
+
+                if (delayed != null)
+                    await delayed.DeleteAsync();
             }
             else
             {
