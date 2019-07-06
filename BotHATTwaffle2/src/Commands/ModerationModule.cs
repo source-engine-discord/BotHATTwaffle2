@@ -701,7 +701,7 @@ namespace BotHATTwaffle2.Commands
             string reply;
             IUserMessage delayed = null;
             var rconCommand = _rconService.RconCommand(targetServer, command);
-            var waiting = Task.Delay(1000);
+            var waiting = Task.Delay(2000);
             if(rconCommand == await Task.WhenAny(rconCommand,waiting))
             {
                 reply = await rconCommand;

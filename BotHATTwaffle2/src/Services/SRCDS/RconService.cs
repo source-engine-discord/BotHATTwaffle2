@@ -107,7 +107,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                     client.Dispose();
                 }
                 //Delay between retries for teardown
-                await Task.Delay(1000);
+                await Task.Delay(500);
             }
 
             //Command failed to send, alert.
