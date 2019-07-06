@@ -2,11 +2,10 @@
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
+using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
 using CoreRCON;
 using CoreRCON.Parsers.Standard;
@@ -14,10 +13,11 @@ namespace BotHATTwaffle2.Services.SRCDS
 {
     public class LogReceiverService
     {
-        private string _publicIpAddress = new WebClient().DownloadString("http://icanhazip.com/");
+        private string _publicIpAddress;
         private readonly DataService _dataService;
         private readonly RconService _rconService;
         private readonly LogHandler _logHandler;
+        private PlaytestService _playtestService;
         public bool EnableLog = false;
         private bool _enableFeedback = false;
         public Server ActiveServer;
@@ -29,6 +29,13 @@ namespace BotHATTwaffle2.Services.SRCDS
             _dataService = dataService;
             _logHandler = logHandler;
             SetFileName("feedback");
+            _publicIpAddress = new WebClient().DownloadString("http://icanhazip.com/").Trim();
+        }
+
+        //Can't DI this variable, this is a workaround.
+        public void SetPlayTestService(PlaytestService playtestService)
+        {
+            _playtestService = playtestService;
         }
 
         /// <summary>
@@ -49,14 +56,15 @@ namespace BotHATTwaffle2.Services.SRCDS
                 return;
             
             EnableLog = true;
-            string externalip = new WebClient().DownloadString("http://icanhazip.com").Trim();
-            await _rconService.RconCommand(ActiveServer.ServerId, $"logaddress_add {externalip}:{_dataService.RSettings.ProgramSettings.ListenPort}");
+            await _rconService.RconCommand(ActiveServer.ServerId, $"logaddress_add {_publicIpAddress}:{_dataService.RSettings.ProgramSettings.ListenPort}");
 
             var ip = GeneralUtil.GetIPHost(ActiveServer.Address).AddressList.FirstOrDefault();
+
+            //Start listening on listen port, accept messages from 'ip' on 27015.
             var log = new LogReceiver(_dataService.RSettings.ProgramSettings.ListenPort, new IPEndPoint(ip, 27015));
 
             await _logHandler.LogMessage($"Starting LogReceiver for `{ActiveServer.Address}` using:\n" +
-                                         "`logaddress_add " + externalip + ":" + _dataService.RSettings.ProgramSettings.ListenPort + "`");
+                                         "`logaddress_add " + _publicIpAddress + ":" + _dataService.RSettings.ProgramSettings.ListenPort + "`");
 
             //Start the task and run it forever in a loop. The bool changes at a later time which breaks the loop
             //and removes this client so we can make another one later on.
@@ -65,10 +73,12 @@ namespace BotHATTwaffle2.Services.SRCDS
                 log.Listen<FeedbackMessage>(chat =>
                 {
                     if(_enableFeedback)
-                        _ = HandleInGameFeedback(ActiveServer, chat);
+                        HandleInGameFeedback(ActiveServer, chat);
                 });
 
-                log.Listen<RconMessage>(rcon => { _ = InGameRcon(ActiveServer, rcon); });
+                log.Listen<RconMessage>(rcon => { InGameRcon(ActiveServer, rcon); });
+
+                log.Listen<PlaytestMessage>(pt => { HandlePlaytestCommand(ActiveServer, pt); });
 
                 while (EnableLog)
                 {
@@ -95,7 +105,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             {
                 _enableFeedback = true;
                 //Seed the feedback log with the current timestamp
-                _ = HandleInGameFeedback(ActiveServer, new FeedbackMessage
+                HandleInGameFeedback(ActiveServer, new FeedbackMessage
                 {
                     Message = $"Log Started at {DateTime.Now} CT",
                     Player = new Player
@@ -122,7 +132,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <param name="server">Server to send RCON to</param>
         /// <param name="rconMessage">Command to send</param>
         /// <returns></returns>
-        private async Task InGameRcon(Server server, RconMessage rconMessage)
+        private async void InGameRcon(Server server, RconMessage rconMessage)
         {
             //Make sure the user has access
             if (!_dataService.RSettings.Lists.SteamIDs.Any(x => x.Contains(rconMessage.Player.SteamId)))
@@ -137,7 +147,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <param name="server">Server to send acks to</param>
         /// <param name="message">Message to log</param>
         /// <returns></returns>
-        private async Task HandleInGameFeedback(Server server, FeedbackMessage message)
+        private async void HandleInGameFeedback(Server server, FeedbackMessage message)
         {
             Directory.CreateDirectory("Feedback");
 
@@ -157,7 +167,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 sw.WriteLine($"{message.Player.Name} ({message.Player.Team}): {message.Message}");
             }
 
-            _ = _rconService.RconCommand(server.ServerId, $"say Feedback from {message.Player.Name} captured!");
+            await _rconService.RconCommand(server.ServerId, $"say Feedback from {message.Player.Name} captured!");
         }
 
         public void SetFileName(string fileName)
@@ -169,5 +179,55 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         public string GetFilePath() => path;
+
+        private async void HandlePlaytestCommand(Server server, PlaytestMessage message)
+        {
+            //Make sure the user has access
+            if (!_dataService.RSettings.Lists.SteamIDs.Any(x => x.Contains(message.Player.SteamId)))
+                return;
+
+            //Not valid - abort
+            if (!_playtestService.PlaytestCommandPreCheck())
+            {
+                await _rconService.RconCommand(server.Address, "This command requires a valid playtest event.");
+                return;
+            }
+
+            switch (message.Message.ToLower())
+            {
+                case "prestart":
+                case "pre":
+                    await _playtestService.PlaytestCommandPre(false);
+                    break;
+                case "start":
+                    await _playtestService.PlaytestCommandStart(false);
+                    break;
+                case "post":
+                    await _playtestService.PlaytestCommandPost(false);
+                    break;
+                case "pause":
+                case "p":
+                    await _playtestService.PlaytestcommandGenericAction(false,
+                        "mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!",
+                        $"Pausing Playtest On {server.Address}");
+                    break;
+                case "unpause":
+                case "u":
+                    await _playtestService.PlaytestcommandGenericAction(false,
+                        "mp_unpause_match;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!;say Unpausing Match",
+                        $"Unpausing Playtest On {server.Address}");
+                    break;
+                case "scramble":
+                case "s":
+                    await _playtestService.PlaytestcommandGenericAction(false,
+                        "mp_scrambleteams 1;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!",
+                        $"Scrambling teams On {server.Address}");
+                    break;
+                default:
+                    await _rconService.RconCommand(server.Address, "Say Invalid action! Not all commands available " +
+                                                                   "from ingame chat.");
+                    break;
+            }
+        }
     }
 }

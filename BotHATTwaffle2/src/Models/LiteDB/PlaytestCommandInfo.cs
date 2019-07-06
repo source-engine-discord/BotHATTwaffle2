@@ -6,7 +6,7 @@ namespace BotHATTwaffle2.Models.LiteDB
     /// This class is used to store information for the >playtest command so the information can persist
     /// between restarts.
     /// </summary>
-    class PlaytestCommandInfo
+    public class PlaytestCommandInfo
     {
         public int Id { get; set; }
         public string Mode { get; set; }
