@@ -35,6 +35,7 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel TestingChannel { get; private set; }
         public SocketTextChannel CompetitiveTestingChannel { get; private set; }
         public SocketTextChannel WebhookChannel { get; private set; }
+        public SocketTextChannel AdminChannel { get; private set; }
 
         // Roles
         public SocketRole PlayTesterRole { get; private set; }
@@ -47,7 +48,8 @@ namespace BotHATTwaffle2.Services
         public SocketRole AdminRole { get; private set; }
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
-
+        public SocketRole PlaytestAdmin { get; private set; }
+        
         public bool IncludePlayerCount { get; set; }
         public string PlayerCount { get; set; }
 
@@ -127,6 +129,9 @@ namespace BotHATTwaffle2.Services
 
             LogChannel = await ParseChannel(RSettings.ProgramSettings.LogChannel);
             Console.WriteLine($"LogChannel ID:{LogChannel.Id} Discovered Name:{LogChannel.Name}");
+
+            AdminChannel = await ParseChannel(RSettings.General.AdminChannel);
+            Console.WriteLine($"AdminChannel ID:{AdminChannel.Id} Discovered Name:{AdminChannel.Name}");
 
             if (RSettings.ProgramSettings.Debug)
             {
@@ -266,6 +271,9 @@ namespace BotHATTwaffle2.Services
                 Console.WriteLine(
                     $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
             }
+
+            PlaytestAdmin = guild.GetRole(RSettings.UserRoles.PlaytestAdmin);
+            Console.WriteLine($"Moderator ID:{PlaytestAdmin.Id} Discovered Name:{PlaytestAdmin.Name}");
 
             Console.ResetColor();
         }

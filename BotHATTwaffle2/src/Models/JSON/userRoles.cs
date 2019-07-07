@@ -11,5 +11,6 @@
         public ulong CommunityTester { get; set; }
         public ulong CompetitiveTester { get; set; }
         public ulong Bots { get; set; }
+        public ulong PlaytestAdmin { get; set; }
     }
 }

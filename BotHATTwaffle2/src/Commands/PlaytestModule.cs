@@ -62,7 +62,7 @@ namespace BotHATTwaffle2.Commands
             {
                 _dataService.IgnoreListenList.Add(Context.User);
 
-                var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar);
+                var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
                 await requestBuilder.SchedulePlaytestAsync(display);
 
                 _dataService.IgnoreListenList.Remove(Context.User);
@@ -79,7 +79,7 @@ namespace BotHATTwaffle2.Commands
         public async Task PlaytestRequestAsync([Summary("A pre-built playtest event based on the template.")][Optional][Remainder]string playtestInformation)
         {
             _dataService.IgnoreListenList.Add(Context.User);
-            var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar);
+            var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
 
             if (playtestInformation != null)
             {

@@ -30,12 +30,13 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
+        private readonly PlaytestService _playtestService;
         private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
 
         //Help text used for the wizard / Updating information
         private readonly string[] _wizardText =
         {
-            "Enter the desired time for the test in the __**CT timezone**__. Ideal times are between `12:00-18:00 CT`. Required format: `MM/DD/YYYY HH:MM`\n" +
+            "Enter the desired time for the test in the `CT timezone`. Ideal times are between `12:00-18:00 CT`. Required format: `MM/DD/YYYY HH:MM`\n" +
             "Example: `2/17/2019 14:00`",
             "Enter email addresses of the creators in a comma separated format.\n" +
             "Example: `tophattwaffle@gmail.com, doug@tophattwaffle.com`",
@@ -74,13 +75,14 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public RequestBuilder(SocketCommandContext context, InteractiveService interactive, DataService data,
             LogHandler log,
-            GoogleCalendar calendar)
+            GoogleCalendar calendar, PlaytestService playtestService)
         {
             _context = context;
             _interactive = interactive;
             _dataService = data;
             _log = log;
             _calendar = calendar;
+            _playtestService = playtestService;
 
             //Make the test object
             _testRequest = new PlaytestRequest();
@@ -195,7 +197,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)",
                     embed: wbEmbed.Build());
 
-                //Remove the test from the DB.
+               //Remove the test from the DB.
                 DatabaseUtil.RemovePlaytestRequest(_testRequest);
 
                 await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest.ToString()}",color: LOG_COLOR);
@@ -250,6 +252,11 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //Give them the quick request if they want to re-test.
                 await _context.Channel.SendMessageAsync(
                     $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
+
+                var schedule = await _playtestService.GetUpcomingEvents(true, false);
+
+                await _dataService.AdminChannel.SendMessageAsync($"{_dataService.PlaytestAdmin.Mention} a new playtest request has been submitted!",
+                    embed: schedule.Build());
 
                 //Users to mention.
                 string mentions = null;
