@@ -200,7 +200,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                //Remove the test from the DB.
                 DatabaseUtil.RemovePlaytestRequest(_testRequest);
 
-                await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest.ToString()}",color: LOG_COLOR);
+                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest.ToString()}",color: LOG_COLOR);
 
                 return;
             }
@@ -216,7 +216,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// Used to confirm if a user wants to submit their playtest request, or make further changes.
         /// </summary>
         /// <returns></returns>
-        private async Task ConfirmTest()
+        private async Task ConfirmRequest()
         {
             while (true)
             {
@@ -269,7 +269,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL)))
                     .Build());
 
-                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest.ToString()}", color: LOG_COLOR);
+                await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest.ToString()}", color: LOG_COLOR);
             }
             else
             {
@@ -365,7 +365,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Everything is valid - move onto confirmation
-            await ConfirmTest();
+            await ConfirmRequest();
         }
 
         /// <summary>
@@ -383,7 +383,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Move onto confirmation
-            await ConfirmTest();
+            await ConfirmRequest();
         }
 
         /// <summary>
