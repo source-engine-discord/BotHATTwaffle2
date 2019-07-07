@@ -18,6 +18,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class RequestBuilder
     {
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
+
         //The values that are used by the wizard to build the test. Also used for editing the event.
         private readonly string[] _arrayValues =
         {
@@ -29,9 +31,9 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly SocketCommandContext _context;
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
+        private readonly bool _isDms;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
 
         //Help text used for the wizard / Updating information
         private readonly string[] _wizardText =
@@ -65,13 +67,12 @@ namespace BotHATTwaffle2.Services.Playtesting
         private IUserMessage _embedMessage;
 
         private IUserMessage _instructionsMessage;
-        private readonly bool _isDms;
-        private bool _requireAbort;
-        private PlaytestRequest _testRequest;
-        private SocketMessage _userMessage;
 
         private IEnumerable<PlaytestRequest> _otherRequests;
+        private bool _requireAbort;
         private Events _scheduledTests;
+        private PlaytestRequest _testRequest;
+        private SocketMessage _userMessage;
 
         public RequestBuilder(SocketCommandContext context, InteractiveService interactive, DataService data,
             LogHandler log,
@@ -93,7 +94,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Entry point for moderation staff to work with playtest requests.
+        ///     Entry point for moderation staff to work with playtest requests.
         /// </summary>
         /// <param name="display">The embed message to attach to for displaying updates</param>
         /// <returns></returns>
@@ -106,11 +107,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (playtestRequests.Count == 0)
                 return;
 
-            await _embedMessage.ModifyAsync(x=>x.Content = "Type `exit` to abort at any time.");
+            await _embedMessage.ModifyAsync(x => x.Content = "Type `exit` to abort at any time.");
             _instructionsMessage = await _context.Channel.SendMessageAsync("Type the ID of the playtest to schedule.");
-            
+
             //Finds the correct playtest request to work with.
-            int id = 0;
+            var id = 0;
             while (true)
             {
                 _userMessage = await _interactive.NextMessageAsync(_context);
@@ -135,7 +136,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Allows moderator to update or delete a playtest request. If confirmed, the event is added to the calendar.
+        ///     Allows moderator to update or delete a playtest request. If confirmed, the event is added to the calendar.
         /// </summary>
         /// <returns></returns>
         private async Task ConfirmSchedule()
@@ -166,7 +167,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
                 {
                     DatabaseUtil.RemovePlaytestRequest(_testRequest);
-                    await _embedMessage.ModifyAsync(x=>x.Embed = RebuildEmbed().WithColor(25,25,25).Build());
+                    await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
                     await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
                     await _userMessage.DeleteAsync();
                     return;
@@ -191,16 +192,17 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 //Workshop embed.
                 var ws = new Workshop();
-                var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService, $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
+                var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService,
+                    $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
                 await _dataService.TestingChannel.SendMessageAsync(
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)",
                     embed: wbEmbed.Build());
 
-               //Remove the test from the DB.
+                //Remove the test from the DB.
                 DatabaseUtil.RemovePlaytestRequest(_testRequest);
 
-                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest.ToString()}",color: LOG_COLOR);
+                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
 
                 return;
             }
@@ -208,12 +210,13 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Failed to add to calendar.
             finalEmbed.WithColor(new Color(20, 20, 20));
             await _embedMessage.ModifyAsync(x => x.Embed = finalEmbed.Build());
-            await _instructionsMessage.ModifyAsync(x => x.Content = "An error occured working with the Google APIs, consult the logs.\n" +
-            "The playtest event may still have been created.");
+            await _instructionsMessage.ModifyAsync(x => x.Content =
+                "An error occured working with the Google APIs, consult the logs.\n" +
+                "The playtest event may still have been created.");
         }
 
         /// <summary>
-        /// Used to confirm if a user wants to submit their playtest request, or make further changes.
+        ///     Used to confirm if a user wants to submit their playtest request, or make further changes.
         /// </summary>
         /// <returns></returns>
         private async Task ConfirmRequest()
@@ -246,7 +249,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Attempt to store request in the DB
             if (DatabaseUtil.AddPlaytestRequests(_testRequest))
             {
-                await _instructionsMessage.ModifyAsync(x => x.Content = "Request Submitted!");
+                await _instructionsMessage.ModifyAsync(x =>
+                    x.Content =
+                        $"Request Submitted! If you have any feedback or suggestions of the scheduling process, please send {_dataService.AlertUser} a message!");
                 await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(240, 240, 240).Build());
 
                 //Give them the quick request if they want to re-test.
@@ -255,7 +260,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 var schedule = await _playtestService.GetUpcomingEvents(true, false);
 
-                await _dataService.AdminChannel.SendMessageAsync($"{_dataService.PlaytestAdmin.Mention} a new playtest request has been submitted!",
+                await _dataService.AdminChannel.SendMessageAsync(
+                    $"{_dataService.PlaytestAdmin.Mention} a new playtest request has been submitted!",
                     embed: schedule.Build());
 
                 //Users to mention.
@@ -269,7 +275,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL)))
                     .Build());
 
-                await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest.ToString()}", color: LOG_COLOR);
+                await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest}", color: LOG_COLOR);
             }
             else
             {
@@ -283,7 +289,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Validates a specific playtest element as valid.
+        ///     Validates a specific playtest element as valid.
         /// </summary>
         /// <param name="type">Type of data to validate</param>
         /// <param name="data">Data to validate</param>
@@ -314,7 +320,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Entry point for users requesting a playtest using interactive mode.
+        ///     Entry point for users requesting a playtest using interactive mode.
         /// </summary>
         /// <returns></returns>
         public async Task BuildPlaytestRequestWizard()
@@ -322,8 +328,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Make sure users have at least been to the website to consume the playtest requirements.
             while (true)
             {
-                await Display("Please refer to the above message to see current tests in the queue, and currently scheduled tests." +
-                              " To confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
+                await Display(
+                    "Please refer to the above message to see current tests in the queue, and currently scheduled tests." +
+                    " To confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 if (_userMessage.Content == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
@@ -333,7 +340,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
 
                 //They got the message correct!
-                if (_userMessage.Content.Equals("I have read and understand the playtesting requirements", StringComparison.OrdinalIgnoreCase))
+                if (_userMessage.Content.Equals("I have read and understand the playtesting requirements",
+                    StringComparison.OrdinalIgnoreCase))
                     break;
             }
 
@@ -369,7 +377,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Entry point for someone submitting a playtest request from the bulk request template
+        ///     Entry point for someone submitting a playtest request from the bulk request template
         /// </summary>
         /// <param name="input">Prebuilt template containing all playtest information</param>
         /// <returns></returns>
@@ -387,7 +395,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Updates the instructions and display embed to reflect the current state of the playtest request.
+        ///     Updates the instructions and display embed to reflect the current state of the playtest request.
         /// </summary>
         /// <param name="instructions">Instructions to display to the user</param>
         /// <returns></returns>
@@ -410,7 +418,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Rebuilds the playtest embed with the most up to date information.
+        ///     Rebuilds the playtest embed with the most up to date information.
         /// </summary>
         /// <returns>EmbedBuilder object containing all relevant information</returns>
         private EmbedBuilder RebuildEmbed()
@@ -494,7 +502,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Cancels the request. Does some basic cleanup tasks.
+        ///     Cancels the request. Does some basic cleanup tasks.
         /// </summary>
         /// <returns></returns>
         private async Task CancelRequest()
@@ -505,7 +513,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Parses, and validates information before it is stored in a playtest request object.
+        ///     Parses, and validates information before it is stored in a playtest request object.
         /// </summary>
         /// <param name="type">Type of data to parse</param>
         /// <param name="data">Data to parse</param>
@@ -524,6 +532,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _dateChecked = false;
                         return true;
                     }
+
                     await Display($"Unable to parse DateTime.\nYou provided `{data}`\n" + _wizardText[0]);
                     return false;
 
@@ -545,6 +554,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                           _wizardText[1]);
                             return false;
                         }
+
                     return true;
 
                 case "mapname":
@@ -572,6 +582,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                             return false;
                         }
                     }
+
                     return true;
 
                 case "imgur":
@@ -581,6 +592,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                       $"You provided `{data}`\n" + _wizardText[4]);
                         return false;
                     }
+
                     _testRequest.ImgurAlbum = data;
                     return true;
 
@@ -590,6 +602,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _testRequest.WorkshopURL = data;
                         return true;
                     }
+
                     await Display("Invalid Steam Workshop URL!\n" +
                                   $"You provided `{data}`\n" + _wizardText[5]);
                     return false;
@@ -612,6 +625,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                         return true;
                     }
+
                     await Display("Unable to parse number of spawns\n" +
                                   $"You provided `{data}`\n" + _wizardText[8]);
                     return false;
@@ -630,6 +644,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                         return true;
                     }
+
                     var servers = DatabaseUtil.GetAllTestServers();
                     await Display("Unable to to find a valid server\n" +
                                   $"You provided `{data}`\n" +
