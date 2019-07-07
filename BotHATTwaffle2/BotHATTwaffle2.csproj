@@ -18,6 +18,7 @@
     <PackageReference Include="FluentScheduler" Version="5.3.0" />
     <PackageReference Include="Google.Apis.Calendar.v3" Version="1.40.1.1611" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.40.2.1593" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.8" />
     <PackageReference Include="Imgur.API" Version="4.0.1" />
     <PackageReference Include="JSON" Version="1.0.1" />
     <PackageReference Include="LiteDB" Version="4.1.4" />

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Web;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.YouTube;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -329,6 +330,20 @@ namespace BotHATTwaffle2.Commands
             }
 
             await ReplyAsync(embed:embed.Build());
+        }
+
+        [Command("TanookiIRL", RunMode = RunMode.Async)]
+        [Summary("Displays Tanooki looking at stuff!")]
+        [Alias("TanookiLooksAtThings")]
+        public async Task TanookiLookAsync()
+        {
+            var embed = new EmbedBuilder
+            {
+                ImageUrl = GeneralUtil.GetRandomImgFromUrl("https://content.tophattwaffle.com/BotHATTwaffle/kimjongillookingatthings/"),
+                Color = new Color(138, 43, 226)
+            };
+
+            await ReplyAsync(string.Empty, false, embed.Build());
         }
     }
 }

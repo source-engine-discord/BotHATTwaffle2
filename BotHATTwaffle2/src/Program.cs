@@ -81,7 +81,7 @@ namespace BotHATTwaffle2
             //Set handlers for static classes
             DatabaseUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             DownloadHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
-            GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
+            GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>(), _services.GetRequiredService<Random>());
 
             await _client.StartAsync();
 

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using HtmlAgilityPack;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Color = Discord.Color;
@@ -15,11 +17,13 @@ namespace BotHATTwaffle2.Util
     {
         private static LogHandler _log;
         private static DataService _dataService;
+        private static Random _random;
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkBlue;
-        public static void SetHandlers(LogHandler log, DataService data)
+        public static void SetHandlers(LogHandler log, DataService data, Random random)
         {
             _log = log;
             _dataService = data;
+            _random = random;
         }
 
         /// <summary>
@@ -174,6 +178,28 @@ namespace BotHATTwaffle2.Util
             }
 
             return iPHostEntry;
+        }
+
+        /// <summary>
+        /// Provided a URL, will scan the page for all files that end in a file
+        /// It then picks one at random and returns that
+        /// Example Page: https://content.tophattwaffle.com/BotHATTwaffle/catfacts/
+        /// </summary>
+        /// <param name="inUrl">URL to look at</param>
+        /// <returns>inUrl + ImageName.ext</returns>
+        public static string GetRandomImgFromUrl(string inUrl)
+        {
+            //New web client
+            HtmlWeb htmlWeb = new HtmlWeb();
+
+            //Load page
+            HtmlDocument htmlDocument = htmlWeb.Load(inUrl);
+
+            //Add each image to a list
+            List<string> validImg = htmlDocument.DocumentNode.SelectNodes("//a[@href]").Select(link =>
+                link.GetAttributeValue("href", string.Empty).Replace(@"\", "").Replace("\"", "")).Where(Path.HasExtension).ToList();
+
+            return inUrl + validImg[(_random.Next(0, validImg.Count))];
         }
     }
 }
