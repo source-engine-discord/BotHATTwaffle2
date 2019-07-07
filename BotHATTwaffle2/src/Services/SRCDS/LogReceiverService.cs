@@ -28,7 +28,6 @@ namespace BotHATTwaffle2.Services.SRCDS
             _rconService = rconService;
             _dataService = dataService;
             _logHandler = logHandler;
-            SetFileName("feedback");
             _publicIpAddress = new WebClient().DownloadString("http://icanhazip.com/").Trim();
         }
 
@@ -93,16 +92,15 @@ namespace BotHATTwaffle2.Services.SRCDS
         //Stops listening for log messages and defaults a file for logging.
         public void StopLogReceiver()
         {
-            //Reset path to something default incase sessions is started outside of a test.
-            SetFileName("feedback");
             EnableLog = false;
             _enableFeedback = false;
         }
 
-        public bool EnableFeedback()
+        public bool EnableFeedback(string feedbackLogName)
         {
             if (EnableLog && !_enableFeedback)
             {
+                SetFileName(feedbackLogName);
                 _enableFeedback = true;
                 //Seed the feedback log with the current timestamp
                 HandleInGameFeedback(ActiveServer, new FeedbackMessage
@@ -156,7 +154,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 // Create a file to write to.
                 using (StreamWriter sw = File.CreateText(path))
                 {
-                    sw.WriteLine($"{message.Player.Name} ({message.Player.Team}): {message.Message}");
+                    sw.WriteLine($"{DateTime.Now} - {message.Player.Name} ({message.Player.Team}): {message.Message}");
                 }
             }
             else
@@ -170,7 +168,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             await _rconService.RconCommand(server.ServerId, $"say Feedback from {message.Player.Name} captured!");
         }
 
-        public void SetFileName(string fileName)
+        private void SetFileName(string fileName)
         {
             if (fileName.Contains(".txt"))
                 path = "Feedback/" + fileName;

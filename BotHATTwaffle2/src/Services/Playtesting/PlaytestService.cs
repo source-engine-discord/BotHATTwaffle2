@@ -118,8 +118,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .WithDescription(
                         $"[Download Demo Here]({demoUrl}) | [Map Images]({_playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
 
-                //Set the filename for this playtest again incase the bot restarted.
-                _logReceiverService.SetFileName(_playtestCommandInfo.DemoName);
                 //Stop getting more feedback
                 _logReceiverService.DisableFeedback();
 
@@ -141,7 +139,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
                 await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
                 await Task.Delay(2000);
-                await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a support at www.patreon.com/tophattwaffle");
+                await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a supporter at www.patreon.com/tophattwaffle");
 
             });
 
@@ -188,7 +186,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
             await Task.Delay(2000);
-            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a support at www.patreon.com/tophattwaffle");
+            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a supporter at www.patreon.com/tophattwaffle");
 
             return _playtestCommandInfo;
 
@@ -232,14 +230,11 @@ namespace BotHATTwaffle2.Services.Playtesting
                 StartDateTime = _calendar.GetTestEventNoUpdate().StartDateTime.Value
             };
 
-            //Set the filename for this playtest
-            _logReceiverService.SetFileName(_playtestCommandInfo.DemoName);
-
             //Start receiver if it isn't already
             _logReceiverService.StartLogReceiver(_playtestCommandInfo.ServerAddress);
 
             //Start feedback capture
-            _logReceiverService.EnableFeedback();
+            _logReceiverService.EnableFeedback(_playtestCommandInfo.DemoName);
 
             //Write to the DB so we can restore this info next boot
             DatabaseUtil.StorePlaytestCommandInfo(_playtestCommandInfo);
@@ -737,7 +732,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Disable reservations on servers
             await _reservationService.DisableReservations();
 
-            _logReceiverService.EnableFeedback();
+            _logReceiverService.EnableFeedback(_playtestCommandInfo.DemoName);
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
