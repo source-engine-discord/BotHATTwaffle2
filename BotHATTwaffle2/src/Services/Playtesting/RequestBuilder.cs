@@ -633,7 +633,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     var servers = DatabaseUtil.GetAllTestServers();
                     await Display("Unable to to find a valid server\n" +
                                   $"You provided `{data}`\n" +
-                                  "Please provide a valid server id. Possible servers are:\n" +
+                                  "Please provide a valid server id. Type `None` for no preference. Possible servers are:\n" +
                                   $"`{string.Join("\n", servers.Select(x => x.ServerId).ToArray())}`");
                     return false;
 
