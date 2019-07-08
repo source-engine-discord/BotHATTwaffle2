@@ -1,5 +1,4 @@
-﻿using Discord.WebSocket;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -15,7 +14,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class CalendarBuilder
     {
-        public async Task DiscordPlaytestCalender(SocketCommandContext calContext = null, Events calPlaytestEvents = null)
+        public async Task DiscordPlaytestCalender(SocketCommandContext calContext, Events calPlaytestEvents)
         {
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
