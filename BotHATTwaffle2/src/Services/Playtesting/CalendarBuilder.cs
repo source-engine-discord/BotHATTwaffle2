@@ -19,10 +19,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
 
-            // Here's our directory to the project's RES folder so grab and place the images
-            string templatePath = $@"{Directory.GetCurrentDirectory()}";
-            templatePath = Path.GetFullPath(Path.Combine(templatePath, @"..\..\..\res"));
-
             // Dimensions of our image to make
             int width = 1371;
             int height = 836;
@@ -42,7 +38,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 );
 
                 // Puts the lines over the calendar
-                using (Image<Rgba32> lineImage = Image.Load($@"{templatePath}\calendar-line-overlay.png"))
+                using (Image<Rgba32> lineImage = Image.Load("calendar-line-overlay.png"))
                 {
                     image.Mutate(x => x
                         .DrawImage(lineImage, 1f)
@@ -135,8 +131,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     numOfPlaytests[numDaysSeparate]++;
                 }
 
-                image.Save($@"{templatePath}\filled-calendar.png");
-                await calContext.Channel.SendFileAsync($@"{templatePath}\filled-calendar.png");
+                image.Save("filled-calendar.png");
+                await calContext.Channel.SendFileAsync("filled-calendar.png");
             }
         }
     }
