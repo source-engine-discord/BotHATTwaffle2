@@ -22,6 +22,7 @@
     <PackageReference Include="JSON" Version="1.0.1" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
     <PackageReference Include="Renci.SshNet.Async" Version="1.4.0" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0006" />
   
 </ItemGroup>
 
@@ -31,6 +32,12 @@
 
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Drawing">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\Extensions\Microsoft\LiveShare\Agent\System.Drawing.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
