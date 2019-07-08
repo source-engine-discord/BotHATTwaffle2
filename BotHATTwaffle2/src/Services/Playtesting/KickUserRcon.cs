@@ -64,7 +64,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var display = await _context.Channel.SendMessageAsync(embed: embed.Build());
             var choice = await _interactive.NextMessageAsync(_context, timeout:TimeSpan.FromSeconds(20));
-            if (choice != null && !choice.Content.Equals("0"))
+            if (choice != null && !choice.Content.Equals("exit"))
             {
                 string kickMessage = await _rconService.RconCommand(serverAddress, $"kickid {choice.Content}");
                 await choice.DeleteAsync();

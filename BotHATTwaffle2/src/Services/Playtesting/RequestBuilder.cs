@@ -116,7 +116,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 _userMessage = await _interactive.NextMessageAsync(_context);
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -150,7 +150,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_userMessage.Content.Equals("schedule", StringComparison.OrdinalIgnoreCase))
                     break;
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -229,7 +229,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_userMessage.Content.Equals("submit", StringComparison.OrdinalIgnoreCase))
                     break;
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -310,7 +310,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 data = _userMessage.Content;
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -332,7 +332,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     "Please refer to the above message to see current tests in the queue, and currently scheduled tests." +
                     " To confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -351,7 +351,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 await Display(_wizardText[i]);
                 _userMessage = await _interactive.NextMessageAsync(_context);
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -363,7 +363,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     //Invalid, let's try again.
                     _userMessage = await _interactive.NextMessageAsync(_context);
 
-                    if (_userMessage.Content == null ||
+                    if (_userMessage == null ||
                         _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                     {
                         await CancelRequest();
@@ -507,7 +507,11 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task CancelRequest()
         {
-            await _context.Channel.SendMessageAsync("Request cancelled!");
+            if(_userMessage != null)
+                await _context.Channel.SendMessageAsync("Request cancelled!");
+            else
+                await _context.Channel.SendMessageAsync("Interactive builder timed out!");
+
             await _embedMessage.DeleteAsync();
             await _instructionsMessage.DeleteAsync();
         }
