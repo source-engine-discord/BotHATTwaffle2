@@ -104,7 +104,7 @@ namespace BotHATTwaffle2.Commands
 
             // Updates roles.
             foreach (var role in rolesValid)
-                if (user.Roles.Contains(role))
+                if (user.Roles.Any(x=>x.Id == role.Id))
                 {
                     await user.RemoveRoleAsync(role);
                     rolesRemoved.Add(role);

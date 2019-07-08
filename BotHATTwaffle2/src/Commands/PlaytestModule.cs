@@ -57,8 +57,7 @@ namespace BotHATTwaffle2.Commands
 
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
 
-            if (user.Roles.Contains(_dataService.ModeratorRole)
-            || user.Roles.Contains(_dataService.AdminRole))
+            if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.ModeratorRole.Id))
             {
                 _dataService.IgnoreListenList.Add(Context.User);
 
@@ -556,7 +555,7 @@ namespace BotHATTwaffle2.Commands
         public async Task PlaytesterAsync()
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
-            if (user.Roles.Contains(_dataService.PlayTesterRole))
+            if (user.Roles.Any(x=>x.Id == _dataService.PlayTesterRole.Id))
             {
                 await ReplyAsync($"Sorry to see you go from playtest notifications {Context.User.Mention}!");
                 await user.RemoveRoleAsync(_dataService.PlayTesterRole);

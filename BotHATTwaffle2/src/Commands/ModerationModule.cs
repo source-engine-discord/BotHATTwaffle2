@@ -47,7 +47,7 @@ namespace BotHATTwaffle2.Commands
             _rconService = rconService;
             _logReceiverService = logReceiverService;
         }
-
+        
         [Command("StartListen", RunMode = RunMode.Async)]
         [Alias("startl")]
         [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]
@@ -116,7 +116,7 @@ namespace BotHATTwaffle2.Commands
             var embed = new EmbedBuilder();
 
             //This is all for a shitpost on mods trying to mute admins
-            if (user.Roles.Contains(_dataService.AdminRole) || user.IsBot)
+            if (user.Roles.Any(x=>x.Id == _dataService.AdminRole.Id) || user.IsBot)
             {
                 user = Context.User as SocketGuildUser;
                 muteLength = new TimeSpan(0, 69, 0);
@@ -529,7 +529,7 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task CompetitiveTesterAsync([Summary("User to give role to")] SocketGuildUser user)
         {
-            if (user.Roles.Contains(_dataService.CompetitiveTesterRole))
+            if (user.Roles.Any(x=>x.Id == _dataService.CompetitiveTesterRole.Id))
             {
                 await Context.Message.DeleteAsync();
                 await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);

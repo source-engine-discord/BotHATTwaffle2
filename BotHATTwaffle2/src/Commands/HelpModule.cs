@@ -152,7 +152,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "About Ido",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Url = "https://www.tophattwaffle.com/",
                 ThumbnailUrl = _client.CurrentUser.GetAvatarUrl(),

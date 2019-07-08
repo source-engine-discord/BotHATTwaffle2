@@ -203,76 +203,74 @@ namespace BotHATTwaffle2.Services
         /// <exception cref="InvalidOperationException">Thrown when a role can't be found.</exception>
         private void GetRoles()
         {
-            var guild = _client.Guilds.FirstOrDefault();
-
             Console.ForegroundColor = LOG_COLOR;
 
             if (RSettings.ProgramSettings.Debug)
             {
                 Console.WriteLine("\nSetting roles based on debug values!!!");
 
-                ModeratorRole = guild.GetRole(RSettings.DebugValues.Moderator);
+                ModeratorRole = Guild.GetRole(RSettings.DebugValues.Moderator);
                 Console.WriteLine($"Moderator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
 
-                PlayTesterRole = guild.GetRole(RSettings.DebugValues.Playtester);
+                PlayTesterRole = Guild.GetRole(RSettings.DebugValues.Playtester);
                 Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
 
-                MuteRole = guild.GetRole(RSettings.DebugValues.Muted);
+                MuteRole = Guild.GetRole(RSettings.DebugValues.Muted);
                 Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
 
-                ActiveRole = guild.GetRole(RSettings.DebugValues.Active);
+                ActiveRole = Guild.GetRole(RSettings.DebugValues.Active);
                 Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
 
-                PatreonsRole = guild.GetRole(RSettings.DebugValues.Patreons);
+                PatreonsRole = Guild.GetRole(RSettings.DebugValues.Patreons);
                 Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
 
-                CommunityTesterRole = guild.GetRole(RSettings.DebugValues.CommunityTester);
+                CommunityTesterRole = Guild.GetRole(RSettings.DebugValues.CommunityTester);
                 Console.WriteLine(
                     $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
 
-                BotsRole = guild.GetRole(RSettings.DebugValues.Bots);
+                BotsRole = Guild.GetRole(RSettings.DebugValues.Bots);
                 Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
 
-                AdminRole = guild.GetRole(RSettings.DebugValues.Admin);
+                AdminRole = Guild.GetRole(RSettings.DebugValues.Admin);
                 Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
 
-                CompetitiveTesterRole = guild.GetRole(RSettings.DebugValues.CompetitiveTester);
+                CompetitiveTesterRole = Guild.GetRole(RSettings.DebugValues.CompetitiveTester);
                 Console.WriteLine(
                     $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
             }
             else
             {
-                ModeratorRole = guild.GetRole(RSettings.UserRoles.Moderator);
+                ModeratorRole = Guild.GetRole(RSettings.UserRoles.Moderator);
                 Console.WriteLine($"\nModerator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
 
-                PlayTesterRole = guild.GetRole(RSettings.UserRoles.Playtester);
+                PlayTesterRole = Guild.GetRole(RSettings.UserRoles.Playtester);
                 Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
 
-                MuteRole = guild.GetRole(RSettings.UserRoles.Muted);
+                MuteRole = Guild.GetRole(RSettings.UserRoles.Muted);
                 Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
 
-                ActiveRole = guild.GetRole(RSettings.UserRoles.Active);
+                ActiveRole = Guild.GetRole(RSettings.UserRoles.Active);
                 Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
 
-                PatreonsRole = guild.GetRole(RSettings.UserRoles.Patreons);
+                PatreonsRole = Guild.GetRole(RSettings.UserRoles.Patreons);
                 Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
 
-                CommunityTesterRole = guild.GetRole(RSettings.UserRoles.CommunityTester);
+                CommunityTesterRole = Guild.GetRole(RSettings.UserRoles.CommunityTester);
                 Console.WriteLine(
                     $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
 
-                BotsRole = guild.GetRole(RSettings.UserRoles.Bots);
+                BotsRole = Guild.GetRole(RSettings.UserRoles.Bots);
                 Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
 
-                AdminRole = guild.GetRole(RSettings.UserRoles.Admin);
+                AdminRole = Guild.GetRole(RSettings.UserRoles.Admin);
                 Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
 
-                CompetitiveTesterRole = guild.GetRole(RSettings.UserRoles.CompetitiveTester);
+                CompetitiveTesterRole = Guild.GetRole(RSettings.UserRoles.CompetitiveTester);
                 Console.WriteLine(
                     $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
             }
 
-            PlaytestAdmin = guild.GetRole(RSettings.UserRoles.PlaytestAdmin);
+            PlaytestAdmin = Guild.GetRole(RSettings.UserRoles.PlaytestAdmin);
             Console.WriteLine($"Moderator ID:{PlaytestAdmin.Id} Discovered Name:{PlaytestAdmin.Name}");
 
             Console.ResetColor();
