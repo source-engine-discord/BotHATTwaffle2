@@ -8,17 +8,23 @@ using SixLabors.Primitives;
 using System.Threading.Tasks;
 using SixLabors.Fonts;
 using Google.Apis.Calendar.v3.Data;
+using System.IO;
+using Discord.Commands;
 
 namespace BotHATTwaffle2.Services.Playtesting
 {
     public class CalendarBuilder
     {
-        public async Task DiscordPlaytestCalender(SocketMessage message, Events calPlaytestEvents = null)
+        public async Task DiscordPlaytestCalender(SocketCommandContext calContext = null, Events calPlaytestEvents = null)
         {
+            Console.WriteLine("Made it here");
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
 
-            using (Image<Rgba32> image = Image.Load("C:\\Users\\Quinton\\Desktop\\blank-calendar-1.jpg"))
+
+            string templatePath = $@"{Directory.GetCurrentDirectory()}";
+            templatePath = Path.GetFullPath(Path.Combine(templatePath, @"..\..\..\res"));
+            using (Image<Rgba32> image = Image.Load($@"{templatePath}\calendar-template.jpg"))
             {
                 // Getting the current time (start of calendar) and setting up our fonts
                 var currentDateTime = DateTime.Now;
@@ -106,8 +112,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     numOfPlaytests[numDaysSeparate]++;
                 }
 
-                image.Save("C:\\Users\\Quinton\\Desktop\\testCal.jpg");
-                await message.Channel.SendFileAsync("C:\\Users\\Quinton\\Desktop\\testCal.jpg");
+                image.Save($@"{templatePath}\filled-calendar.jpg");
+                await calContext.Channel.SendFileAsync($@"{templatePath}\filled-calendar.jpg");
             }
         }
     }

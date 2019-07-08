@@ -15,6 +15,7 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
+using Google.Apis.Calendar.v3.Data;
 using Google.Apis.YouTube.v3.Data;
 
 namespace BotHATTwaffle2.Commands
@@ -28,6 +29,7 @@ namespace BotHATTwaffle2.Commands
         private readonly ReservationService _reservationService;
         private readonly GoogleCalendar _calendar;
         private readonly PlaytestService _playtestService;
+        private readonly CalendarBuilder _calendarBuilder;
         private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
@@ -49,10 +51,9 @@ namespace BotHATTwaffle2.Commands
         [Remarks("For members, displays test in the queue and scheduled on the calendar." +
                  "If you're moderation staff, allows for officially scheduling the playtest event after making any needed changes.")]
         public async Task ScheduleTestAsync([Summary("If `true`, displays scheduled tests as well.")][Optional]bool getAll)
-        {
+        {      
             var embed = await _playtestService.GetUpcomingEvents(true, getAll);
             var display = await ReplyAsync(embed: embed.Build());
-
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
 
             if (user.Roles.Contains(_dataService.ModeratorRole)
@@ -65,6 +66,11 @@ namespace BotHATTwaffle2.Commands
 
                 _dataService.IgnoreListenList.Remove(Context.User);
             }
+            Console.WriteLine("About to skip it");
+            var nextMonthEvents = _calendar.GetNextMonthAsync(DateTime.Now).Result;
+            // WHY DOES THIS TASK NOT RUN AT ALL??????
+            await _calendarBuilder.DiscordPlaytestCalender(Context, nextMonthEvents);
+            Console.WriteLine("Skipped");
         }
 
         [Command("Request", RunMode = RunMode.Async)]

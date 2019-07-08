@@ -34,10 +34,4 @@
     <Folder Include="Properties\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="System.Drawing">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\Extensions\Microsoft\LiveShare\Agent\System.Drawing.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>
