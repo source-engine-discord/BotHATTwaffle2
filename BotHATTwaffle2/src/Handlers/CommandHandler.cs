@@ -21,7 +21,6 @@ namespace BotHATTwaffle2.Handlers
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
         private readonly Workshop _workshop = new Workshop();
-        private readonly CalendarBuilder _calendarBuild = new CalendarBuilder();
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)

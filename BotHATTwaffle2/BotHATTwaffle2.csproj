@@ -22,6 +22,7 @@
     <PackageReference Include="JSON" Version="1.0.1" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
     <PackageReference Include="Renci.SshNet.Async" Version="1.4.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0006" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0006" />
   
 </ItemGroup>

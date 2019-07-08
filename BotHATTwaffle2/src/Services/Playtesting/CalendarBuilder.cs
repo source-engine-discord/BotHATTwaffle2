@@ -19,20 +19,41 @@ namespace BotHATTwaffle2.Services.Playtesting
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
 
+            // Here's our directory to the project's RES folder so grab and place the images
             string templatePath = $@"{Directory.GetCurrentDirectory()}";
             templatePath = Path.GetFullPath(Path.Combine(templatePath, @"..\..\..\res"));
-            using (Image<Rgba32> image = Image.Load($@"{templatePath}\calendar-template.jpg"))
+
+            // Dimensions of our image to make
+            int width = 1371;
+            int height = 836;
+
+            using (Image<Rgba32> image = new Image<Rgba32>(width, height))
             {
+
+                // Change colors here
+                Rgba32 dateColor = Rgba32.Black;
+                Rgba32 playtestTitleColor = Rgba32.GhostWhite;
+                Rgba32 playtestTimeColor = Rgba32.Black;
+                Rgba32 backgroundColor = Rgba32.Gray;
+
+                // Changes background color obv
+                image.Mutate(x => x
+                    .BackgroundColor(backgroundColor)
+                );
+
+                // Puts the lines over the calendar
+                using (Image<Rgba32> lineImage = Image.Load($@"{templatePath}\calendar-line-overlay.png"))
+                {
+                    image.Mutate(x => x
+                        .DrawImage(lineImage, 1f)
+                    );
+                }
+
                 // Getting the current time (start of calendar) and setting up our fonts
                 var currentDateTime = DateTime.Now;
                 var fontDates = SystemFonts.CreateFont("Arial", 40, FontStyle.Bold);
                 var fontPTName = SystemFonts.CreateFont("Arial", 15, FontStyle.Regular);
                 var fontPT = SystemFonts.CreateFont("Arial", 23, FontStyle.Regular);
-
-                // Color of the Dates
-                Rgba32 dateColor = Rgba32.DodgerBlue;
-                Rgba32 playtestTitleColor = Rgba32.IndianRed;
-                Rgba32 playtestTimeColor = Rgba32.Black;
 
                 // Here are the coordinate lists for the date headings
                 List<float> xPosList = new List<float>() { 99f, 294f, 489f, 684f, 880f, 1075f, 1272f };
@@ -59,11 +80,11 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 // These are similar to the date headings, but these are for the playtest names and times
                 // They are in groups of 3. So each set of 3 is in the same row
-                List<float> playtestTitlesYPosList = new List<float>() {   55f,  88f, 123f,   220f, 253f, 288f,   385f, 418f, 453f,   552f, 590f, 626f,   725f, 759f, 795f };
-                List<float> playtestTimesYPosList = new List<float>() {    70f, 104f, 140f,   235f, 269f, 305f,   400f, 434f, 470f,   567f, 605f, 643f,   739f, 774f, 812f };
+                List<float> playtestTitlesYPosList = new List<float>() { 55f, 88f, 123f, 220f, 253f, 288f, 385f, 418f, 453f, 552f, 590f, 626f, 725f, 759f, 795f };
+                List<float> playtestTimesYPosList = new List<float>() { 70f, 104f, 140f, 235f, 269f, 305f, 400f, 434f, 470f, 567f, 605f, 643f, 739f, 774f, 812f };
                 SizeF customSize2 = TextMeasurer.Measure($"Gongji by Squidski | Casual:", new RendererOptions(fontPTName));
                 SizeF customSize3 = TextMeasurer.Measure($"00:00 - 00:00", new RendererOptions(fontPT));
-      
+
                 // Here's the big boi. Putting the playtest events on the calendar
                 List<int> numOfPlaytests = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -108,14 +129,14 @@ namespace BotHATTwaffle2.Services.Playtesting
                     // Finally drawing on the screen. Lots of variable names here. This is Squidski's fault by the way.
                     image.Mutate(x => x
                         .DrawText($"{shortenedEventSummary}", fontPTName, playtestTitleColor, new PointF(xPosList[columnNum] - (titleSize.Width / 2), titleYCoord))
-                        .DrawText($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", fontPT, playtestTimeColor, new PointF(xPosList[columnNum] - (timeSize.Width /2), timeYCoord))
+                        .DrawText($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", fontPT, playtestTimeColor, new PointF(xPosList[columnNum] - (timeSize.Width / 2), timeYCoord))
                     );
 
                     numOfPlaytests[numDaysSeparate]++;
                 }
 
-                image.Save($@"{templatePath}\filled-calendar.jpg");
-                await calContext.Channel.SendFileAsync($@"{templatePath}\filled-calendar.jpg");
+                image.Save($@"{templatePath}\filled-calendar.png");
+                await calContext.Channel.SendFileAsync($@"{templatePath}\filled-calendar.png");
             }
         }
     }
