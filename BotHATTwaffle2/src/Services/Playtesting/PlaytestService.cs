@@ -123,11 +123,25 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 //Make sure the playtest file exists before trying to send it.
                 if (File.Exists(_logReceiverService.GetFilePath()))
-                    await _dataService.TestingChannel.SendFileAsync(_logReceiverService.GetFilePath(), _playtestCommandInfo.CreatorMentions,
+                {
+                    Directory.CreateDirectory($"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{_playtestCommandInfo.StartDateTime:yyyy}" +
+                                              $"\\{_playtestCommandInfo.StartDateTime:MM} - {_playtestCommandInfo.StartDateTime:MMMM}" +
+                                              $"\\{_playtestCommandInfo.DemoName}");
+
+                    File.Copy(_logReceiverService.GetFilePath(),
+                            $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{_playtestCommandInfo.StartDateTime:yyyy}" +
+                            $"\\{_playtestCommandInfo.StartDateTime:MM} - {_playtestCommandInfo.StartDateTime:MMMM}" +
+                            $"\\{_playtestCommandInfo.DemoName}\\{_playtestCommandInfo.DemoName}.txt"
+                        ,true);
+                    await _dataService.TestingChannel.SendFileAsync(_logReceiverService.GetFilePath(),
+                        _playtestCommandInfo.CreatorMentions,
                         embed: embed.Build());
+                }
                 else
+                {
                     await _dataService.TestingChannel.SendMessageAsync(_playtestCommandInfo.CreatorMentions,
                         embed: embed.Build());
+                }
 
                 await Task.Delay(30000);
                 var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
@@ -189,7 +203,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a supporter at www.patreon.com/tophattwaffle");
 
             return _playtestCommandInfo;
-
         }
 
         public async Task<PlaytestCommandInfo> PlaytestCommandPre(bool replyInContext)

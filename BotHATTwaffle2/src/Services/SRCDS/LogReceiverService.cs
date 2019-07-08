@@ -171,9 +171,9 @@ namespace BotHATTwaffle2.Services.SRCDS
         private void SetFileName(string fileName)
         {
             if (fileName.Contains(".txt"))
-                path = "Feedback/" + fileName;
+                path = "Feedback\\" + fileName;
 
-            path = "Feedback/" + fileName + ".txt";
+            path = "Feedback\\" + fileName + ".txt";
         }
 
         public string GetFilePath() => path;
