@@ -17,10 +17,8 @@ namespace BotHATTwaffle2.Services.Playtesting
     {
         public async Task DiscordPlaytestCalender(SocketCommandContext calContext = null, Events calPlaytestEvents = null)
         {
-            Console.WriteLine("Made it here");
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
-
 
             string templatePath = $@"{Directory.GetCurrentDirectory()}";
             templatePath = Path.GetFullPath(Path.Combine(templatePath, @"..\..\..\res"));
@@ -31,6 +29,11 @@ namespace BotHATTwaffle2.Services.Playtesting
                 var fontDates = SystemFonts.CreateFont("Arial", 40, FontStyle.Bold);
                 var fontPTName = SystemFonts.CreateFont("Arial", 15, FontStyle.Regular);
                 var fontPT = SystemFonts.CreateFont("Arial", 23, FontStyle.Regular);
+
+                // Color of the Dates
+                Rgba32 dateColor = Rgba32.DodgerBlue;
+                Rgba32 playtestTitleColor = Rgba32.IndianRed;
+                Rgba32 playtestTimeColor = Rgba32.Black;
 
                 // Here are the coordinate lists for the date headings
                 List<float> xPosList = new List<float>() { 99f, 294f, 489f, 684f, 880f, 1075f, 1272f };
@@ -50,7 +53,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         customSize = TextMeasurer.Measure($"{customDateTime.ToString("MMM")} {customDateTime.Day}", new RendererOptions(fontDates));
 
                         image.Mutate(x => x
-                            .DrawText($"{customDateTime.ToString("MMM")} {customDateTime.Day}", fontDates, Rgba32.Black, new PointF(xPos - (customSize.Width / 2), yPos)));
+                            .DrawText($"{customDateTime.ToString("MMM")} {customDateTime.Day}", fontDates, dateColor, new PointF(xPos - (customSize.Width / 2), yPos)));
                         iterator++;
                     }
                 }
@@ -70,11 +73,11 @@ namespace BotHATTwaffle2.Services.Playtesting
                     // These variables just exist to make names shorter
                     DateTime playtestSDT = playtestEvent.Start.DateTime.Value;
                     int numDaysSeparate = (playtestSDT.Day - currentDateTime.Day);
-                    string shortenedEventSummary = playtestEvent.Summary.Length > 28 ? $"{playtestEvent.Summary.Substring(0, 25)}..." : playtestEvent.Summary;
+                    string shortenedEventSummary = playtestEvent.Summary.Length > 28 ? $"{playtestEvent.Summary.Substring(0, 23)}..." : playtestEvent.Summary;
 
                     // These are the sizes of the info from the calendar. They are required to center the text properly
                     SizeF titleSize = TextMeasurer.Measure(shortenedEventSummary, new RendererOptions(fontPTName));
-                    SizeF timeSize = TextMeasurer.Measure($"{playtestSDT.Hour}:{playtestSDT.Minute} - {playtestSDT.Hour + 2}:{playtestSDT.Minute}", new RendererOptions(fontPT));
+                    SizeF timeSize = TextMeasurer.Measure($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", new RendererOptions(fontPT));
 
                     // Break out of this iteration if the current date already has 3 playtests
                     if (numOfPlaytests[numDaysSeparate] > 2) continue;
@@ -105,8 +108,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     // Finally drawing on the screen. Lots of variable names here. This is Squidski's fault by the way.
                     image.Mutate(x => x
-                        .DrawText($"{shortenedEventSummary}", fontPTName, Rgba32.Black, new PointF(xPosList[columnNum] - (titleSize.Width / 2), titleYCoord))
-                        .DrawText($"{playtestSDT.Hour}:{playtestSDT.Minute} - {playtestSDT.Hour + 2}:{playtestSDT.Minute}", fontPT, Rgba32.Black, new PointF(xPosList[columnNum] - (timeSize.Width /2), timeYCoord))
+                        .DrawText($"{shortenedEventSummary}", fontPTName, playtestTitleColor, new PointF(xPosList[columnNum] - (titleSize.Width / 2), titleYCoord))
+                        .DrawText($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", fontPT, playtestTimeColor, new PointF(xPosList[columnNum] - (timeSize.Width /2), timeYCoord))
                     );
 
                     numOfPlaytests[numDaysSeparate]++;

@@ -29,7 +29,7 @@ namespace BotHATTwaffle2.Commands
         private readonly ReservationService _reservationService;
         private readonly GoogleCalendar _calendar;
         private readonly PlaytestService _playtestService;
-        private readonly CalendarBuilder _calendarBuilder;
+        CalendarBuilder calendarBuilder = new CalendarBuilder();
         private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
@@ -66,11 +66,9 @@ namespace BotHATTwaffle2.Commands
 
                 _dataService.IgnoreListenList.Remove(Context.User);
             }
-            Console.WriteLine("About to skip it");
+
             var nextMonthEvents = _calendar.GetNextMonthAsync(DateTime.Now).Result;
-            // WHY DOES THIS TASK NOT RUN AT ALL??????
-            await _calendarBuilder.DiscordPlaytestCalender(Context, nextMonthEvents);
-            Console.WriteLine("Skipped");
+            await calendarBuilder.DiscordPlaytestCalender(Context, nextMonthEvents);
         }
 
         [Command("Request", RunMode = RunMode.Async)]
