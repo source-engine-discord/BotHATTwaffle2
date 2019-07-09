@@ -19,6 +19,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
 
+            // Not sure why the line overlay wouldn't be in the folder. But if its not, then we will just abord the process
+            if (!File.Exists("calendar-line-overlay.png")) return;
+
             // Dimensions of our image to make
             int width = 1371;
             int height = 836;
@@ -43,6 +46,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     image.Mutate(x => x
                         .DrawImage(lineImage, 1f)
                     );
+                    lineImage.Dispose();
                 }
 
                 // Getting the current time (start of calendar) and setting up our fonts
@@ -133,6 +137,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 image.Save("filled-calendar.png");
                 await calContext.Channel.SendFileAsync("filled-calendar.png");
+                image.Dispose();
             }
         }
     }
