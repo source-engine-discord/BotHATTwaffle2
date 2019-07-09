@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.TypeReader;
 using Discord;
