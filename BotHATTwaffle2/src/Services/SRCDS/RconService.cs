@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Util;
@@ -80,34 +81,57 @@ namespace BotHATTwaffle2.Services.SRCDS
             string reply = null;
             serverId = GeneralUtil.GetServerCode(serverId);
             //Retry upper bound amount of times
-            int retryCount = 5;
+            int retryCount = 4;
             int currentTry = 0;
-            for (;currentTry <= retryCount; currentTry++)
+            RCON client = null;
+
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            CancellationToken token = tokenSource.Token;
+
+            //start the task, so we can wait on it later with a timeout timer.
+            var t = Task.Run(async () =>
             {
-                var client = GetOrCreateRconClient(serverId);
-                var commandResult = client.SendCommandAsync(command);
-                if (commandResult == await Task.WhenAny(commandResult, Task.Delay(3000)))
+                for (; currentTry <= retryCount; currentTry++)
                 {
+                    //Throw out of task if we are cancelling
+                    token.ThrowIfCancellationRequested();
+
+                    client = GetOrCreateRconClient(serverId);
                     try
                     {
-                        reply = await commandResult;
-
-                        //Success sending, break loop
-                        break;
+                        var commandResult = client.SendCommandAsync(command);
+                        if (commandResult == await Task.WhenAny(commandResult, Task.Delay(3000)))
+                        {
+                            reply = await commandResult;
+                            //Success sending, break loop
+                            break;
+                        }
                     }
                     catch
                     {
-                        await _log.LogMessage($"Failed to communicate with RCON server {serverId} {currentTry} times. Will try " +
-                                              $"{retryCount - currentTry} more times.",false, color: LOG_COLOR);
+                        await _log.LogMessage(
+                            $"Failed to communicate with RCON server {serverId} {currentTry} times. Will try " +
+                            $"{retryCount - currentTry} more times.", false, color: LOG_COLOR);
                         client.Dispose();
                     }
+
+                    //Delay between retries for teardown
+                    await Task.Delay(250);
                 }
-                else
-                {
-                    client.Dispose();
-                }
-                //Delay between retries for teardown
-                await Task.Delay(500);
+            });
+
+            if (!t.Wait(15 * 1000))
+            {
+                _running = false;
+                await _log.LogMessage(
+                    $"Failed to communicate with RCON server {serverId} within the timeout period.\nThe following command **was not** sent.\n" +
+                    $"`{serverId}`\n`{command}`", color: LOG_COLOR);
+                
+                tokenSource.Cancel();
+
+                client.Dispose();
+
+                return $"Failed to communicate with RCON server {serverId} within the timeout period. The server may not be running";
             }
 
             //Command failed to send, alert.
@@ -117,7 +141,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                     $"Failed to communicate with RCON server {serverId} after {retryCount} tries.\nThe following command **was not** sent.\n" +
                     $"`{serverId}`\n`{command}`", color: LOG_COLOR);
 
-                reply = $"Failed to communicate with RCON server {serverId} after {retryCount} tries. The server may not be running";
+                return $"Failed to communicate with RCON server {serverId} after {retryCount} tries. The server may not be running";
             }
             //Release the next instance
             _running = false;
@@ -127,7 +151,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             if (string.IsNullOrWhiteSpace(reply))
                 reply = $"{command} was sent, but provided no reply.";
 
-           //Ignore logging status replies... This is a one off that just causes too much spam.
+            //Ignore logging status replies... This is a one off that just causes too much spam.
             if (!command.Contains("status", StringComparison.OrdinalIgnoreCase))
                await _log.LogMessage($"**Sending:** `{command}`\n**To:** `{serverId}`\n**Response Was:** `{reply}`", color: LOG_COLOR);
 
