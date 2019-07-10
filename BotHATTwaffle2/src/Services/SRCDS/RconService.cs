@@ -175,7 +175,6 @@ namespace BotHATTwaffle2.Services.SRCDS
             var formatted = results.FirstOrDefault()?.Substring(10);
             
             _dataService.PlayerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
-            Console.WriteLine(_dataService.PlayerCount);
         }
 
         /// <summary>

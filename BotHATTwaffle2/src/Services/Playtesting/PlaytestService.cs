@@ -584,9 +584,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (startDateTime != null && DateTime.Compare(DateTime.Now.AddMinutes(60), startDateTime.Value) < 0)
             {
-                //Subtract 60.1 minutes. If .1 isn't added the announcement states wrong time.
+                //Subtract 60.2 minutes. If .2 isn't added the announcement states wrong time.
                 JobManager.AddJob(async () => await PlaytestStartingInTask(), s => s
-                    .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-60.1)));
+                    .WithName("[Playtest1Hour]").ToRunOnceAt(startDateTime.Value.AddMinutes(-60.2)));
 
                 _ = _log.LogMessage("1 hour playtest announcement scheduled for:" +
                                     $"\n{JobManager.GetSchedule("[Playtest1Hour]").NextRun}", false,
@@ -697,6 +697,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                                                $"{unsubInfo}",
                 embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
                     true, PlaytestAnnouncementMessage.Id));
+            await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
 
             //DM users about their test
             foreach (var creator in _calendar.GetTestEventNoUpdate().Creators)
@@ -709,8 +710,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     //Could not DM creator about their test.
                 }
-
-            await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
         }
 
         /// <summary>
