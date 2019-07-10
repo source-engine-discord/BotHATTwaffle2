@@ -30,7 +30,7 @@ namespace BotHATTwaffle2.Services.Calendar
         {
             _log = log;
             _dataService = dataService;
-            Console.Write("Getting or checking Sheets OAuth Credentials... ");
+            Console.Write("Getting or checking Calendar OAuth Credentials... ");
             _calendar = new CalendarService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = GetCalendarCredentials(),

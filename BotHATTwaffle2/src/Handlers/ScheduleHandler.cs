@@ -73,9 +73,9 @@ namespace BotHATTwaffle2.Handlers
 
             //Add schedule for playtest count update, will do every few hours, and now to seed the value.
             JobManager.AddJob(UpdatePlayTestCount, s => s
-                .WithName("[PlayingUpdate]").ToRunEvery(2).Hours());
+                .WithName("[PlaytestCountUpdate]").ToRunEvery(2).Hours());
             JobManager.AddJob(UpdatePlayTestCount, s => s
-                .WithName("[PlayingUpdate]").ToRunNow());
+                .WithName("[PlaytestCountUpdateNow]").ToRunNow());
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.

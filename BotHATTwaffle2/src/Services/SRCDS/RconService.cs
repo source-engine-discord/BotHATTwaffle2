@@ -187,5 +187,18 @@ namespace BotHATTwaffle2.Services.SRCDS
             var replyArray = input.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             return string.Join("\n", replyArray.Where(x => !x.Trim().StartsWith("L ")));
         }
+
+        /// <summary>
+        /// If the RCON server hasn't been used in a while, just yeet some shit its way to make it wake tf up.
+        /// </summary>
+        /// <param name="serverId">Server ID to wake up</param>
+        /// <returns></returns>
+        public async Task WakeRconServer(string serverId)
+        {
+            //Using GUIDs for basically random text.
+            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
+            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
+            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
+        }
     }
 }

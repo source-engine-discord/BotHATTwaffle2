@@ -207,15 +207,6 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public async Task<PlaytestCommandInfo> PlaytestCommandPre(bool replyInContext)
         {
-            //No context to send these messages to - default them
-            if (!replyInContext)
-                await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"Pre-start playtest of {_playtestCommandInfo.Title}")
-                    .WithColor(new Color(55, 55, 165))
-                    .WithDescription($"\nOn **{_playtestCommandInfo.ServerAddress}**" +
-                                     $"\nWith config of **{_playtestCommandInfo.Mode}**" +
-                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**").Build());
-
             var config = _calendar.GetTestEventNoUpdate().IsCasual
                 ? _dataService.RSettings.General.CasualConfig
                 : _dataService.RSettings.General.CompConfig;
@@ -257,7 +248,15 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                 $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
 
-            
+            //No context to send these messages to - default them
+            if (!replyInContext)
+                await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"Pre-start playtest of {_playtestCommandInfo.Title}")
+                    .WithColor(new Color(55, 55, 165))
+                    .WithDescription($"\nOn **{_playtestCommandInfo.ServerAddress}**" +
+                                     $"\nWith config of **{_playtestCommandInfo.Mode}**" +
+                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**").Build());
+
             return _playtestCommandInfo;
         }
 
@@ -632,6 +631,9 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             _ = _log.LogMessage("Running playtesting starting in X minutes task...", true, color: LOG_COLOR);
 
+            //Ensure server is awake and RCON connection is established. Run other things while waking server
+            _ = _rconService.WakeRconServer(_calendar.GetTestEventNoUpdate().ServerLocation);
+            
             //Setup the log receiver for this test.
             _ = Task.Run(async () =>
             {
@@ -672,8 +674,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
-                    $"sv_cheats 0; sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
                 mentionRole = _dataService.CompetitiveTesterRole;
 
                 await _dataService.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
@@ -682,6 +682,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                         $"`connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}`")
                     .WithColor(new Color(55, 55, 165))
                     .Build());
+
+                await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+                    $"sv_cheats 0; sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
             }
 
             //Skip the alert.
@@ -718,7 +721,13 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PlaytestTwentyMinuteTask()
         {
-           _ = _log.LogMessage("Running playtesting starting in 20 minutes task...", true, color: LOG_COLOR);
+            //Ensure server is awake and RCON connection is established. Run other things while waking server
+            _ = _rconService.WakeRconServer(_calendar.GetTestEventNoUpdate().ServerLocation);
+
+            //Ensure server is awake and RCON connection is established.
+            await _rconService.WakeRconServer(_calendar.GetTestEventNoUpdate().ServerLocation);
+
+            _ = _log.LogMessage("Running playtesting starting in 20 minutes task...", true, color: LOG_COLOR);
            _logReceiverService.StartLogReceiver(_calendar.GetTestEventNoUpdate().ServerLocation);
             await _rconService.RconCommand(GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().ServerLocation),
                $"host_workshop_map {GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())}");
@@ -741,10 +750,19 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             _ = _log.LogMessage("Running playtesting starting in 15 minutes task...", true, color: LOG_COLOR);
 
+            //Ensure server is awake and RCON connection is established. Run other things while waking server
+            _ = _rconService.WakeRconServer(_calendar.GetTestEventNoUpdate().ServerLocation);
+
             //Disable reservations on servers
             await _reservationService.DisableReservations();
 
-            _logReceiverService.EnableFeedback(_playtestCommandInfo.DemoName);
+            _logReceiverService.StartLogReceiver(_calendar.GetTestEventNoUpdate().ServerLocation);
+
+            //Start the log listener for users to give feedback before the test starts.
+            var gameMode = _calendar.GetTestEventNoUpdate().IsCasual ? "casual" : "comp";
+            _logReceiverService.EnableFeedback($"{_calendar.GetTestEventNoUpdate().StartDateTime:MM_dd_yyyy}" +
+                                               $"_{_calendar.GetTestEventNoUpdate().Title.Substring(0, _calendar.GetTestEventNoUpdate().Title.IndexOf(' '))}" +
+                                               $"_{gameMode}");
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Settings up test server for {_calendar.GetTestEventNoUpdate().Title}")
