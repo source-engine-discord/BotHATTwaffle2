@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.TypeReader;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -208,6 +209,18 @@ namespace BotHATTwaffle2.Handlers
                 await Propper();
                 return;
             }
+
+            var converted = UnitConverter.AutoConversion(message.Content);
+            if (converted.Count > 0)
+            {
+                string formatted = null;
+                foreach (var c in converted)
+                {
+                    formatted += $"`{c.Key.ToLower()}` is `{c.Value}`\n";
+                }
+                await message.Channel.SendMessageAsync(formatted.Trim());
+            }
+
 
             // Methods for building the embeds that the if statements caught above
             async Task PlaytestRequest()
