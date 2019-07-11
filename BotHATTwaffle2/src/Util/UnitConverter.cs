@@ -57,7 +57,7 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{CelsiusToFahrenheit(value)}F");
+                    dictionary.Add(match.Value.Trim(), $"{CelsiusToFahrenheit(value)}f");
                 }
 
             matches = RegExF.Matches(input);
@@ -65,7 +65,7 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{FahrenheitToCelsius(value)}C");
+                    dictionary.Add(match.Value.Trim(), $"{FahrenheitToCelsius(value)}c");
                 }
 
             matches = RegExMm.Matches(input);
@@ -97,7 +97,7 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{KilometersToMiles(value)}Mi");
+                    dictionary.Add(match.Value.Trim(), $"{KilometersToMiles(value)}mi");
                 }
 
             matches = RegExMi.Matches(input);
