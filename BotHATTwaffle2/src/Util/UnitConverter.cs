@@ -8,7 +8,7 @@ namespace BotHATTwaffle2.Util
     {
         //temps
         private static readonly string PatternCelsius = @"[+-]?(\d*\.)?\d+c(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternFahrenheit = @"\d+\.?\d+f(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternFahrenheit = @"[+-]?(\d*\.)?\d+f(( )|($)|(\r\n|\r|\n))";
 
         //Metric
         private static readonly string PatternMilimeters = @"[+-]?(\d*\.)?\d+mm(( )|($)|(\r\n|\r|\n))";
@@ -20,6 +20,11 @@ namespace BotHATTwaffle2.Util
         private static readonly string PatternMiles = @"[+-]?(\d*\.)?\d+mi(( )|($)|(\r\n|\r|\n))";
         private static readonly string PatternFeet = @"[+-]?(\d*\.)?\d+(ft|')(( )|($)|(\r\n|\r|\n))";
         private static readonly string PatternInches = "[+-]?(\\d*\\.)?\\d+(in|\")(( )|($)|(\r\n|\r|\n))";
+
+        //Weight
+        private static readonly string PatternPounds = @"[+-]?(\d*\.)?\d+(lb|lbs)(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternKilograms = @"[+-]?(\d*\.)?\d+(kg|kgs)(( )|($)|(\r\n|\r|\n))";
+
 
         private static readonly Regex RegExC = new Regex(PatternCelsius,
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -48,6 +53,10 @@ namespace BotHATTwaffle2.Util
             new Regex(PatternInches, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex RegExNumbersonly = new Regex(@"[+-]?(\d*\.)?\d+", RegexOptions.Compiled);
+
+        private static readonly Regex RegExLb = new Regex(PatternPounds, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex RegExKg = new Regex(PatternKilograms, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public static Dictionary<string, string> AutoConversion(string input)
         {
@@ -124,6 +133,22 @@ namespace BotHATTwaffle2.Util
                     dictionary.Add(match.Value.Trim(), $"{InchesToCentimeters(value)}cm");
                 }
 
+            matches = RegExLb.Matches(input);
+            if (matches.Count > 0)
+                foreach (Match match in matches)
+                {
+                    double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
+                    dictionary.Add(match.Value.Trim(), $"{PoundsToKilograms(value)}kg");
+                }
+
+            matches = RegExKg.Matches(input);
+            if (matches.Count > 0)
+                foreach (Match match in matches)
+                {
+                    double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
+                    dictionary.Add(match.Value.Trim(), $"{KilogramsToPounds(value)}lb");
+                }
+
             return dictionary;
         }
 
@@ -170,6 +195,16 @@ namespace BotHATTwaffle2.Util
         public static double FeetToMeter(double ft)
         {
             return Math.Round(ft / 3.2808399, 2);
+        }
+
+        public static double PoundsToKilograms(double lb)
+        {
+            return Math.Round(lb * 0.45359237, 2);
+        }
+
+        public static double KilogramsToPounds(double kg)
+        {
+            return Math.Round(kg / 0.45359237, 2);
         }
     }
 }
