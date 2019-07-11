@@ -66,7 +66,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{CelsiusToFahrenheit(value)}f");
+                    if(!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{CelsiusToFahrenheit(value)}f");
                 }
 
             matches = RegExF.Matches(input);
@@ -74,7 +75,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{FahrenheitToCelsius(value)}c");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{FahrenheitToCelsius(value)}c");
                 }
 
             matches = RegExMm.Matches(input);
@@ -82,7 +84,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{MilimetersToInches(value)}in");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{MilimetersToInches(value)}in");
                 }
 
             matches = RegExCm.Matches(input);
@@ -90,7 +93,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{CentimetersToInches(value)}in");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{CentimetersToInches(value)}in");
                 }
 
             matches = RegExM.Matches(input);
@@ -98,7 +102,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{MetersToFeet(value)}ft");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{MetersToFeet(value)}ft");
                 }
 
             matches = RegExKm.Matches(input);
@@ -106,7 +111,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{KilometersToMiles(value)}mi");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{KilometersToMiles(value)}mi");
                 }
 
             matches = RegExMi.Matches(input);
@@ -114,7 +120,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{MilesToKilometers(value)}km");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{MilesToKilometers(value)}km");
                 }
 
             matches = RegExFt.Matches(input);
@@ -122,7 +129,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{FeetToMeter(value)}m");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{FeetToMeter(value)}m");
                 }
 
             matches = RegExIn.Matches(input);
@@ -130,7 +138,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{InchesToCentimeters(value)}cm");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{InchesToCentimeters(value)}cm");
                 }
 
             matches = RegExLb.Matches(input);
@@ -138,7 +147,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{PoundsToKilograms(value)}kg");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{PoundsToKilograms(value)}kg");
                 }
 
             matches = RegExKg.Matches(input);
@@ -146,7 +156,8 @@ namespace BotHATTwaffle2.Util
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    dictionary.Add(match.Value.Trim(), $"{KilogramsToPounds(value)}lb");
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{KilogramsToPounds(value)}lb");
                 }
 
             return dictionary;
