@@ -488,7 +488,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_scheduledTests != null && _scheduledTests.Items.Count > 0)
                 foreach (var item in _scheduledTests.Items)
                     if (item.Summary.Contains("unavailable", StringComparison.OrdinalIgnoreCase))
-                        conflicts += "**Reason:** `TopHATTwaffle is Unavailable`\n";
+                        conflicts += $"**Reason:** `{item.Summary.Replace(" - Click for details","")}`\n";
                     else
                         conflicts +=
                             $"**Map:** `{item.Summary}`\n**Test Date:** `{item.Start.DateTime}`\n**Status:** `Scheduled`";
