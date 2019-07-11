@@ -44,6 +44,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             "Example: `tophattwaffle@gmail.com, doug@tophattwaffle.com`",
             "Enter the map name.\n" +
             "Example: `Facade 2`",
+            "To add yourself as the creator, mention yourself.\n" +
             "Please provide creators in a comma separated list.\n <https://support.discordapp.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->\n" +
             "Example: `111939018500890624, 560667510580576266`",
             "Please provide the imgur album containing your level images.\n" +

@@ -257,6 +257,14 @@ namespace BotHATTwaffle2.Services.Playtesting
                                      $"\nWith config of **{_playtestCommandInfo.Mode}**" +
                                      $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**").Build());
 
+            _ = Task.Run(async () =>
+            {
+                //Wait some, reset password
+                await Task.Delay(5000);
+                await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+                    $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
+            });
+            
             return _playtestCommandInfo;
         }
 
@@ -674,6 +682,21 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
+                foreach (var creator in _calendar.GetTestEventNoUpdate().Creators)
+                {
+                    try
+                    {
+                        var user = _dataService.GetSocketGuildUser(creator.Id);
+                        if (user.Roles.All(x => x.Id != _dataService.CompetitiveTesterRole.Id))
+                        {
+                            await _log.LogMessage($"{user} ID:{user.Id} does not have competitive tester role for this comp test. Applying.");
+                            await user.AddRoleAsync(_dataService.CompetitiveTesterRole);
+                        }
+                    }
+                    catch
+                    {}
+                }
+
                 mentionRole = _dataService.CompetitiveTesterRole;
 
                 await _dataService.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
@@ -739,7 +762,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                await _rconService.RconCommand(
                    GeneralUtil.GetServerCode(_calendar.GetTestEventNoUpdate().CompCasualServer),
                    $"host_workshop_map {GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString())}");
-           }
+
+               //Delay before setting password again.
+               await Task.Delay(5000);
+
+               await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+                   $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
+            }
         }
 
         /// <summary>

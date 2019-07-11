@@ -47,7 +47,33 @@ namespace BotHATTwaffle2.Commands
             _rconService = rconService;
             _logReceiverService = logReceiverService;
         }
-        
+
+//        [Command("Test", RunMode = RunMode.Async)]
+//        [Summary("Used to debug. This should not go live")]
+//        public async Task TestAsync(int check = 0)
+//        {
+//            //Only allow if in debug mode
+//            if (!_dataService.RSettings.ProgramSettings.Debug)
+//                return;
+//
+//            if (check == 0)
+//            {
+//                await _playtestService.PlaytestStartingInTask();
+//            }
+//            if (check == 1)
+//            {
+//                await _playtestService.PlaytestTwentyMinuteTask();
+//            }
+//            if (check == 2)
+//            {
+//                await _playtestService.PlaytestFifteenMinuteTask();
+//            }
+//            if (check == 3)
+//            {
+//                await _playtestService.PlaytestStartingTask();
+//            }
+//        }
+
         [Command("StartListen", RunMode = RunMode.Async)]
         [Alias("startl")]
         [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]

@@ -152,7 +152,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 reply = $"{command} was sent, but provided no reply.";
 
             //Ignore logging status replies... This is a one off that just causes too much spam.
-            if (!command.Contains("status", StringComparison.OrdinalIgnoreCase))
+            if (!command.Contains("status", StringComparison.OrdinalIgnoreCase) && !command.StartsWith("//"))
                await _log.LogMessage($"**Sending:** `{command}`\n**To:** `{serverId}`\n**Response Was:** `{reply}`", color: LOG_COLOR);
 
             return reply;

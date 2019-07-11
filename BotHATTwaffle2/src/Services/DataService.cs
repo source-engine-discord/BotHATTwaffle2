@@ -367,8 +367,14 @@ namespace BotHATTwaffle2.Services
             SocketGuildUser user = null;
             try
             {
-                //Check if username#1234 was provided
-                if (input.Contains('#'))
+                
+                if (input.StartsWith("<@") && input.EndsWith(">"))
+                {
+                    input = input.Replace("<@", "").Replace(">","");
+                    if (ulong.TryParse(input, out var id))
+                        user = Guild.GetUser(id);
+                }
+                else if (input.Contains('#'))//Check if username#1234 was provided
                 {
                     var split = input.Split('#');
                     ushort.TryParse(split[1], out var disc);
