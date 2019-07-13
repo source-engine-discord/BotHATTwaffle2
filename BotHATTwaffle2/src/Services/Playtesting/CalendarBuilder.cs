@@ -52,7 +52,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 // Getting the current time (start of calendar) and setting up our fonts
                 var currentDateTime = DateTime.Now;
                 var fontDates = SystemFonts.CreateFont("Arial", 40, FontStyle.Bold);
-                var fontPTName = SystemFonts.CreateFont("Arial", 15, FontStyle.Regular);
+                var fontPTName = SystemFonts.CreateFont("Arial", 20, FontStyle.Regular);
                 var fontPT = SystemFonts.CreateFont("Arial", 23, FontStyle.Regular);
 
                 // Here are the coordinate lists for the date headings
@@ -79,11 +79,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
 
                 // These are similar to the date headings, but these are for the playtest names and times
-                // They are in groups of 3. So each set of 3 is in the same row
-                List<float> playtestTitlesYPosList = new List<float>() { 55f, 88f, 123f, 220f, 253f, 288f, 385f, 418f, 453f, 552f, 590f, 626f, 725f, 759f, 795f };
-                List<float> playtestTimesYPosList = new List<float>() { 70f, 104f, 140f, 235f, 269f, 305f, 400f, 434f, 470f, 567f, 605f, 643f, 739f, 774f, 812f };
-                SizeF customSize2 = TextMeasurer.Measure($"Gongji by Squidski | Casual:", new RendererOptions(fontPTName));
-                SizeF customSize3 = TextMeasurer.Measure($"00:00 - 00:00", new RendererOptions(fontPT));
+                // They are in groups of 2. So each set of 2 is in the same row
+                List<float> playtestTitlesYPosList = new List<float>() { 56.5f,  116.0f,   221.5f,  281.0f,   386.5f, 446.0f,    551.5f, 631.0f,   726.5f, 786.0f,  };
+                List<float> playtestTimesYPosList = new List<float>()  { 79.0f,  134.5f,   244.0f,  299.5f,   409.0f, 464.5f,    571.0f, 649.5f,   748.0f, 804.5f,  };
 
                 // Here's the big boi. Putting the playtest events on the calendar
                 List<int> numOfPlaytests = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -93,22 +91,32 @@ namespace BotHATTwaffle2.Services.Playtesting
                     // These variables just exist to make names shorter
                     DateTime playtestSDT = playtestEvent.Start.DateTime.Value;
                     int numDaysSeparate = (playtestSDT.Day - currentDateTime.Day);
-                    string shortenedEventSummary = playtestEvent.Summary.Length > 28 ? $"{playtestEvent.Summary.Substring(0, 23)}..." : playtestEvent.Summary;
+                    string shortenedEventSummary = "";
+
+                    // Here we're just grabbing the mapname from the playtest title
+                    foreach (var entry in playtestEvent.Summary.Split(" "))
+                    {
+                        if (entry != "by")
+                        {
+                            shortenedEventSummary += entry;
+                        }
+                        else break;
+                    }
 
                     // These are the sizes of the info from the calendar. They are required to center the text properly
                     SizeF titleSize = TextMeasurer.Measure(shortenedEventSummary, new RendererOptions(fontPTName));
                     SizeF timeSize = TextMeasurer.Measure($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", new RendererOptions(fontPT));
 
-                    // Break out of this iteration if the current date already has 3 playtests
-                    if (numOfPlaytests[numDaysSeparate] > 2) continue;
+                    // Break out of this iteration if the current date already has 2 playtests
+                    if (numOfPlaytests[numDaysSeparate] > 1) continue;
 
                     // Basically this finds out where in the Y postition lists we should start (since they are broken up into sets)
                     int groupStartIndex;
                     if (numDaysSeparate < 7) groupStartIndex = 0;
-                    else if (numDaysSeparate < 14) groupStartIndex = 3;
-                    else if (numDaysSeparate < 21) groupStartIndex = 6;
-                    else if (numDaysSeparate < 28) groupStartIndex = 9;
-                    else groupStartIndex = 12;
+                    else if (numDaysSeparate < 14) groupStartIndex = 2;
+                    else if (numDaysSeparate < 21) groupStartIndex = 4;
+                    else if (numDaysSeparate < 28) groupStartIndex = 6;
+                    else groupStartIndex = 8;
 
                     // Get the column that the day would be in (so we can get the x coordinate)
                     int columnNum = 7;
