@@ -20,5 +20,7 @@ namespace BotHATTwaffle2
         public string PostgameConfig { get; set; }
         public string WebhookChannel { get; set; }
         public string AdminChannel { get; set; }
+        public string VoidChannel { get; set; }
+        public string BotChannel { get; set; }
     }
 }

@@ -66,7 +66,16 @@ namespace BotHATTwaffle2.Handlers
             catch
             {
                 await _log.LogMessage($"Attempted to send welcome message to `{user.Username}` `{user.Id}`, but failed. " +
-                                      $"They either have DMs off, or left the server.");
+                                      $"They might have DMs of - I'll try in the BotChannel.");
+
+                try
+                {
+                    await _dataService.BotChannel.SendMessageAsync(embed: WelcomeEmbed(user));
+                }
+                catch
+                {
+                    //User left the guild - can't mention them.
+                }
             }
             DatabaseUtil.RemoveJoinedUser(user.Id);
         }

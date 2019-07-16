@@ -158,13 +158,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return;
                 }
 
-                if (int.TryParse(_userMessage.Content, out var index) && index >= 0 && index <= 10)
-                {
-                    await Display(_wizardText[index]);
-                    _userMessage = await _interactive.NextMessageAsync(_context);
-                    await ParseTestInformation(_arrayValues[index], _userMessage.Content);
-                }
-
                 if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
                 {
                     DatabaseUtil.RemovePlaytestRequest(_testRequest);
@@ -172,6 +165,38 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
                     await _userMessage.DeleteAsync();
                     return;
+                }
+
+                if (int.TryParse(_userMessage.Content, out var index) && index >= 0 && index <= 10)
+                {
+                    //Validate based on the index.
+                    await Display(_wizardText[index]);
+                    _userMessage = await _interactive.NextMessageAsync(_context);
+                    if (_userMessage == null ||
+                        _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await CancelRequest();
+                        return;
+                    }
+
+                    //Loop until valid, or allow an exit.
+                    while (!await ParseTestInformation(_arrayValues[index], _userMessage.Content))
+                    {
+                        //Invalid, let's try again.
+                        _userMessage = await _interactive.NextMessageAsync(_context);
+
+                        if (_userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            break;
+                        }
+
+                        //No reply - fully exit
+                        if (_userMessage == null)
+                        {
+                            await CancelRequest();
+                            return;
+                        }
+                    }
                 }
             }
 

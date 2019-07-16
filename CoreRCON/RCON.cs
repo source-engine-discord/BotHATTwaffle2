@@ -25,6 +25,7 @@ namespace CoreRCON
         private int _packetId = 1;
 
         private readonly string _password;
+        private int _staleCounter = 0;
         private uint _reconnectDelay;
 
         /// <summary>
@@ -117,8 +118,24 @@ namespace CoreRCON
             await SendPacketAsync(new RCONPacket(0, PacketType.Auth, _password));
             await _authenticationTask.Task;
 
-            //Don't watch
             //Task.Run(() => WatchForDisconnection(_reconnectDelay)).Forget();
+            Task.Run(CheckIfStale).Forget();
+        }
+
+        private async Task CheckIfStale()
+        {
+            while (true)
+            {
+                if(_staleCounter > 120)
+                {
+                    Log($"RCON Client for {_endpoint} is stale - Disposing!");
+                    Dispose();
+                    break;
+                }
+
+                await Task.Delay(5000);
+                _staleCounter++;
+            }
         }
 
         /// <summary>
@@ -156,6 +173,7 @@ namespace CoreRCON
         public async Task<string> SendCommandAsync(string command)
         {
             Monitor.Enter(_lock);
+            _staleCounter = 0;
             var source = new TaskCompletionSource<string>();
             _pendingCommands.Add(++_packetId, source.SetResult);
             var packet = new RCONPacket(_packetId, PacketType.ExecCommand, command);

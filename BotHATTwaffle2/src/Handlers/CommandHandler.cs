@@ -20,8 +20,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
-        private readonly Workshop _workshop = new Workshop();
-
+        
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)
         {
@@ -177,7 +176,8 @@ namespace BotHATTwaffle2.Handlers
             if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                await _workshop.SendWorkshopEmbed(message, _dataService);
+                Workshop workshop = new Workshop();
+                await workshop.SendWorkshopEmbed(message, _dataService);
                 return;
             }
 
@@ -232,9 +232,9 @@ namespace BotHATTwaffle2.Handlers
                 //Get the creator
                 var creator = _dataService.GetSocketUser(input[1]);
                 string creatorMention = creator != null ? creator.Mention : input[1];
-
+                Workshop workshop = new Workshop();
                 await _dataService.TestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
-                    (await _workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
+                    (await workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
                     .Build());
             }
 

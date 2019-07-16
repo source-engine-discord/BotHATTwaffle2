@@ -8,7 +8,7 @@ using LiteDB;
 
 namespace BotHATTwaffle2.Util
 {
-    static class DatabaseUtil
+    internal static class DatabaseUtil
     {
         private const string DBPATH = @"MasterDB.db";
         private const string COLLECTION_ANNOUNCEMENT = "announcement";
@@ -70,7 +70,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened storing announcement message\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
@@ -98,7 +97,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting announcement message\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundMessage;
@@ -122,7 +120,8 @@ namespace BotHATTwaffle2.Util
                     if (commandInfo != null)
                     {
                         if (_dataService.RSettings.ProgramSettings.Debug)
-                            _ = _log.LogMessage("Old playtest command info record found, deleting", false, color: LOG_COLOR);
+                            _ = _log.LogMessage("Old playtest command info record found, deleting", false,
+                                color: LOG_COLOR);
 
                         collection.Delete(1);
                     }
@@ -133,11 +132,11 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened storing announcement message\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
             return true;
         }
 
@@ -159,7 +158,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting announcement message\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return commandInfo;
@@ -194,7 +192,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting test server\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundServer;
@@ -234,7 +231,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened removing test server\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
@@ -262,7 +258,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all test servers\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundServers;
@@ -300,7 +295,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened adding test server\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
             }
@@ -334,7 +328,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened adding user join\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
             }
@@ -362,7 +355,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened removing user join\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
             }
@@ -387,7 +379,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all user joins\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundUsers;
@@ -397,7 +388,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Gets a single active mute for a user. There should only ever be 1 at a time.
+        ///     Gets a single active mute for a user. There should only ever be 1 at a time.
         /// </summary>
         /// <param name="userId">UserId to get active mute for</param>
         /// <returns>Valid Mute object if found, null otherwise</returns>
@@ -411,7 +402,8 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
 
-                    foundMute = collection.FindOne(Query.And(Query.EQ("UserId", (long)userId), Query.EQ("Expired",false)));
+                    foundMute = collection.FindOne(Query.And(Query.EQ("UserId", (long) userId),
+                        Query.EQ("Expired", false)));
                 }
 
                 if (_dataService.RSettings.ProgramSettings.Debug && foundMute != null)
@@ -419,7 +411,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting test server\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundMute;
@@ -429,7 +420,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Adds a mute to the database
+        ///     Adds a mute to the database
         /// </summary>
         /// <param name="userMute">Mute object to add</param>
         /// <returns>True if added, false otherwise</returns>
@@ -444,7 +435,7 @@ namespace BotHATTwaffle2.Util
                 using (var db = new LiteDatabase(DBPATH))
                 {
                     var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
-                    
+
                     collection.EnsureIndex(x => x.UserId);
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
@@ -457,7 +448,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened adding user join\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
             }
@@ -466,7 +456,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Unmutes a user in the database based on userId
+        ///     Unmutes a user in the database based on userId
         /// </summary>
         /// <param name="userId">UserId to unmute</param>
         /// <returns>True if user was unmuted, false otherwise</returns>
@@ -494,7 +484,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened adding user join\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
             }
@@ -503,7 +492,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Gets all currently active mutes on server.
+        ///     Gets all currently active mutes on server.
         /// </summary>
         /// <returns>IEnumerable list of Mutes</returns>
         public static IEnumerable<Mute> GetAllActiveUserMutes()
@@ -521,7 +510,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all user mutes\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundUsers;
@@ -531,7 +519,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Gets all mutes based on a specific user ID
+        ///     Gets all mutes based on a specific user ID
         /// </summary>
         /// <param name="userId">User ID to get mutes for</param>
         /// <returns>IEnumerable list of Mutes</returns>
@@ -545,12 +533,11 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var collection = db.GetCollection<Mute>(COLLECTION_MUTES);
 
-                    foundMutes = collection.Find(Query.EQ("UserId", (long)userId));
+                    foundMutes = collection.Find(Query.EQ("UserId", (long) userId));
                 }
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage($"Something happened getting all mutes for user ID {userId}\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundMutes;
@@ -560,7 +547,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Adds a new server reservations
+        ///     Adds a new server reservations
         /// </summary>
         /// <param name="serverReservation">Server reservation to add</param>
         /// <returns>True if reservation could be added, false otherwise</returns>
@@ -592,15 +579,15 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened adding server reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
             }
+
             return false;
         }
 
         /// <summary>
-        /// Gets a server reservation
+        ///     Gets a server reservation
         /// </summary>
         /// <param name="server">server ID to get reservation for</param>
         /// <returns>ServerReservation object if found, null otherwiser</returns>
@@ -622,11 +609,11 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting server reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return serverReservation;
             }
+
             return serverReservation;
         }
 
@@ -640,7 +627,7 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
 
-                    serverReservation = collection.FindOne(Query.EQ("UserId", (long)userId));
+                    serverReservation = collection.FindOne(Query.EQ("UserId", (long) userId));
                 }
 
                 if (_dataService.RSettings.ProgramSettings.Debug && serverReservation != null)
@@ -648,16 +635,16 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting server reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return serverReservation;
             }
+
             return serverReservation;
         }
 
         /// <summary>
-        /// Gets server object on an active reservation based on a user ID
+        ///     Gets server object on an active reservation based on a user ID
         /// </summary>
         /// <param name="userId">UserID to locate server from</param>
         /// <returns>Server object if reservation found, null otherwise</returns>
@@ -671,27 +658,23 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
 
-                    var serverReservation = collection.FindOne(Query.EQ("UserId", (long)userId));
+                    var serverReservation = collection.FindOne(Query.EQ("UserId", (long) userId));
 
-                    if (serverReservation != null)
-                    {
-                        foundServer = GetTestServer(serverReservation.ServerId);
-                    }
+                    if (serverReservation != null) foundServer = GetTestServer(serverReservation.ServerId);
                 }
-
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting test server reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundServer;
             }
+
             return foundServer;
         }
 
         /// <summary>
-        /// Gets all active server reservations
+        ///     Gets all active server reservations
         /// </summary>
         /// <returns>IEnumerable of ServerReservation objects of active reservations, or null if none.</returns>
         public static IEnumerable<ServerReservation> GetAllServerReservation()
@@ -709,7 +692,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all server reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return serverReservations;
@@ -719,7 +701,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Removes all server reservations by dropping the collection
+        ///     Removes all server reservations by dropping the collection
         /// </summary>
         /// <returns>True if successful, false otherwise</returns>
         public static bool RemoveAllServerReservations()
@@ -733,7 +715,6 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all server reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
@@ -741,13 +722,12 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Removes a server reservation based on user ID
+        ///     Removes a server reservation based on user ID
         /// </summary>
         /// <param name="userId">User ID to remove server reservation</param>
         /// <returns>True if removed, false otherwise</returns>
         public static bool RemoveServerReservation(ulong userId)
         {
-
             try
             {
                 using (var db = new LiteDatabase(DBPATH))
@@ -764,16 +744,16 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened releasing reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
             return false;
         }
 
         /// <summary>
-        /// Changes the announced flag to true on a server reservation based on user ID
+        ///     Changes the announced flag to true on a server reservation based on user ID
         /// </summary>
         /// <param name="userId">User ID of reservation</param>
         /// <returns>True if updated, false otherwise</returns>
@@ -784,7 +764,7 @@ namespace BotHATTwaffle2.Util
                 using (var db = new LiteDatabase(DBPATH))
                 {
                     var collection = db.GetCollection<ServerReservation>(COLLECTION_RESERVATIONS);
-                    var reservation = collection.FindOne(Query.EQ("UserId", (long)userId));
+                    var reservation = collection.FindOne(Query.EQ("UserId", (long) userId));
 
                     if (reservation != null)
                     {
@@ -795,16 +775,16 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened releasing reservations\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
             return false;
         }
 
         /// <summary>
-        /// Adds a playtest request to the database
+        ///     Adds a playtest request to the database
         /// </summary>
         /// <param name="playtestRequest">PlaytestRequest to add</param>
         /// <returns>True if added, false otherwise</returns>
@@ -826,16 +806,16 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened storing playtest request\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
             return true;
         }
 
         /// <summary>
-        /// Gets all playtest requests from the DB
+        ///     Gets all playtest requests from the DB
         /// </summary>
         /// <returns>IEnumerable of PlaytestRequests</returns>
         public static IEnumerable<PlaytestRequest> GetAllPlaytestRequests()
@@ -847,28 +827,27 @@ namespace BotHATTwaffle2.Util
                 {
                     //Grab our collection
                     var collection = db.GetCollection<PlaytestRequest>(COLLECTION_PTREQUESTS);
-                    
+
                     foundRequests = collection.FindAll();
                 }
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all playtest requests\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return foundRequests;
             }
+
             return foundRequests;
         }
 
         /// <summary>
-        /// Removes a PlaytestRequest from the Database
+        ///     Removes a PlaytestRequest from the Database
         /// </summary>
         /// <param name="playtestRequest">PlaytestRequest to remove</param>
         /// <returns>True if removed, false otherwise</returns>
         public static bool RemovePlaytestRequest(PlaytestRequest playtestRequest)
         {
-            
             try
             {
                 using (var db = new LiteDatabase(DBPATH))
@@ -881,11 +860,11 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                //TODO: Don't actually know what exceptions can happen here, catch all for now.
                 _ = _log.LogMessage("Something happened getting all playtest requests\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
             return true;
         }
     }

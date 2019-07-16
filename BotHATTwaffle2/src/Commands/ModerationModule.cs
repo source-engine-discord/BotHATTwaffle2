@@ -27,11 +27,11 @@ namespace BotHATTwaffle2.Commands
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
+        private readonly LogReceiverService _logReceiverService;
         private readonly PlaytestService _playtestService;
         private readonly Random _random;
-        private readonly ReservationService _reservationService;
         private readonly RconService _rconService;
-        private readonly LogReceiverService _logReceiverService;
+        private readonly ReservationService _reservationService;
 
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
@@ -48,30 +48,11 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-//        [Command("Test", RunMode = RunMode.Async)]
+//        [Command("Test")]
 //        [Summary("Used to debug. This should not go live")]
-//        public async Task TestAsync(int check = 0)
+//        public async Task TestAsync()
 //        {
-//            //Only allow if in debug mode
-//            if (!_dataService.RSettings.ProgramSettings.Debug)
-//                return;
 //
-//            if (check == 0)
-//            {
-//                await _playtestService.PlaytestStartingInTask();
-//            }
-//            if (check == 1)
-//            {
-//                await _playtestService.PlaytestTwentyMinuteTask();
-//            }
-//            if (check == 2)
-//            {
-//                await _playtestService.PlaytestFifteenMinuteTask();
-//            }
-//            if (check == 3)
-//            {
-//                await _playtestService.PlaytestStartingTask();
-//            }
 //        }
 
         [Command("StartListen", RunMode = RunMode.Async)]
@@ -79,17 +60,19 @@ namespace BotHATTwaffle2.Commands
         [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]
         [Remarks("If you have been added to the Steam ID whitelist, you can use `>rcon [command]` in the server to " +
                  "send RCON commands to it. Regular users can use `>feedback [message]` to leave feedback on the map.")]
-        public async Task StartServerListenAsync([Summary("Server to start listening on")]string server)
+        public async Task StartServerListenAsync([Summary("Server to start listening on")]
+            string server)
         {
             if (_logReceiverService.EnableLog)
             {
-                await ReplyAsync(embed:new EmbedBuilder()
+                await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Unable to start new listener")
-                    .WithDescription($"You cannot start another log session until the existing session on " +
+                    .WithDescription("You cannot start another log session until the existing session on " +
                                      $"`{_logReceiverService.ActiveServer.Address}` is ended")
-                    .WithColor(new Color(55,55,165)).Build());
+                    .WithColor(new Color(55, 55, 165)).Build());
                 return;
             }
+
             _logReceiverService.StartLogReceiver(server);
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor("Started new Listener")
@@ -102,7 +85,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Stops server listening to disallow ingame chat to call certain bot functions.")]
         public async Task StopServerListenAsync()
         {
-            if(!_logReceiverService.EnableLog)
+            if (!_logReceiverService.EnableLog)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("A listener isn't started")
@@ -132,7 +115,9 @@ namespace BotHATTwaffle2.Commands
             [Summary("Reason the user has been muted")] [Remainder]
             string reason)
         {
+            //Convert to total minutes, used later for mute extensions
             var duration = muteLength.TotalMinutes;
+
             //Variables used if we are extending a mute.
             double oldMuteTime = 0;
             var muteStartTime = DateTime.Now;
@@ -142,7 +127,7 @@ namespace BotHATTwaffle2.Commands
             var embed = new EmbedBuilder();
 
             //This is all for a shitpost on mods trying to mute admins
-            if (user.Roles.Any(x=>x.Id == _dataService.AdminRole.Id) || user.IsBot)
+            if (user.Roles.Any(x => x.Id == _dataService.AdminRole.Id) || user.IsBot)
             {
                 user = Context.User as SocketGuildUser;
                 muteLength = new TimeSpan(0, 69, 0);
@@ -186,7 +171,7 @@ namespace BotHATTwaffle2.Commands
                     //Remove old mute from job manager
                     JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
 
-                    reason = "Extended from previous mute: " + reason.Substring(reason.IndexOf(' '));
+                    reason = "Extended from previous mute:" + reason.Substring(reason.IndexOf(' '));
                 }
             }
 
@@ -210,7 +195,8 @@ namespace BotHATTwaffle2.Commands
                     await user.AddRoleAsync(_dataService.MuteRole);
 
                     JobManager.AddJob(async () => await _dataService.UnmuteUser(user.Id), s => s
-                        .WithName($"[UnmuteUser_{user.Id}]").ToRunOnceAt(DateTime.Now.Add(muteLength)));
+                        .WithName($"[UnmuteUser_{user.Id}]")
+                        .ToRunOnceAt(DateTime.Now.AddMinutes(duration + oldMuteTime)));
                 }
                 catch
                 {
@@ -243,12 +229,12 @@ namespace BotHATTwaffle2.Commands
                 await ReplyAsync(embed: embed
                     .WithAuthor($"{user.Username} Muted")
                     .WithDescription(
-                        $"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
+                        $"Muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
                     .WithColor(new Color(165, 55, 55))
                     .Build());
 
                 await _log.LogMessage(
-                    $"`{Context.User}` muted `{user}` `{user.Id}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",
+                    $"`{Context.User}` muted `{user}` `{user.Id}`\nFor: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`",
                     color: LOG_COLOR);
 
                 try
@@ -256,13 +242,19 @@ namespace BotHATTwaffle2.Commands
                     await user.SendMessageAsync(embed: embed
                         .WithAuthor("You have been muted")
                         .WithDescription(
-                            $"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
+                            $"You have been muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
                         .WithColor(new Color(165, 55, 55))
                         .Build());
                 }
                 catch
                 {
-                    //Can't DM then
+                    //Can't DM then, send in void instead
+                    await _dataService.VoidChannel.SendMessageAsync(embed: embed
+                        .WithAuthor("You have been muted")
+                        .WithDescription(
+                            $"You have been muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
+                        .WithColor(new Color(165, 55, 55))
+                        .Build());
                 }
             }
             else
@@ -325,7 +317,7 @@ namespace BotHATTwaffle2.Commands
                 foreach (var mute in allMutes)
                 {
                     var mod = _dataService.GetSocketUser(mute.ModeratorId);
-                    string modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
+                    var modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     embed.AddField(mute.Username,
                         $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod: `{modString}`");
                 }
@@ -369,8 +361,8 @@ namespace BotHATTwaffle2.Commands
                     foreach (var mutePage in allMutes.Reverse())
                     {
                         var mod = _dataService.GetSocketUser(mutePage.ModeratorId);
-                        string modString = mod == null ? $"{mutePage.ModeratorId}" : mod.ToString();
-                        
+                        var modString = mod == null ? $"{mutePage.ModeratorId}" : mod.ToString();
+
                         fullListing += $"**{mutePage.MuteTime.ToString()}**" +
                                        $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
                                        $"\nReason: `{mutePage.Reason}`" +
@@ -397,7 +389,7 @@ namespace BotHATTwaffle2.Commands
                 foreach (var mute in allMutes.Reverse())
                 {
                     var mod = _dataService.GetSocketUser(mute.ModeratorId);
-                    string modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
+                    var modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     fullListing += $"**{mute.MuteTime.ToString()}**" +
                                    $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
                                    $"\nReason: `{mute.Reason}`" +
@@ -448,6 +440,9 @@ namespace BotHATTwaffle2.Commands
             {
                 case "prestart":
                 case "pre":
+                    var preMessage = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription("⏰ Running Playtest Pre-start...").WithColor(new Color(165, 55, 55)).Build());
+
                     playtestCommandInfo = await _playtestService.PlaytestCommandPre(true);
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Pre-start playtest of {playtestCommandInfo.Title}")
@@ -455,9 +450,14 @@ namespace BotHATTwaffle2.Commands
                         .WithDescription($"\nOn **{playtestCommandInfo.ServerAddress}**" +
                                          $"\nWith config of **{playtestCommandInfo.Mode}**" +
                                          $"\nWorkshop ID **{playtestCommandInfo.WorkshopId}**").Build());
+
+                    await preMessage.DeleteAsync();
                     break;
 
                 case "start":
+                    var startMessage = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription("⏰ Running Playtest Start...").WithColor(new Color(165, 55, 55)).Build());
+
                     playtestCommandInfo = await _playtestService.PlaytestCommandStart(true);
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Start playtest of {playtestCommandInfo.Title}")
@@ -467,9 +467,13 @@ namespace BotHATTwaffle2.Commands
                                          $"\nWorkshop ID **{playtestCommandInfo.WorkshopId}**" +
                                          $"\nDemo Name **{playtestCommandInfo.DemoName}**").Build());
 
+                    await startMessage.DeleteAsync();
                     break;
 
                 case "post":
+                    var postMessage = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription("⏰ Running Playtest post...").WithColor(new Color(165, 55, 55)).Build());
+
                     playtestCommandInfo = await _playtestService.PlaytestCommandPost(true);
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Post playtest of {playtestCommandInfo.Title}")
@@ -477,6 +481,8 @@ namespace BotHATTwaffle2.Commands
                         .WithDescription($"\nOn **{playtestCommandInfo.ServerAddress}**" +
                                          $"\nWorkshop ID **{playtestCommandInfo.WorkshopId}**" +
                                          $"\nDemo Name **{playtestCommandInfo.DemoName}**").Build());
+
+                    await postMessage.DeleteAsync();
                     break;
 
                 case "pause":
@@ -484,9 +490,9 @@ namespace BotHATTwaffle2.Commands
                     playtestCommandInfo = await _playtestService.PlaytestcommandGenericAction(true,
                         "mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!");
 
-                    await ReplyAsync(embed:new EmbedBuilder()
+                    await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Pausing Playtest On {playtestCommandInfo.ServerAddress}")
-                        .WithColor(new Color(55,55,165))
+                        .WithColor(new Color(55, 55, 165))
                         .Build());
                     break;
 
@@ -555,7 +561,7 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task CompetitiveTesterAsync([Summary("User to give role to")] SocketGuildUser user)
         {
-            if (user.Roles.Any(x=>x.Id == _dataService.CompetitiveTesterRole.Id))
+            if (user.Roles.Any(x => x.Id == _dataService.CompetitiveTesterRole.Id))
             {
                 await Context.Message.DeleteAsync();
                 await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
@@ -619,7 +625,7 @@ namespace BotHATTwaffle2.Commands
                  "Then commands can be sent as normal without a server ID:\n" +
                  "Example: `>r sv_cheats 1`\n" +
                  "Provide no parameters to see what server you're current sending to.")]
-        public async Task RconAsync([Summary("Rcon command to send")][Remainder][Optional]
+        public async Task RconAsync([Summary("Rcon command to send")] [Remainder] [Optional]
             string command)
         {
             string targetServer = null;
@@ -728,16 +734,17 @@ namespace BotHATTwaffle2.Commands
             IUserMessage delayed = null;
             var rconCommand = _rconService.RconCommand(targetServer, command);
             var waiting = Task.Delay(2000);
-            if(rconCommand == await Task.WhenAny(rconCommand,waiting))
+            if (rconCommand == await Task.WhenAny(rconCommand, waiting))
             {
                 reply = await rconCommand;
             }
             else
             {
-                delayed = await ReplyAsync(embed:new EmbedBuilder()
-                    .WithDescription($"⏰RCON command to `{targetServer}` is taking longer than normal...\nSit tight while I'll " +
-                                     "try a few more times.")
-                    .WithColor(new Color(165,55,55)).Build());
+                delayed = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithDescription(
+                        $"⏰RCON command to `{targetServer}` is taking longer than normal...\nSit tight while I'll " +
+                        "try a few more times.")
+                    .WithColor(new Color(165, 55, 55)).Build());
                 reply = await rconCommand;
             }
 

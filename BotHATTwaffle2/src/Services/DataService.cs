@@ -36,6 +36,8 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel CompetitiveTestingChannel { get; private set; }
         public SocketTextChannel WebhookChannel { get; private set; }
         public SocketTextChannel AdminChannel { get; private set; }
+        public SocketTextChannel VoidChannel { get; private set; }
+        public SocketTextChannel BotChannel { get; private set; }
 
         // Roles
         public SocketRole PlayTesterRole { get; private set; }
@@ -132,6 +134,12 @@ namespace BotHATTwaffle2.Services
 
             AdminChannel = await ParseChannel(RSettings.General.AdminChannel);
             Console.WriteLine($"AdminChannel ID:{AdminChannel.Id} Discovered Name:{AdminChannel.Name}");
+
+            VoidChannel = await ParseChannel(RSettings.General.VoidChannel);
+            Console.WriteLine($"VoidChannel ID:{VoidChannel.Id} Discovered Name:{VoidChannel.Name}");
+
+            BotChannel = await ParseChannel(RSettings.General.BotChannel);
+            Console.WriteLine($"BotChannel ID:{BotChannel.Id} Discovered Name:{BotChannel.Name}");
 
             if (RSettings.ProgramSettings.Debug)
             {

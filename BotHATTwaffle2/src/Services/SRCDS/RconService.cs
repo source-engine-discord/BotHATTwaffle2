@@ -74,14 +74,13 @@ namespace BotHATTwaffle2.Services.SRCDS
             {
                 await _log.LogMessage($"Waiting for another instance of RCON to finish before sending\n" +
                                       $"{command}\nTo: {serverId}", channel: false, color: LOG_COLOR);
-                await Task.Delay(250);
+                await Task.Delay(500);
             }
             _running = true;
 
             string reply = null;
             serverId = GeneralUtil.GetServerCode(serverId);
             //Retry upper bound amount of times
-            int retryCount = 4;
             int currentTry = 0;
             RCON client = null;
 
@@ -91,7 +90,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             //start the task, so we can wait on it later with a timeout timer.
             var t = Task.Run(async () =>
             {
-                for (; currentTry <= retryCount; currentTry++)
+                while (true)
                 {
                     //Throw out of task if we are cancelling
                     token.ThrowIfCancellationRequested();
@@ -110,17 +109,17 @@ namespace BotHATTwaffle2.Services.SRCDS
                     catch
                     {
                         await _log.LogMessage(
-                            $"Failed to communicate with RCON server {serverId} {currentTry} times. Will try " +
-                            $"{retryCount - currentTry} more times.", false, color: LOG_COLOR);
+                            $"Failed to communicate with RCON server {serverId} {currentTry} times. Will retry...", false, color: LOG_COLOR);
                         client.Dispose();
                     }
 
+                    currentTry++;
                     //Delay between retries for teardown
                     await Task.Delay(250);
                 }
             });
-
-            if (!t.Wait(15 * 1000))
+            
+            if (await Task.WhenAny(t, Task.Delay(15 * 1000)) != t)
             {
                 _running = false;
                 await _log.LogMessage(
@@ -132,16 +131,6 @@ namespace BotHATTwaffle2.Services.SRCDS
                 client.Dispose();
 
                 return $"Failed to communicate with RCON server {serverId} within the timeout period. The server may not be running";
-            }
-
-            //Command failed to send, alert.
-            if (currentTry >= retryCount)
-            {
-                await _log.LogMessage(
-                    $"Failed to communicate with RCON server {serverId} after {retryCount} tries.\nThe following command **was not** sent.\n" +
-                    $"`{serverId}`\n`{command}`", color: LOG_COLOR);
-
-                return $"Failed to communicate with RCON server {serverId} after {retryCount} tries. The server may not be running";
             }
             //Release the next instance
             _running = false;
@@ -199,6 +188,20 @@ namespace BotHATTwaffle2.Services.SRCDS
             await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
             await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
             await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
+        }
+
+        /// <summary>
+        /// Gets the current running level, and workshop ID from a test server.
+        /// If array.length == 3 it is a workshop map, with the ID in [1] and map name in [2]
+        /// Otherwise it is a stock level with the name in [0]
+        /// </summary>
+        /// <param name="server">Server to query</param>
+        /// <returns>An array populated with the result.</returns>
+        public async Task<string[]> GetRunningLevelAsync(string server)
+        {
+            var reply = await RconCommand(server, "host_map");
+            reply = reply.Substring(14, reply.IndexOf(".bsp", StringComparison.Ordinal) - 14);
+            return reply.Split('/');
         }
     }
 }

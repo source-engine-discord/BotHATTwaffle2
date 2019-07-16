@@ -7,23 +7,23 @@ namespace BotHATTwaffle2.Util
     internal class UnitConverter
     {
         //temps
-        private static readonly string PatternCelsius = @"[+-]?(\d*\.)?\d+c(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternFahrenheit = @"[+-]?(\d*\.)?\d+f(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternCelsius = @"(^| )[+-]?(\d*\.)?\d+c(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternFahrenheit = @"(^| )[+-]?(\d*\.)?\d+f(( )|($)|(\r\n|\r|\n))";
 
         //Metric
-        private static readonly string PatternMilimeters = @"[+-]?(\d*\.)?\d+mm(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternCentimeters = @"[+-]?(\d*\.)?\d+cm(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternMeters = @"[+-]?(\d*\.)?\d+m(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternKilometers = @"[+-]?(\d*\.)?\d+km(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternMilimeters = @"(^| )[+-]?(\d*\.)?\d+mm(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternCentimeters = @"(^| )[+-]?(\d*\.)?\d+cm(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternMeters = @"(^| )[+-]?(\d*\.)?\d+m(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternKilometers = @"(^| )[+-]?(\d*\.)?\d+km(( )|($)|(\r\n|\r|\n))";
 
         //Freedom
-        private static readonly string PatternMiles = @"[+-]?(\d*\.)?\d+mi(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternFeet = @"[+-]?(\d*\.)?\d+(ft|')(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternInches = "[+-]?(\\d*\\.)?\\d+(in|\")(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternMiles = @"(^| )[+-]?(\d*\.)?\d+mi(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternFeet = @"(^| )[+-]?(\d*\.)?\d+(ft|')(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternInches = "(^| )[+-]?(\\d*\\.)?\\d+(in|\")(( )|($)|(\r\n|\r|\n))";
 
         //Weight
-        private static readonly string PatternPounds = @"[+-]?(\d*\.)?\d+(lb|lbs)(( )|($)|(\r\n|\r|\n))";
-        private static readonly string PatternKilograms = @"[+-]?(\d*\.)?\d+(kg|kgs)(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternPounds = @"(^| )[+-]?(\d*\.)?\d+(lb|lbs)(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternKilograms = @"(^| )[+-]?(\d*\.)?\d+(kg|kgs)(( )|($)|(\r\n|\r|\n))";
 
 
         private static readonly Regex RegExC = new Regex(PatternCelsius,

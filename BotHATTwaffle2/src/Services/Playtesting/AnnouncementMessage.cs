@@ -148,7 +148,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             playtestEmbed.AddField("Moderator",
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
 
-            if (_dataService.IncludePlayerCount)
+            //Make sure player count isn't null. It may be null if RCON is failing for some reason.
+            if (_dataService.IncludePlayerCount && _dataService.PlayerCount != null)
             {
                 playtestEmbed.AddField("Players Connected", _dataService.PlayerCount, true);
             }

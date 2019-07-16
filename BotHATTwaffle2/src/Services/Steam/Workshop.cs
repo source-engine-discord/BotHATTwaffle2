@@ -19,10 +19,6 @@ namespace BotHATTwaffle2.Services.Steam
     public class Workshop
     {
         private static RootWorkshop workshopJsonGameData;
-        public Workshop()
-        {
-            EnsureGameListCache();
-        }
 
         private bool EnsureGameListCache()
         {
@@ -73,10 +69,19 @@ namespace BotHATTwaffle2.Services.Steam
                     kvp1,kvp2
                 });
 
-                // Send the actual post request
-                clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
-                var resultItem = await clientItem.PostAsync("", contentItem);
-                string resultContentItem = await resultItem.Content.ReadAsStringAsync();
+                string resultContentItem;
+                try
+                {
+                    // Send the actual post request
+                    clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
+                    var resultItem = await clientItem.PostAsync("", contentItem);
+                    resultContentItem = await resultItem.Content.ReadAsStringAsync();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return null;
+                }
 
                 //Check if response is empty
                 if (resultContentItem == "{}") return null;

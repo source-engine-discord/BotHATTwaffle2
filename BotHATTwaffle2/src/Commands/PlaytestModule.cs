@@ -239,7 +239,7 @@ namespace BotHATTwaffle2.Commands
                 DatabaseUtil.UpdateAnnouncedServerReservation(Context.User.Id);
             }
 
-            var result = await _playtestService.GetRunningLevelAsync(server.Address);
+            var result = await _rconService.GetRunningLevelAsync(server.Address);
 
             var embed = new EmbedBuilder();
 
@@ -248,10 +248,19 @@ namespace BotHATTwaffle2.Commands
             {
                 embed = await new Workshop().HandleWorkshopEmbeds(Context.Message, _dataService, inputId: result[1]);
 
-                await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                   $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
-                                                                   $"\nType `>roleme Community Tester` to get this role.",
-                    embed: embed.Build());
+                if(embed != null)
+                {
+                    await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                                                                       $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                                       $"\nType `>roleme Community Tester` to get this role.",
+                        embed: embed.Build());
+                }
+                else //Workshop builder returned bad / no data. Don't send an embed.
+                {
+                    await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                                                                       $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                                       $"\nType `>roleme Community Tester` to get this role.");
+                }
             }
             else
             {
@@ -287,7 +296,7 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            var levelInfo = await _playtestService.GetRunningLevelAsync(reservation.ServerId);
+            var levelInfo = await _rconService.GetRunningLevelAsync(reservation.ServerId);
             if (levelInfo.Length != 3)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
