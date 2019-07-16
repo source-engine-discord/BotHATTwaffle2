@@ -70,7 +70,7 @@ namespace BotHATTwaffle2.Handlers
 
                 try
                 {
-                    await _dataService.BotChannel.SendMessageAsync(embed: WelcomeEmbed(user));
+                    await _dataService.BotChannel.SendMessageAsync(user.Mention, embed: WelcomeEmbed(user));
                 }
                 catch
                 {
