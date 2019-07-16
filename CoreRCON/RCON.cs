@@ -126,9 +126,13 @@ namespace CoreRCON
         {
             while (true)
             {
+                //If we somehow disconnected, break out.
+                if (!_connected)
+                    break;
+
                 if(_staleCounter > 120)
                 {
-                    Log($"RCON Client for {_endpoint} is stale - Disposing!");
+                    Console.WriteLine($"RCON Client for {_endpoint} is stale - Disposing!");
                     Dispose();
                     break;
                 }
