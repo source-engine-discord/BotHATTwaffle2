@@ -11,7 +11,7 @@ namespace CoreRCON.Parsers.Standard
 
     public class PlaytestMessageParser : DefaultParser<PlaytestMessage>
     {
-        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(p|playtest)\\s?(?<Message>.+?)\"";
+        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(?i)(p|playtest)\\s?(?<Message>.+?)\"";
         private static PlayerParser playerParser { get; } = new PlayerParser();
 
         public override PlaytestMessage Load(GroupCollection groups)

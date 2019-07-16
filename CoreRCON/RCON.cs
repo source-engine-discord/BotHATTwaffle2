@@ -177,12 +177,12 @@ namespace CoreRCON
         public async Task<string> SendCommandAsync(string command)
         {
             Monitor.Enter(_lock);
-            _staleCounter = 0;
             var source = new TaskCompletionSource<string>();
             _pendingCommands.Add(++_packetId, source.SetResult);
             var packet = new RCONPacket(_packetId, PacketType.ExecCommand, command);
             Monitor.Exit(_lock);
 
+            _staleCounter = 0;
             await SendPacketAsync(packet);
             return await source.Task;
         }

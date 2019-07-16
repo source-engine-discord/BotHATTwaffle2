@@ -11,7 +11,7 @@ namespace CoreRCON.Parsers.Standard
 
     public class FeedbackMessageParser : DefaultParser<FeedbackMessage>
     {
-        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(fb|feedback)\\s?(?<Message>.+?)\"";
+        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(?i)(fb|feedback)\\s?(?<Message>.+?)\"";
         private static PlayerParser playerParser { get; } = new PlayerParser();
 
         public override FeedbackMessage Load(GroupCollection groups)

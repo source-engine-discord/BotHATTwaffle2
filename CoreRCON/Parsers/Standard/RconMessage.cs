@@ -11,7 +11,7 @@ namespace CoreRCON.Parsers.Standard
 
     public class RconMessageParser : DefaultParser<RconMessage>
     {
-        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(r|rcon)\\s(?<Message>.+?)\"";
+        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(?i)(r|rcon)\\s(?<Message>.+?)\"";
         private static PlayerParser playerParser { get; } = new PlayerParser();
 
         public override RconMessage Load(GroupCollection groups)

@@ -128,7 +128,14 @@ namespace BotHATTwaffle2.Services.SRCDS
                 
                 tokenSource.Cancel();
 
-                client.Dispose();
+                try
+                {
+                    client.Dispose();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failure disposing of RCON client:\n" + e.Message);
+                }
 
                 return $"Failed to communicate with RCON server {serverId} within the timeout period. The server may not be running";
             }
