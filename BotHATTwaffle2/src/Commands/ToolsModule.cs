@@ -232,6 +232,29 @@ namespace BotHATTwaffle2.Commands
             await ReplyAsync(string.Empty, false, embed.Build());
         }
 
+        [Command("BlenderSourceTools")]
+        [Summary("Provides a download link to the latest version of Blender Source Tools.")]
+        [Alias("bst")]
+        public async Task BstAsync()
+        {
+            var embed = new EmbedBuilder
+            {
+                Author = new EmbedAuthorBuilder
+                {
+                    Name = "Download Blender Source Tools",
+                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                },
+                Title = "Click Here",
+                Url = "https://github.com/Artfunkel/BlenderSourceTools",
+                ThumbnailUrl = "https://www.blendswap.com/files/images/2017/07/23/Blend/89002/dffa3371bf3bd129701856cef1d37ed1.jpg",
+                Color = new Color(50, 50, 50),
+                Description = "Blender Source Tools allow Blender to import and export Studiomdl Data and DMX model files,  " +
+                              "as well as automatically generating .qc files."
+            };
+
+            await ReplyAsync(string.Empty, false, embed.Build());
+        }
+
         [Command("Log")]
         [Summary("Provides a link to the compile log checker on Interlopers.")]
         [Alias("l")]
