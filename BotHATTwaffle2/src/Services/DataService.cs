@@ -13,7 +13,7 @@ namespace BotHATTwaffle2.Services
 {
     public class DataService
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Blue;
         private readonly DiscordSocketClient _client;
         private LogHandler _log;
 

@@ -18,7 +18,7 @@ namespace BotHATTwaffle2.Util
         private static LogHandler _log;
         private static DataService _dataService;
         private static Random _random;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkBlue;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.White;
         public static void SetHandlers(LogHandler log, DataService data, Random random)
         {
             _log = log;

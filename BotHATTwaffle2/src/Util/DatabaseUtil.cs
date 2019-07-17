@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
 using Discord;
 using LiteDB;
 
@@ -18,7 +19,8 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_MUTES = "mutes";
         private const string COLLECTION_RESERVATIONS = "serverReservations";
         private const string COLLECTION_PTREQUESTS = "playtestRequests";
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
+        private const string COLLECTION_COMP = "compPw";
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
 
@@ -26,6 +28,81 @@ namespace BotHATTwaffle2.Util
         {
             _dataService = data;
             _log = log;
+        }
+
+        /// <summary>
+        ///     Gets the stored CompPw from the DB.
+        /// </summary>
+        /// <returns>Found CompPw or null</returns>
+        public static CompPw GetCompPw()
+        {
+            CompPw found = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<CompPw>(COLLECTION_COMP);
+
+                    found = col.FindOne(Query.EQ("_id", 1));
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting CompPw\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return found;
+            }
+
+            return found;
+        }
+
+        /// <summary>
+        /// Stores a competitive playtest password
+        /// </summary>
+        /// <param name="playtestEvent">Playtest event to store info</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool StoreCompPw(PlaytestEvent playtestEvent)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<CompPw>(COLLECTION_COMP);
+
+                    var found = col.FindOne(Query.EQ("_id", 1));
+
+                    //If not null, we need to remove the old record first.
+                    if (found != null)
+                    {
+                        if (_dataService.RSettings.ProgramSettings.Debug)
+                            _ = _log.LogMessage("Old announcement CompPw found, deleting", false, color: LOG_COLOR);
+
+                        col.Delete(1);
+                    }
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Adding new record..." +
+                                            $"\n{playtestEvent.CompPassword} at for event ID {playtestEvent.EventEditTime.Value}", false, color: LOG_COLOR);
+
+                    //Insert new entry with ID of 1, and our values.
+                    col.Insert(new CompPw
+                    {
+                        Id = 1,
+                        EventEditTime = playtestEvent.EventEditTime.Value,
+                        CompPassword = playtestEvent.CompPassword
+                    });
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened storing CompPw\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

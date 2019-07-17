@@ -7,7 +7,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class AnnouncementMessage
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
         private static int _lastImageIndex;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
@@ -129,8 +129,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play. 15 minutes before start time, you can use the following to check the level out in a sandbox server:*\n" +
-                                          $"`connect {_calendar.GetTestEventNoUpdate().CompCasualServer}; password {_dataService.RSettings.General.CasualPassword}`";
+                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play.";
                 footer = "Connection info hidden due to competitive test";
             }
 

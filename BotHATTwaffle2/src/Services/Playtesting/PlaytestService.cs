@@ -14,7 +14,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class PlaytestService
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
         private static AnnouncementMessage _announcementMessage;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
@@ -846,12 +846,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 await _rconService.RconCommand(testEvent.ServerLocation,
                     $"sv_password {testEvent.CompPassword}");
-
-                //Delay to make sure level has actually changed
-                await Task.Delay(10000);
-                await _rconService.RconCommand(
-                    GeneralUtil.GetServerCode(testEvent.CompCasualServer),
-                    $"exec {_dataService.RSettings.General.PostgameConfig}; sv_password {_dataService.RSettings.General.CasualPassword}; bot_stop 1");
             }
             
             //Delay to make sure level has actually changed

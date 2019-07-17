@@ -12,7 +12,7 @@ namespace BotHATTwaffle2.Handlers
 {
     internal class ScheduleHandler
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkMagenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;

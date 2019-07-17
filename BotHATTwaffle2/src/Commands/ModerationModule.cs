@@ -21,7 +21,7 @@ namespace BotHATTwaffle2.Commands
 {
     public class ModerationModule : InteractiveBase
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkGreen;
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
         private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
@@ -591,14 +591,14 @@ namespace BotHATTwaffle2.Commands
             await Context.Message.DeleteAsync();
 
             //Do nothing if a test is not valid.
-            if (!_calendar.GetTestEventNoUpdate().IsValid)
+            if (!_calendar.GetTestEventNoUpdate().IsValid || _calendar.GetTestEventNoUpdate().IsCasual)
             {
                 await ReplyAsync("There is no valid test that I can invite that user to.");
                 return;
             }
 
             await _log.LogMessage(
-                $"{user} has been invite to the competitive test of {_calendar.GetTestEventNoUpdate().Title} by {Context.User}");
+                $"`{user}` has been invited to the competitive test of `{_calendar.GetTestEventNoUpdate().Title}` by `{Context.User}`");
 
             try
             {

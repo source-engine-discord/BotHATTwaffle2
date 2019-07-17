@@ -13,7 +13,7 @@ namespace BotHATTwaffle2.Services.SRCDS
     {
         private readonly DataService _dataService;
         private LogHandler _log;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
         private static Dictionary<string, RCON> _rconClients;
         private static bool _running = false;
 

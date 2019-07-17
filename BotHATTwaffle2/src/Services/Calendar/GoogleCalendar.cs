@@ -20,7 +20,7 @@ namespace BotHATTwaffle2.Services.Calendar
 {
     public class GoogleCalendar
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Gray;
         private static PlaytestEvent _testEvent;
         private readonly CalendarService _calendar;
         private readonly DataService _dataService;

@@ -18,7 +18,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class RequestBuilder
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Red;
 
         //The values that are used by the wizard to build the test. Also used for editing the event.
         private readonly string[] _arrayValues =
@@ -144,13 +144,31 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             while (true)
             {
+                //Variables used later.
+                int index = -1;
+                bool isValid = false;
+
                 await Display(
                     "Type the ID of the field you want to edit or type `Schedule` to schedule the playtest.\n" +
                     "Type `delete` to delete this request completely.");
-                _userMessage = await _interactive.NextMessageAsync(_context);
-                if (_userMessage.Content.Equals("schedule", StringComparison.OrdinalIgnoreCase))
-                    break;
 
+                //User's input
+                _userMessage = await _interactive.NextMessageAsync(_context);
+
+                //We want to schedule the event
+                if (_userMessage.Content.Equals("schedule", StringComparison.OrdinalIgnoreCase))
+                {
+                    //Server cannot be none when scheduling. Require it to be valid.
+                    if (_testRequest.Preferredserver == "No preference")
+                    {
+                        index = 10;
+                        isValid = true;
+                    }
+                    else
+                        break;
+                }
+
+                //Exiting
                 if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
@@ -158,6 +176,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return;
                 }
 
+                //Deleting test
                 if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
                 {
                     DatabaseUtil.RemovePlaytestRequest(_testRequest);
@@ -167,7 +186,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return;
                 }
 
-                if (int.TryParse(_userMessage.Content, out var index) && index >= 0 && index <= 10)
+                //Get the relevant index from the user message only if we aren't getting here from a forced server schedule.
+                if(!isValid)
+                    isValid = int.TryParse(_userMessage.Content, out index);
+                
+                //Valid number, and between the valid indexes?
+                if (isValid && index >= 0 && index <= 10)
                 {
                     //Validate based on the index.
                     await Display(_wizardText[index]);

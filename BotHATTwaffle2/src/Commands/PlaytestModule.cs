@@ -29,7 +29,7 @@ namespace BotHATTwaffle2.Commands
         private readonly GoogleCalendar _calendar;
         private readonly PlaytestService _playtestService;
         private readonly RconService _rconService;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService, RconService rconService,
