@@ -27,6 +27,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         public bool PlaytestStartAlert = true;
         private readonly RconService _rconService;
         private readonly LogReceiverService _logReceiverService;
+        private static bool _playtestCommandRunning = false;
 
         //Playtest Command Functions
         private static PlaytestCommandInfo _playtestCommandInfo;
@@ -51,8 +52,16 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public PlaytestCommandInfo GetPlaytestCommandInfo() => _playtestCommandInfo;
 
+        public void ResetCommandRunningFlag() => _playtestCommandRunning = false;
+
         public bool PlaytestCommandPreCheck()
         {
+            //Stop executing if we are already running a command
+            if (_playtestCommandRunning)
+            {
+                return false;
+            }
+
             //Make sure we have a valid event, if not, abort.
             if (!_calendar.GetTestEventNoUpdate().IsValid)
             {
@@ -62,6 +71,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Reload the last used playtest if the current event is null
             if (_playtestCommandInfo == null)
                 _playtestCommandInfo = DatabaseUtil.GetPlaytestCommandInfo();
+
+            //We are now running a command
+            _playtestCommandRunning = true;
 
             return true;
         }
@@ -75,6 +87,10 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .Build());
 
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, command);
+
+            //Reset the flag as we are done running
+            _playtestCommandRunning = false;
+
             return _playtestCommandInfo;
         }
 
@@ -157,6 +173,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             });
 
+            //Reset the flag as we are done running
+            _playtestCommandRunning = false;
+
             return _playtestCommandInfo;
         }
 
@@ -201,6 +220,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
             await Task.Delay(2000);
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, @"Say Become a supporter at www.patreon.com/tophattwaffle");
+
+            //Reset the flag as we are done running
+            _playtestCommandRunning = false;
 
             return _playtestCommandInfo;
         }
@@ -264,7 +286,10 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
             });
-            
+
+            //Reset the flag as we are done running
+            _playtestCommandRunning = false;
+
             return _playtestCommandInfo;
         }
 

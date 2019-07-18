@@ -187,7 +187,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             //Not valid - abort
             if (!_playtestService.PlaytestCommandPreCheck())
             {
-                await _rconService.RconCommand(server.Address, "This command requires a valid playtest event.");
+                await _rconService.RconCommand(server.Address, "A playtest command is running, or no valid test exists.");
                 return;
             }
 

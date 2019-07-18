@@ -32,7 +32,7 @@ namespace BotHATTwaffle2.Commands
         private readonly Random _random;
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
-
+        
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
             Random random, RconService rconService, LogReceiverService logReceiverService)
@@ -422,15 +422,32 @@ namespace BotHATTwaffle2.Commands
             "`u` / `unpause` - Unpauses a live test.\n" +
             "`s` / `scramble` - Scrambles teams on test server. This command will restart the test. Don't run it after running `start`\n" +
             "`k` / `kick` - Kicks a player from the playtest.\n" +
-            "`end` - Officially ends a playtest which allows community server reservations.")]
+            "`end` - Officially ends a playtest which allows community server reservations.\n" +
+            "`reset` - ")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task PlaytestAsync([Summary("Playtesting Sub-command")] string command)
         {
+            if (command.Equals("reset", StringComparison.OrdinalIgnoreCase))
+            {
+                _playtestService.ResetCommandRunningFlag();
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithDescription("The running flag has been reset.")
+                    .WithColor(55, 165, 55)
+                    .Build());
+                return;
+            }
+
             //Not valid - abort
             if (!_playtestService.PlaytestCommandPreCheck())
             {
-                await ReplyAsync("This command requires a valid playtest event.");
+                await ReplyAsync(embed:new EmbedBuilder()
+                    .WithDescription("There is already a playtest command running. Only 1 may be running at a time." +
+                                     " To force a reset of the running flag, use `>p reset`. This only needs to be done if there" +
+                                     "was some issue with the Discord API.\n\n" +
+                                     "Or no valid test is found.")
+                    .WithColor(165,55,55)
+                    .Build());
                 return;
             }
 
