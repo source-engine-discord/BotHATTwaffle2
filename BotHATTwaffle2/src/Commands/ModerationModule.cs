@@ -48,12 +48,46 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-//        [Command("Test")]
-//        [Summary("Used to debug. This should not go live")]
-//        public async Task TestAsync()
-//        {
-//
-//        }
+        //        [Command("Test")]
+        //        [Summary("Used to debug. This should not go live")]
+        //        public async Task TestAsync()
+        //        {
+        //
+        //        }
+
+        [Command("StartFeeddback", RunMode = RunMode.Async)]
+        [Alias("startfb")]
+        [Summary("Starts server listening for ingame feedback")]
+        public async Task StartServerFeedbackAsync()
+        {
+            if (_logReceiverService.EnableLog)
+            {
+                var result = _logReceiverService.EnableFeedback(_playtestService.GetPlaytestCommandInfo().DemoName);
+
+                if(result)
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Started new feedback listener")
+                        .WithDescription(
+                            $"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback in game.")
+                        .WithColor(new Color(55, 165, 55)).Build());
+                }
+                else
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Unable to start feedback listening")
+                        .WithDescription("The server is already listening for feedback.")
+                        .WithColor(new Color(165, 55, 55)).Build());
+                }
+            }
+            else
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Unable to start feedback listening")
+                    .WithDescription("This command requires that a listening session already be enabled running. Use `>startl [server]` to start a session.")
+                    .WithColor(new Color(165, 55, 55)).Build());
+            }
+        }
 
         [Command("StartListen", RunMode = RunMode.Async)]
         [Alias("startl")]

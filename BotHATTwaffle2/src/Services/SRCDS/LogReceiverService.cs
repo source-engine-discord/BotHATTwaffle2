@@ -116,7 +116,7 @@ namespace BotHATTwaffle2.Services.SRCDS
 
                 return true;
             }
-            else return false;
+            return false;
         }
 
         public void DisableFeedback()
