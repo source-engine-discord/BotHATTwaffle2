@@ -457,7 +457,7 @@ namespace BotHATTwaffle2.Commands
             "`s` / `scramble` - Scrambles teams on test server. This command will restart the test. Don't run it after running `start`\n" +
             "`k` / `kick` - Kicks a player from the playtest.\n" +
             "`end` - Officially ends a playtest which allows community server reservations.\n" +
-            "`reset` - ")]
+            "`reset` - Resets the running flag. Really should not needed to be used except edge cases.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task PlaytestAsync([Summary("Playtesting Sub-command")] string command)
@@ -781,10 +781,11 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            await Context.Channel.TriggerTypingAsync();
             string reply;
             IUserMessage delayed = null;
             var rconCommand = _rconService.RconCommand(targetServer, command);
-            var waiting = Task.Delay(2000);
+            var waiting = Task.Delay(4000);
             if (rconCommand == await Task.WhenAny(rconCommand, waiting))
             {
                 reply = await rconCommand;

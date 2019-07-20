@@ -99,7 +99,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                     try
                     {
                         var commandResult = client.SendCommandAsync(command);
-                        if (commandResult == await Task.WhenAny(commandResult, Task.Delay(3000)))
+                        if (commandResult == await Task.WhenAny(commandResult, Task.Delay(2000)))
                         {
                             reply = await commandResult;
                             //Success sending, break loop

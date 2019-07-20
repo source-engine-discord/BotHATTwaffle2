@@ -443,10 +443,11 @@ namespace BotHATTwaffle2.Commands
                     return;
                 }
 
+                await Context.Channel.TriggerTypingAsync();
                 string reply;
                 IUserMessage delayed = null;
                 var rconCommand = _rconService.RconCommand(server.Address, command);
-                var waiting = Task.Delay(2000);
+                var waiting = Task.Delay(4000);
                 if (rconCommand == await Task.WhenAny(rconCommand, waiting))
                 {
                     reply = await rconCommand;
