@@ -675,7 +675,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _logReceiverService.StopLogReceiver();
 
                 //Log receiver takes time to stop before it can be restarted.
-                await Task.Delay(2000);
+                await Task.Delay(15000);
                 _logReceiverService.StartLogReceiver(testEvent.ServerLocation);
             });
 
