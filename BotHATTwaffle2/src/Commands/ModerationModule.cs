@@ -457,7 +457,7 @@ namespace BotHATTwaffle2.Commands
             "`s` / `scramble` - Scrambles teams on test server. This command will restart the test. Don't run it after running `start`\n" +
             "`k` / `kick` - Kicks a player from the playtest.\n" +
             "`end` - Officially ends a playtest which allows community server reservations.\n" +
-            "`reset` - Resets the running flag. Really should not needed to be used except edge cases.")]
+            "`reset` - Resets the running flag. Really should not need to be used except edge cases.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task PlaytestAsync([Summary("Playtesting Sub-command")] string command)

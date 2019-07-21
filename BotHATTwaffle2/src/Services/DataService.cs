@@ -19,6 +19,7 @@ namespace BotHATTwaffle2.Services
 
         public DataService(DiscordSocketClient client)
         {
+            StartTime = DateTime.Now;
             _client = client;
             // Some settings are needed before the client connects (e.g. token).
             ReadConfig();
@@ -51,7 +52,9 @@ namespace BotHATTwaffle2.Services
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
         public SocketRole PlaytestAdmin { get; private set; }
-        
+
+        public DateTime StartTime;
+        public int CommandCount = 0;
         public bool IncludePlayerCount { get; set; }
         public string PlayerCount { get; set; }
 

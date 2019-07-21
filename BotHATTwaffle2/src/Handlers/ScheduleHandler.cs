@@ -199,9 +199,18 @@ namespace BotHATTwaffle2.Handlers
         {
             string playing = _dataService.RSettings.Lists.Playing[_random.Next(_dataService.RSettings.Lists.Playing.Count)];
 
-            if (playing == "[TestCount]")
-                playing = $"{_playtestCount} Playtests Run";
-
+            switch (playing)
+            {
+                case "[TestCount]":
+                    playing = $"{_playtestCount} Playtests Run";
+                    break;
+                case "[CommandCount]":
+                    playing = $"{_dataService.CommandCount} Commands Run";
+                    break;
+                case "[RunTime]":
+                    playing = $"Up For: {DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}";
+                    break;
+            }
             await _client.SetGameAsync(playing);
         }
 

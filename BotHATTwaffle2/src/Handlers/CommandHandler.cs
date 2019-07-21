@@ -85,7 +85,10 @@ namespace BotHATTwaffle2.Handlers
                 _service);
 
             if (result.Error is null || result.Error == CommandError.UnknownCommand)
+            {
+                _dataService.CommandCount++;
                 return; // Ignores successful executions and unknown commands.
+            }
 
             var logMessage =
                 $"Command: {message}\nInvoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
