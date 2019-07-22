@@ -203,11 +203,21 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// Otherwise it is a stock level with the name in [0]
         /// </summary>
         /// <param name="server">Server to query</param>
-        /// <returns>An array populated with the result.</returns>
+        /// <returns>An array populated with the result, or null if failed</returns>
         public async Task<string[]> GetRunningLevelAsync(string server)
         {
             var reply = await RconCommand(server, "host_map");
-            reply = reply.Substring(14, reply.IndexOf(".bsp", StringComparison.Ordinal) - 14);
+
+            try
+            {
+                reply = reply.Substring(14, reply.IndexOf(".bsp", StringComparison.Ordinal) - 14);
+            }
+            catch
+            {
+                //Only end up here if there is a server issue.
+                return null;
+            }
+
             return reply.Split('/');
         }
     }

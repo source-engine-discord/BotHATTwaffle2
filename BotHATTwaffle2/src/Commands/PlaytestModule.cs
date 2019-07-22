@@ -429,6 +429,14 @@ namespace BotHATTwaffle2.Commands
 
             var server = DatabaseUtil.GetTestServer(reservation.ServerId);
 
+            var result = await _rconService.GetRunningLevelAsync(server.Address);
+            if (result == null)
+            {
+                await ReplyAsync("I attempted to get the running level from the server, but the response did not" +
+                                 " make any sense. I have not announced for your level. Please try again in a moment.");
+                return;
+            }
+
             string mention = null;
             if (!reservation.Announced)
             {
@@ -436,8 +444,6 @@ namespace BotHATTwaffle2.Commands
                 mention = _dataService.CommunityTesterRole.Mention;
                 DatabaseUtil.UpdateAnnouncedServerReservation(Context.User.Id);
             }
-
-            var result = await _rconService.GetRunningLevelAsync(server.Address);
 
             var embed = new EmbedBuilder();
 
