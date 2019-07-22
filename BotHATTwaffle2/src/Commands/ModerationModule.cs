@@ -58,6 +58,8 @@ namespace BotHATTwaffle2.Commands
         [Command("StartFeeddback", RunMode = RunMode.Async)]
         [Alias("startfb")]
         [Summary("Starts server listening for ingame feedback")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task StartServerFeedbackAsync()
         {
             if (_logReceiverService.EnableLog)
@@ -94,6 +96,8 @@ namespace BotHATTwaffle2.Commands
         [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]
         [Remarks("If you have been added to the Steam ID whitelist, you can use `>rcon [command]` in the server to " +
                  "send RCON commands to it. Regular users can use `>feedback [message]` to leave feedback on the map.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task StartServerListenAsync([Summary("Server to start listening on")]
             string server)
         {
@@ -117,6 +121,8 @@ namespace BotHATTwaffle2.Commands
         [Command("StopListen", RunMode = RunMode.Async)]
         [Alias("stopl")]
         [Summary("Stops server listening to disallow ingame chat to call certain bot functions.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task StopServerListenAsync()
         {
             if (!_logReceiverService.EnableLog)

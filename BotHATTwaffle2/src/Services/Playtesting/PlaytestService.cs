@@ -8,6 +8,7 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
 using Discord;
+using Discord.WebSocket;
 using FluentScheduler;
 
 namespace BotHATTwaffle2.Services.Playtesting
@@ -21,6 +22,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly int _failedRetryCount = 60;
         private readonly LogHandler _log;
         private readonly ReservationService _reservationService;
+        private readonly DiscordSocketClient _client;
         private int _failedToFetch;
         private DateTime _lastSeenEditTime;
         private AnnounceMessage _oldMessage;
@@ -28,19 +30,21 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly RconService _rconService;
         private readonly LogReceiverService _logReceiverService;
         private static bool _playtestCommandRunning = false;
+        public VoiceFeedbackSession FeedbackSession { get; private set; }
 
         //Playtest Command Functions
         private static PlaytestCommandInfo _playtestCommandInfo;
         private IUserMessage PlaytestAnnouncementMessage { get; set; }
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random,
-            ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService)
+            ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService,DiscordSocketClient client)
         {
             _dataService = data;
             _log = log;
             _calendar = calendar;
             _reservationService = reservationService;
             _logReceiverService = logReceiverService;
+            _client = client;
 
             PlaytestAnnouncementMessage = null;
             _oldMessage = null;
@@ -53,6 +57,33 @@ namespace BotHATTwaffle2.Services.Playtesting
         public PlaytestCommandInfo GetPlaytestCommandInfo() => _playtestCommandInfo;
 
         public void ResetCommandRunningFlag() => _playtestCommandRunning = false;
+
+        /// <summary>
+        /// Creates a new feedback session for a playtest
+        /// </summary>
+        /// <returns>True if created, false otherwise</returns>
+        public bool CreateVoiceFeedbackSession()
+        {
+            if (FeedbackSession != null || !_calendar.GetTestEventNoUpdate().IsValid)
+                return false;
+
+            FeedbackSession = new VoiceFeedbackSession(_dataService, _client, _calendar.GetTestEventNoUpdate(),_rconService);
+            return true;
+        }
+
+        /// <summary>
+        /// Ends the active feedback session
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool EndVoiceFeedbackSession()
+        {
+            if (FeedbackSession == null)
+                return false;
+            
+            FeedbackSession.Dispose();
+            FeedbackSession = null;
+            return true;
+        }
 
         public bool PlaytestCommandPreCheck()
         {

@@ -39,6 +39,7 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel AdminChannel { get; private set; }
         public SocketTextChannel VoidChannel { get; private set; }
         public SocketTextChannel BotChannel { get; private set; }
+        public SocketVoiceChannel LevelTestVoiceChannel { get; private set; }
 
         // Roles
         public SocketRole PlayTesterRole { get; private set; }
@@ -131,6 +132,9 @@ namespace BotHATTwaffle2.Services
             Console.ForegroundColor = LOG_COLOR;
 
             Console.WriteLine($"Active Guild: {Guild?.Name}\n");
+
+            LevelTestVoiceChannel = Guild.GetVoiceChannel(RSettings.General.LevelTestingVoice);
+            Console.WriteLine($"LevelTestVoiceChannel ID:{LevelTestVoiceChannel.Id} Discovered Name:{LevelTestVoiceChannel.Name}");
 
             LogChannel = await ParseChannel(RSettings.ProgramSettings.LogChannel);
             Console.WriteLine($"LogChannel ID:{LogChannel.Id} Discovered Name:{LogChannel.Name}");

@@ -45,6 +45,192 @@ namespace BotHATTwaffle2.Commands
             _rconService = rconService;
         }
 
+        [Command("fbqueue", RunMode = RunMode.Async)]
+        [Alias("fbq")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task FeedbackQueueAsync([Optional]string command, [Optional]SocketUser user)
+        {
+            await Context.Message.DeleteAsync();
+            if (command == null)
+            {
+                if(_playtestService.CreateVoiceFeedbackSession())
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("New Feedback Queue Session Started!")
+                        .WithDescription("In order to keep things moving and civil, a Feedback Queue has been started!" +
+                                         "\n\n Users can enter the queue with `>q` and wait for their turn. When it is their turn, " +
+                                         $"they will have {_dataService.RSettings.General.FeedbackDuration} minutes to give their feedback. " +
+                                         $"This is to give everyone a chance to speak, without some users taking a long time." +
+                                         $"\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
+                                         $"already given their feedback." +
+                                         $"\n\nWhen done with your feedback, or to remove yourself from the queue, type `>done`." +
+                                         $"\n\nIf you need to go sooner, please let a moderator know.")
+                        .WithColor(55,165,55)
+                        .Build());
+                else
+                    await ReplyAsync(
+                        "Unable to create new feedback session. Either no playtest exists, or a session already exists.");
+                return;
+            }
+
+            //Check if we can actually run the command.
+            if (!await IsValid())
+                return;
+            
+            switch (command.ToLower())
+            {
+                case "s":
+                case "start":
+                    if (!await _playtestService.FeedbackSession.StartFeedback())
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("Feedback already started!")
+                            .WithColor(165, 55, 55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                    }
+                    break;
+                case "e":
+                case "end":
+                    _playtestService.EndVoiceFeedbackSession();
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Feedback Ended!")
+                        .WithColor(165, 55, 55).Build());
+                    break;
+                case "p":
+                case "pause":
+                    _playtestService.FeedbackSession.PauseFeedback();
+                    var msgP = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Pausing after this user...")
+                        .WithColor(165, 55, 55).Build());
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(5000);
+                        await msgP.DeleteAsync();
+                    });
+                    break;
+                case "push":
+                case "pri":
+                    if (user == null)
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("User cannot be empty.")
+                            .WithColor(165,55,55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                        return;
+                    }
+
+                    await _playtestService.FeedbackSession.AddUserToTopQueue(user);
+                    break;
+                case "pop":
+                case "remove":
+                    if (user == null)
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("User cannot be empty.")
+                            .WithColor(165, 55, 55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                        return;
+                    }
+                    if (!await _playtestService.FeedbackSession.RemoveUser(user.Id))
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("User not currently in queue")
+                            .WithColor(165, 55, 55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                    }
+                    break;
+                default:
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Unknown command")
+                        .WithDescription("Please see `>help fbq`")
+                        .WithColor(165, 55, 55).Build());
+                    break;
+            }
+
+            async Task<bool> IsValid()
+            {
+                if (_playtestService.FeedbackSession == null)
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("A feedback session must be started first")
+                        .WithDescription("Please see `>help fbq`")
+                        .WithColor(165, 55, 55).Build());
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [Command("Queue", RunMode = RunMode.Async)]
+        [Alias("q")]
+        public async Task EnterFeedbackQueue()
+        {
+            await Context.Message.DeleteAsync();
+            if (_playtestService.FeedbackSession == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("A feedback session must be started before you can do that")
+                    .WithColor(165, 55, 55).Build());
+                return;
+            }
+
+            if(!await _playtestService.FeedbackSession.AddUserToQueue(Context.User))
+            {
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{Context.User} is already in the queue")
+                    .WithColor(165, 55, 55).Build());
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    await msg.DeleteAsync();
+                });
+            }
+
+        }
+
+        [Command("FeedbackDone", RunMode = RunMode.Async)]
+        [Alias("fbd","done")]
+        public async Task DoneFeedbackQueue()
+        {
+            await Context.Message.DeleteAsync();
+            if (_playtestService.FeedbackSession == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("A feedback session must be started before you can do that")
+                    .WithColor(165, 55, 55).Build());
+                return;
+            }
+            
+            if (!await _playtestService.FeedbackSession.RemoveUser(Context.User.Id))
+            {
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{Context.User} is not in the queue")
+                    .WithColor(165, 55, 55).Build());
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    await msg.DeleteAsync();
+                });
+            }
+        }
+
         [Command("Schedule", RunMode = RunMode.Async)]
         [Alias("pts")]
         [Summary("Allows users to view testing queue and schedule.")]
@@ -57,7 +243,7 @@ namespace BotHATTwaffle2.Commands
 
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
 
-            if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.ModeratorRole.Id))
+            if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
             {
                 _dataService.IgnoreListenList.Add(Context.User);
 

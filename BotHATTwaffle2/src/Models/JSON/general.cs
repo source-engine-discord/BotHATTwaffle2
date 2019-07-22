@@ -22,5 +22,7 @@ namespace BotHATTwaffle2
         public string AdminChannel { get; set; }
         public string VoidChannel { get; set; }
         public string BotChannel { get; set; }
+        public ulong LevelTestingVoice { get; set; }
+        public int FeedbackDuration { get; set; }
     }
 }
