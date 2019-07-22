@@ -19,13 +19,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
 
-            // Not sure why the line overlay wouldn't be in the folder. But if its not, then we will just abord the process
-            if (!File.Exists("calendar-line-overlay.png")) return;
-
             // Dimensions of our image to make
-            int width = 1371;
-            int height = 836;
+            int width = 1280;
+            int height = 720;
 
+
+            // WARNING: Exercise caution in changing any of the (dimension * float) values, as that means the value is procedurally generated from the height or width
             using (Image<Rgba32> image = new Image<Rgba32>(width, height))
             {
 
@@ -33,31 +32,51 @@ namespace BotHATTwaffle2.Services.Playtesting
                 Rgba32 dateColor = Rgba32.Black;
                 Rgba32 playtestTitleColor = Rgba32.GhostWhite;
                 Rgba32 playtestTimeColor = Rgba32.Black;
-                Rgba32 backgroundColor = Rgba32.Gray;
+                Rgba32 backgroundColor = new Rgba32(.21176f, .22353f, .24706f); // This is Discord's dark theme's exact background color
+                Rgba32 lineColor = Rgba32.Black;
 
-                // Changes background color obv
+                // Changes background color
                 image.Mutate(x => x
                     .BackgroundColor(backgroundColor)
                 );
 
                 // Puts the lines over the calendar
-                using (Image<Rgba32> lineImage = Image.Load("calendar-line-overlay.png"))
-                {
-                    image.Mutate(x => x
-                        .DrawImage(lineImage, 1f)
-                    );
-                    lineImage.Dispose();
-                }
+                float widthF = (float)width;
+                float heightF = (float)height;
+                Pen<Rgba32> calLinePen = new Pen<Rgba32>(lineColor, 2f);
+
+                image.Mutate(x => x
+                    .Draw(calLinePen, new RectangleF(0f, 0f, 1f, heightF)) // Vertical: 1 (Far Left)
+                    .Draw(calLinePen, new RectangleF((widthF * .14296f), 0f, 1f, heightF)) // Vertical: 2
+                    .Draw(calLinePen, new RectangleF((widthF * .28592f), 0f, 1f, heightF)) // Vertical: 3
+                    .Draw(calLinePen, new RectangleF((widthF * .42888f), 0f, 1f, heightF)) // Vertical: 4
+                    .Draw(calLinePen, new RectangleF((widthF * .57039f), 0f, 1f, heightF)) // Vertical: 5
+                    .Draw(calLinePen, new RectangleF((widthF * .71335f), 0f, 1f, heightF)) // Vertical: 6
+                    .Draw(calLinePen, new RectangleF((widthF * .85631f), 0f, 1f, heightF)) // Vertical: 7
+                    .Draw(calLinePen, new RectangleF((widthF - 1f), 0f, 1f, heightF)) // Vertical: 8 (Far Right) (This one should be weight - 1 for the first value)
+
+                    .Draw(calLinePen, new RectangleF(0f, 0f, widthF, 1f)) // Horizontal: 1 (Top) (Thin)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .06141f), widthF, 2f)) // Horizonal: 2 (Thick)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .20046f), widthF, 0f)) // Horizonal: 3 (Thin)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .26072f), widthF, 2f)) // Horizonal: 4 (Thick)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .39977f), widthF, 0f)) // Horizonal: 5 (Thin)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .46002f), widthF, 2f)) // Horizontal: 6 (Thick)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .59907f), widthF, 0f)) // Horizontal: 7 (Thin)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .65933f), widthF, 2f)) // Horizonal: 8 (Thick)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .79838f), widthF, 0f)) // Horizontal: 9 (Thin)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF * .85863f) , widthF, 2f)) // Horizontal: 10 (Thick)
+                    .Draw(calLinePen, new RectangleF(0f, (heightF - 1f), widthF, 1f)) // Horizontal: 11 (Bottom) (Thin) (The second value should be height - 1)
+                );
 
                 // Getting the current time (start of calendar) and setting up our fonts
                 var currentDateTime = DateTime.Now;
-                var fontDates = SystemFonts.CreateFont("Arial", 40, FontStyle.Bold);
-                var fontPTName = SystemFonts.CreateFont("Arial", 20, FontStyle.Regular);
-                var fontPT = SystemFonts.CreateFont("Arial", 23, FontStyle.Regular);
+                var fontDates = SystemFonts.CreateFont("Arial", (23.536f * (width/height)), FontStyle.Bold);
+                var fontPTName = SystemFonts.CreateFont("Arial", (12.195f * (width/height)), FontStyle.Regular);
+                var fontPT = SystemFonts.CreateFont("Arial", (14.025f * (width/height)), FontStyle.Regular);
 
-                // Here are the coordinate lists for the date headings
-                List<float> xPosList = new List<float>() { 99f, 294f, 489f, 684f, 880f, 1075f, 1272f };
-                List<float> yPosList = new List<float>() { 10f, 174f, 338f, 503f, 677f };
+                // Here are the coordinate lists for the date headings (and xPos is also used by the playtest events)
+                List<float> xPosList = new List<float>() { (widthF * .07148f), (widthF * .21384f), (widthF * .35667f), (widthF * .49854f), (widthF * .64114f), (widthF * .78337f), (widthF * .92706f) };
+                List<float> yPosList = new List<float>() { (heightF * .01196f), (heightF * .21052f), (heightF * .41029f), (heightF * .60766f), (heightF * .80909f) };
 
                 // Need to set up these variables here for scoping reasons
                 SizeF customSize;
@@ -80,8 +99,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 // These are similar to the date headings, but these are for the playtest names and times
                 // They are in groups of 2. So each set of 2 is in the same row
-                List<float> playtestTitlesYPosList = new List<float>() { 56.5f,  116.0f,   221.5f,  281.0f,   386.5f, 446.0f,    551.5f, 631.0f,   726.5f, 786.0f,  };
-                List<float> playtestTimesYPosList = new List<float>()  { 79.0f,  134.5f,   244.0f,  299.5f,   409.0f, 464.5f,    571.0f, 649.5f,   748.0f, 804.5f,  };
+                List<float> playtestTitlesYPosList = new List<float>() { (heightF * .06998f),  (heightF * .13696f),   (heightF * .26914f),  (heightF * .33612f),   (heightF * .46830f), (heightF * .53529f),    (heightF * .66746f), (heightF * .73445f),   (heightF * .86663f), (height * .93361f),  };
+                List<float> playtestTimesYPosList = new List<float>()  { (heightF * .09689f),  (heightF * .16388f),   (heightF * .29605f),  (heightF * .36304f),   (heightF * .49522f), (heightF * .56220f),    (heightF * .69438f), (heightF * .76136f),   (heightF * .89354f), (height * .96232f),  };
 
                 // Here's the big boi. Putting the playtest events on the calendar
                 List<int> numOfPlaytests = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -131,8 +150,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     if (columnNum == 7) return;  // But if for some reason it didn't fit into any of these columns, something is broken
 
                     // This gets kinda complicated here, but basically the Y coordinates are calculated from our current playtests in the same day, as well as from our "group" from the list earlier
-                    float titleYCoord = playtestTitlesYPosList[groupStartIndex] + numOfPlaytests[numDaysSeparate];
-                    float timeYCoord = playtestTimesYPosList[groupStartIndex] + numOfPlaytests[numDaysSeparate];
+                    float titleYCoord = playtestTitlesYPosList[groupStartIndex + numOfPlaytests[numDaysSeparate]];
+                    float timeYCoord = playtestTimesYPosList[groupStartIndex + numOfPlaytests[numDaysSeparate]];
 
                     // Finally drawing on the screen. Lots of variable names here. This is Squidski's fault by the way.
                     image.Mutate(x => x
@@ -143,8 +162,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     numOfPlaytests[numDaysSeparate]++;
                 }
 
-                image.Save("filled-calendar.png");
-                await calContext.Channel.SendFileAsync("filled-calendar.png");
+                image.Save("finishedCalendar.png");
+                await calContext.Channel.SendFileAsync("finishedCalendar.png");
                 image.Dispose();
             }
         }
