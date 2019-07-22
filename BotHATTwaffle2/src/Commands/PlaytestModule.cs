@@ -49,6 +49,14 @@ namespace BotHATTwaffle2.Commands
         [Alias("fbq")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Moderator tool for voice feedback")]
+        [Remarks("Use without any parameters to start a new voice feedback session. `>fbq` Otherwise format is:" +
+                 "`>fbq [command] [user]` where user may be empty depending on the command." +
+                 "\n`s` / `start` - Starts the feedback session. Requires users to be in the queue." +
+                 "\n`e` / `end` - Ends the feedback session completely, which disposes of the queue." +
+                 "\n`p` / `pause` - Pauses the feedback session after the current user finishes." +
+                 "\n`push` / `pri` - Pushes a user to be next after the current user giving feedback." +
+                 "\n`pop` / `remove` - Removes a user from the queue.")]
         public async Task FeedbackQueueAsync([Optional]string command, [Optional]SocketUser user)
         {
             await Context.Message.DeleteAsync();
@@ -180,6 +188,8 @@ namespace BotHATTwaffle2.Commands
 
         [Command("Queue", RunMode = RunMode.Async)]
         [Alias("q")]
+        [RequireContext(ContextType.Guild)]
+        [Summary("Places yourself in the feedback queue.")]
         public async Task EnterFeedbackQueue()
         {
             await Context.Message.DeleteAsync();
@@ -207,6 +217,8 @@ namespace BotHATTwaffle2.Commands
 
         [Command("FeedbackDone", RunMode = RunMode.Async)]
         [Alias("fbd","done")]
+        [RequireContext(ContextType.Guild)]
+        [Summary("Signals that you're done giving feedback, or want to remove yourself from the queue.")]
         public async Task DoneFeedbackQueue()
         {
             await Context.Message.DeleteAsync();
