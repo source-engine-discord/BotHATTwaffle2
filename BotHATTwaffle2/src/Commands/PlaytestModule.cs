@@ -45,7 +45,7 @@ namespace BotHATTwaffle2.Commands
             _rconService = rconService;
         }
 
-        [Command("fbqueue", RunMode = RunMode.Async)]
+        [Command("FeedbackQueue", RunMode = RunMode.Async)]
         [Alias("fbq")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
