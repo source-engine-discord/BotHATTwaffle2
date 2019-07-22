@@ -19,9 +19,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
 
+
+
             // Here's a bunch of stuff you can easily change
-            int width = 1000;
-            int height = 800;
+            // WARNING: Take caution before modifying width and/or height, as font scaling has not been implemented
+            int width = 1372;
+            int height = 1029;
             Rgba32 dateColor = Rgba32.Black;
             Rgba32 playtestTitleColor = Rgba32.GhostWhite;
             Rgba32 playtestTimeColor = Rgba32.Black;
@@ -31,6 +34,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             string playtestMapFontName = "Arial";
             string playtestTimeFontName = "Arial";
             // Modifying anything besides these variables may cause instability, so be extremely cautious if you do so
+
+
+
 
             using (Image<Rgba32> image = new Image<Rgba32>(width, height))
             {
@@ -70,9 +76,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 // Getting the current time (start of calendar) and setting up our fonts
 
-                var fontDates = SystemFonts.CreateFont(playtestDateFontName, 18, FontStyle.Bold);
-                var fontPTName = SystemFonts.CreateFont(playtestMapFontName, 20, FontStyle.Regular);
-                var fontPT = SystemFonts.CreateFont(playtestTimeFontName, 23, FontStyle.Regular);
+                var fontDates = SystemFonts.CreateFont(playtestDateFontName, 20, FontStyle.Bold);
+                var fontPTName = SystemFonts.CreateFont(playtestMapFontName, 23, FontStyle.Regular);
+                var fontPT = SystemFonts.CreateFont(playtestTimeFontName, 25, FontStyle.Regular);
                 var currentDateTime = DateTime.Now;
 
                 // Here are the coordinate lists for the date headings (and xPos is also used by the playtest events)
