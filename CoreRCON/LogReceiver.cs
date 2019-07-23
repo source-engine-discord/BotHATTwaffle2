@@ -104,7 +104,7 @@ namespace CoreRCON
 				var result = await _udp.ReceiveAsync();
 
 				// If the packet did not come from an accepted source, throw it out
-				if (!_sources.Contains(result.RemoteEndPoint)) return;
+				if (!_sources.Contains(result.RemoteEndPoint)) continue;
 
 				// Parse out the LogAddress packet
 				LogAddressPacket packet = LogAddressPacket.FromBytes(result.Buffer);

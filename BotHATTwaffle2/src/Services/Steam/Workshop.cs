@@ -85,9 +85,19 @@ namespace BotHATTwaffle2.Services.Steam
 
                 //Check if response is empty
                 if (resultContentItem == "{}") return null;
-
+                RootWorkshop workshopJsonItem;
                 // Build workshop item embed, and set up author and game data embeds here for scoping reasons
-                RootWorkshop workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
+                try
+                {
+                    workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
+                }
+                catch (Exception e)
+                {
+                    //Something happened getting the response from Steam. We got a response but it wasn't valid?
+                    Console.WriteLine("JSON RESPONSE WAS:\n" + resultContentItem);
+                    Console.WriteLine(e);
+                    return null;
+                }
                 RootWorkshop workshopJsonAuthor;
 
                 // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us

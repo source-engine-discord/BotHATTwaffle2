@@ -92,8 +92,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             var pst = TimeZoneInfo
                 .ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"))
                 .ToString("ddd HH:mm");
-            var gmt = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"))
-                .ToString("ddd HH:mm");
+            //No more GMT, replaced by UTC
+//            var gmt = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"))
+//                .ToString("ddd HH:mm");
 
             //Figure out how far away from start we are
             string countdownString = null;
@@ -129,7 +130,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play.";
+                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play.*";
                 footer = "Connection info hidden due to competitive test";
             }
 
@@ -172,7 +173,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 playtestEmbed.ImageUrl = embedImageUrl;
                 playtestEmbed.ThumbnailUrl = thumbnailUrl;
                 playtestEmbed.AddField("When",
-                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {gmt} GMT");
+                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {utcTime} UTC");
             }
 
             playtestEmbed.AddField("Information",information);

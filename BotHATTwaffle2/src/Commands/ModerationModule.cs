@@ -55,9 +55,9 @@ namespace BotHATTwaffle2.Commands
         //
         //        }
 
-        [Command("StartFeeddback", RunMode = RunMode.Async)]
+        [Command("StartFeedback", RunMode = RunMode.Async)]
         [Alias("startfb")]
-        [Summary("Starts server listening for ingame feedback")]
+        [Summary("Starts server listening for in game feedback")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task StartServerFeedbackAsync()

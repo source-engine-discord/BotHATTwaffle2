@@ -10,7 +10,7 @@ using FluentScheduler;
 
 namespace BotHATTwaffle2.Handlers
 {
-    internal class ScheduleHandler
+    public class ScheduleHandler
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private readonly DiscordSocketClient _client;
@@ -21,6 +21,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly Random _random;
         private readonly ReservationService _reservationService;
         private int _playtestCount = 0;
+        private bool _allowPlayingCycle = true;
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService
         , UserHandler userHandler, Random random, ReservationService reservationService)
@@ -197,6 +198,10 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         private async Task UpdatePlaying()
         {
+            //Allow us to turn this off.
+            if (!_allowPlayingCycle)
+                return;
+
             string playing = _dataService.RSettings.Lists.Playing[_random.Next(_dataService.RSettings.Lists.Playing.Count)];
 
             switch (playing)
@@ -213,6 +218,9 @@ namespace BotHATTwaffle2.Handlers
             }
             await _client.SetGameAsync(playing);
         }
+
+        public void DisablePlayingUpdate() => _allowPlayingCycle = false;
+        public void EnablePlayingUpdate() => _allowPlayingCycle = true;
 
         /// <summary>
         /// Updates the number of playtest files found on the local machine.

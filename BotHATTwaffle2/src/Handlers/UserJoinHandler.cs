@@ -9,7 +9,7 @@ using FluentScheduler;
 
 namespace BotHATTwaffle2.Handlers
 {
-    internal class UserHandler
+    public class UserHandler
     {
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;

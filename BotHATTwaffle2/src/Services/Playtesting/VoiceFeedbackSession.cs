@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.SRCDS;
 using Discord;
 using Discord.WebSocket;
+using FluentScheduler;
+using Google.Apis.YouTube.v3;
 
 namespace BotHATTwaffle2.Services.Playtesting
 {
@@ -19,7 +23,11 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly PlaytestEvent _playtestEvent;
         private IUserMessage _display;
         private bool _running = false;
+        private bool _timerRunning = false;
         private string _status = "Idle 🛑";
+        private bool _disposed = false;
+        private int _duration;
+        private TimeSpan _timeLeft = new TimeSpan();
 
         public VoiceFeedbackSession(DataService dataService, DiscordSocketClient client, PlaytestEvent playtestEvent,
             RconService rconService)
@@ -31,21 +39,52 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             _client.UserVoiceStateUpdated += UserVoiceStateUpdated;
 
+            _duration = _dataService.RSettings.General.FeedbackDuration;
+
             //Mute everyone on start
             foreach (var user in _dataService.LevelTestVoiceChannel.Users)
             {
-                //Skip mods
-                if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
-                    continue;
-
-                //Skip creators
-                if (_playtestEvent.Creators.Any(x => x.Id == user.Id))
-                    continue;
-
-                user.ModifyAsync(x => x.Mute = true);
+                _ = ProcessMute(true, user);
             }
 
             _ = _client.SetStatusAsync(UserStatus.AFK);
+        }
+
+        /// <summary>
+        /// Sets the duration for feedback
+        /// </summary>
+        /// <param name="duration"></param>
+        public void SetDuration(int duration)
+        {
+            _duration = duration > 0 ? duration : _dataService.RSettings.General.FeedbackDuration;
+            _ = UpdateCurrentQueueMessage();
+        }
+
+        /// <summary>
+        /// Modifies a user's server voice mute state. Ignores mod staff and the map creators.
+        /// </summary>
+        /// <param name="mute">Set mute to True or False</param>
+        /// <param name="user">User to modify</param>
+        /// <returns>True if successful, false otherwise</returns>
+        private async Task<bool> ProcessMute(bool mute, SocketGuildUser user)
+        {
+            //Skip mods
+            if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
+                return true;
+
+            //Skip creators
+            if (_playtestEvent.Creators.Any(x => x.Id == user.Id))
+                return true;
+
+            try
+            {
+                await user.ModifyAsync(x => x.Mute = mute);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -61,15 +100,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (lefState.VoiceChannel == joinedState.VoiceChannel)
                 return Task.CompletedTask;
 
-            //Skip creators
-            if (_playtestEvent.Creators.Any(x => x.Id == user.Id))
-                return Task.CompletedTask;
-
             var guildUser = _dataService.GetSocketGuildUser(user.Id);
-
-            //Skip mods
-            if (guildUser.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
-                return Task.CompletedTask;
 
             //User joined
             if (joinedState.VoiceChannel != null && joinedState.VoiceChannel.Id == _dataService.LevelTestVoiceChannel.Id)
@@ -77,11 +108,60 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //Don't re-mute a muted user
                 if (guildUser.IsMuted)
                     return Task.CompletedTask;
+                
+                _ = ProcessMute(true, guildUser);
+                return Task.CompletedTask;
+            }
 
-                guildUser.ModifyAsync(x => x.Mute = true);
+            //If a user leaves the channel, remove from the queue.
+            if (lefState.VoiceChannel != null && lefState.VoiceChannel.Id == _dataService.LevelTestVoiceChannel.Id)
+            {
+                _ = RemoveUser(user.Id);
             }
 
             return Task.CompletedTask;
+        }
+
+        private void RemoveUserJobs(ulong userId)
+        {
+            JobManager.RemoveJob($"[FBQ_UserTimeOut_{userId}]");
+            JobManager.RemoveJob($"[FBQ_Warning_{userId}]");
+        }
+
+        private void AddUserJobs(SocketGuildUser user)
+        {
+            JobManager.AddJob(async () => await UserTimeOut(user), s => s
+                .WithName($"[FBQ_UserTimeOut_{user.Id}]").ToRunOnceIn(_duration * 60).Seconds());
+
+            JobManager.AddJob(async () => await UserWarning(user), s => s
+                .WithName($"[FBQ_Warning_{user.Id}]").ToRunOnceIn(_duration * 60 - 20).Seconds());
+        }
+
+        private async Task UserTimeOut(SocketGuildUser user)
+        {
+            await RemoveUser(user.Id);
+        }
+
+        /// <summary>
+        /// The message code for warning a user that their turn is ending.
+        /// </summary>
+        /// <param name="user">User to warn</param>
+        /// <returns></returns>
+        private async Task UserWarning(SocketGuildUser user)
+        {
+            string message = $"{user.Mention} - 20 seconds left. Wrap it up!";
+            string rconMessage = $"{user} - 20 seconds left. Wrap it up!";
+
+            if (_userQueue.Count > 1)
+            {
+                message += $"\n{_dataService.GetSocketGuildUser(_userQueue[1]).Mention} you are up next!";
+                rconMessage += $";say {_dataService.GetSocketGuildUser(_userQueue[1])} you are up next!";
+            }
+
+            _ = _rconService.RconCommand(_playtestEvent.ServerLocation, $"say {rconMessage}");
+            var msg = await _dataService.TestingChannel.SendMessageAsync(message);
+            await Task.Delay(10000);
+            await msg.DeleteAsync();
         }
 
         /// <summary>
@@ -91,6 +171,13 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             _status = "Idle 🛑";
             _running = false;
+
+            if (_userQueue.Count > 0)
+            {
+                var user = _dataService.GetSocketGuildUser(_userQueue[0]);
+                RemoveUserJobs(_userQueue[0]);
+                _ = ProcessMute(true, user);
+            }
             _ = _client.SetStatusAsync(UserStatus.AFK);
         }
         /// <summary>
@@ -128,52 +215,53 @@ namespace BotHATTwaffle2.Services.Playtesting
                 PauseFeedback();
                 return;
             }
-
+            
             var user = _dataService.GetSocketGuildUser(_userQueue[0]);
 
-            try
+            //Make sure user is in voice channel
+            if (_dataService.LevelTestVoiceChannel.Users.All(x => x.Id != user.Id))
             {
-                await user.ModifyAsync(x => x.Mute = false);
-            }
-            catch
-            {
-                //Unable to remove the user because they don't exist in the
-                await RemoveUser(_userQueue[0]);
+                await RemoveUser(user.Id);
                 return;
             }
 
+            if (!await ProcessMute(false, user))
+            {
+                //Failure to remove mute for some reason. Just remove from stack
+                await RemoveUser(user.Id);
+                return;
+            }
+            
             //Alert users
             var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.");
-            await _rconService.RconCommand(_playtestEvent.ServerLocation,$"say {user.Username} may now begin their feedback!;" +
+
+            AddUserJobs(user);
+
+            _timeLeft = TimeSpan.FromMinutes(_duration);
+
+            if(!_timerRunning)
+                _ = UpdateTimer();
+
+            _ = _rconService.RconCommand(_playtestEvent.ServerLocation,$"say {user.Username} may now begin their feedback!;" +
                                                    $"say Please let the creator know your in-game name!");
+            await Task.Delay(10000);
+            await msg.DeleteAsync();
+        }
 
-            _ = Task.Run(async () =>
+        private async Task UpdateTimer()
+        {
+            if (!_running)
             {
-                await Task.Delay(10000);
-                await msg.DeleteAsync();
-            });
-
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay((30 * 1000) - (15 * 1000));
-
-                //Abort if we aren't the same user.
-                if (_userQueue[0] != user.Id || !_running)
-                    return;
-
-                await _rconService.RconCommand(_playtestEvent.ServerLocation, $"say {user.Username} - 15 seconds left. Wrap it up!");
-                var msg2 = await _dataService.TestingChannel.SendMessageAsync($"{user.Username} - 15 seconds left. Wrap it up!");
-                await Task.Delay(10000);
-                await msg2.DeleteAsync();
-            });
-
-            await Task.Delay(_dataService.RSettings.General.FeedbackDuration * 60 * 1000);
-            
-            //Check if the current queue[0] user id matches the user id that sated. In case they end prematurely.
-            if (_userQueue[0] == user.Id && _running)
-            {
-                await RemoveUser(_userQueue[0]);
+                _timerRunning = false;
+                _ = _client.SetGameAsync($"Waiting...");
+                return;
             }
+
+            _timerRunning = true;
+            _ = _client.SetGameAsync($"Time left: {_timeLeft:mm\\:ss}");
+            await Task.Delay(5000);
+            _timeLeft = _timeLeft.Subtract(TimeSpan.FromSeconds(5));
+            _ = UpdateTimer();
         }
 
         /// <summary>
@@ -183,6 +271,8 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns>True if removed, false otherwise</returns>
         public async Task<bool> RemoveUser(ulong userId)
         {
+            RemoveUserJobs(userId);
+
             if (!_userQueue.Contains(userId))
                 return false;
 
@@ -194,14 +284,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var user = _dataService.GetSocketGuildUser(userId);
 
-            try
-            {
-                await user.ModifyAsync(x => x.Mute = true);
-            }
-            catch
-            {
-                //Do nothing.
-            }
+            await ProcessMute(true, user);
 
             if(processNext)
                 await StartNextUserFeedback();
@@ -217,7 +300,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         public async Task<bool> AddUserToQueue(SocketUser user)
         {
-            if (_userQueue.Contains(user.Id))
+            if (_userQueue.Contains(user.Id) || _dataService.LevelTestVoiceChannel.Users.All(x=>x.Id != user.Id))
                 return false;
 
             _userQueue.Add(user.Id);
@@ -250,11 +333,16 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task UpdateCurrentQueueMessage()
         {
+            //If we disposed, don't update again.
+            if (_disposed)
+                return;
+
             if (_userQueue.Count == 0)
             {
                 var emptyEmbed = new EmbedBuilder()
-                    .WithAuthor("No users left in queue...")
-                    .WithColor(165,55,55);
+                    .WithAuthor("No users in queue...")
+                    .WithColor(165,55,55)
+                    .WithFooter("Type >q to enter the queue");
                 if (_display == null)
                 {
                     _display = await _dataService.TestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
@@ -268,9 +356,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             
             var embed = new EmbedBuilder()
-                .WithAuthor($"Feedback Queue - {_status}")
+                .WithAuthor($"Feedback Queue - {_duration}min - {_status}")
                 .WithColor(_running ? new Color(55, 165, 55) : new Color(222, 130, 50))
-                .AddField("On Deck", _dataService.GetSocketUser(_userQueue[0]).Mention);
+                .AddField("On Deck", _dataService.GetSocketUser(_userQueue[0]).Mention)
+                .WithFooter("Type >q to enter the queue");
 
             string message = "";
             for (int i = 1; i < _userQueue.Count; i++)
@@ -315,7 +404,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     //Do nothing, somehow we failed to unmute.
                 }
             }
-
+            _disposed = true;
             _client.UserVoiceStateUpdated -= UserVoiceStateUpdated;
         }
     }

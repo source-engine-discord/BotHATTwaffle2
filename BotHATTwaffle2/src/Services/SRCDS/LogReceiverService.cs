@@ -62,7 +62,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             //Start listening on listen port, accept messages from 'ip' on 27015.
             var log = new LogReceiver(_dataService.RSettings.ProgramSettings.ListenPort, new IPEndPoint(ip, 27015));
 
-            await _logHandler.LogMessage($"Starting LogReceiver for `{ActiveServer.Address}` using:\n" +
+            await _logHandler.LogMessage($"Starting LogReceiver for `{ActiveServer.Address}` - `{ip}` using:\n" +
                                          "`logaddress_add " + _publicIpAddress + ":" + _dataService.RSettings.ProgramSettings.ListenPort + "`");
 
             //Start the task and run it forever in a loop. The bool changes at a later time which breaks the loop
@@ -78,6 +78,9 @@ namespace BotHATTwaffle2.Services.SRCDS
                 log.Listen<RconMessage>(rcon => { InGameRcon(ActiveServer, rcon); });
 
                 log.Listen<PlaytestMessage>(pt => { HandlePlaytestCommand(ActiveServer, pt); });
+
+                if(_dataService.RSettings.ProgramSettings.Debug)
+                    log.ListenRaw(msg => { Console.WriteLine("RAW: "+msg); });
 
                 while (EnableLog)
                 {

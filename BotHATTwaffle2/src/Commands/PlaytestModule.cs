@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -29,11 +30,13 @@ namespace BotHATTwaffle2.Commands
         private readonly GoogleCalendar _calendar;
         private readonly PlaytestService _playtestService;
         private readonly RconService _rconService;
+        private readonly ScheduleHandler _scheduleHandler;
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService, RconService rconService,
-            InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService)
+            InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService,
+            ScheduleHandler scheduleHandler)
         {
             _playtestService = playtestService;
             _client = client;
@@ -43,6 +46,7 @@ namespace BotHATTwaffle2.Commands
             _log = log;
             _calendar = calendar;
             _rconService = rconService;
+            _scheduleHandler = scheduleHandler;
         }
 
         [Command("FeedbackQueue", RunMode = RunMode.Async)]
@@ -54,9 +58,10 @@ namespace BotHATTwaffle2.Commands
                  "`>fbq [command] [user]` where user may be empty depending on the command." +
                  "\n`s` / `start` - Starts the feedback session. Requires users to be in the queue." +
                  "\n`e` / `end` - Ends the feedback session completely, which disposes of the queue." +
-                 "\n`p` / `pause` - Pauses the feedback session after the current user finishes." +
+                 "\n`p` / `pause` - Pauses the feedback session." +
                  "\n`push` / `pri` - Pushes a user to be next after the current user giving feedback." +
-                 "\n`pop` / `remove` - Removes a user from the queue.")]
+                 "\n`pop` / `remove` - Removes a user from the queue." +
+                 "\n`#` - Changes feedback duration. Example: `>fbq 5` sets to 5 minutes.")]
         public async Task FeedbackQueueAsync([Optional]string command, [Optional]SocketUser user)
         {
             await Context.Message.DeleteAsync();
@@ -66,7 +71,7 @@ namespace BotHATTwaffle2.Commands
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor("New Feedback Queue Session Started!")
                         .WithDescription("In order to keep things moving and civil, a Feedback Queue has been started!" +
-                                         "\n\n Users can enter the queue with `>q` and wait for their turn. When it is their turn, " +
+                                         "\n\nUsers can enter the queue with `>q` and wait for their turn. When it is their turn, " +
                                          $"they will have {_dataService.RSettings.General.FeedbackDuration} minutes to give their feedback. " +
                                          $"This is to give everyone a chance to speak, without some users taking a long time." +
                                          $"\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
@@ -84,7 +89,14 @@ namespace BotHATTwaffle2.Commands
             //Check if we can actually run the command.
             if (!await IsValid())
                 return;
-            
+
+            //Set duration
+            if (int.TryParse(command, out var duration))
+            {
+                _playtestService.FeedbackSession.SetDuration(duration);
+                return;
+            }
+
             switch (command.ToLower())
             {
                 case "s":
@@ -99,7 +111,10 @@ namespace BotHATTwaffle2.Commands
                             await Task.Delay(5000);
                             await msg.DeleteAsync();
                         });
+
+                        return;
                     }
+                    _scheduleHandler.DisablePlayingUpdate();
                     break;
                 case "e":
                 case "end":
@@ -107,6 +122,7 @@ namespace BotHATTwaffle2.Commands
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor("Feedback Ended!")
                         .WithColor(165, 55, 55).Build());
+                    _scheduleHandler.EnablePlayingUpdate();
                     break;
                 case "p":
                 case "pause":
@@ -192,19 +208,22 @@ namespace BotHATTwaffle2.Commands
         [Summary("Places yourself in the feedback queue.")]
         public async Task EnterFeedbackQueue()
         {
-            await Context.Message.DeleteAsync();
             if (_playtestService.FeedbackSession == null)
             {
-                await ReplyAsync(embed: new EmbedBuilder()
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("A feedback session must be started before you can do that")
                     .WithColor(165, 55, 55).Build());
+                await Task.Delay(5000);
+                await msg.DeleteAsync();
                 return;
             }
 
             if(!await _playtestService.FeedbackSession.AddUserToQueue(Context.User))
             {
                 var msg = await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"{Context.User} is already in the queue")
+                    .WithAuthor($"{Context.User} unable to be added to queue.")
+                    .WithDescription("To enter the queue, you must be in a voice channel.\n" +
+                                     "Or you are already in the queue.")
                     .WithColor(165, 55, 55).Build());
                 _ = Task.Run(async () =>
                 {
@@ -224,9 +243,11 @@ namespace BotHATTwaffle2.Commands
             await Context.Message.DeleteAsync();
             if (_playtestService.FeedbackSession == null)
             {
-                await ReplyAsync(embed: new EmbedBuilder()
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("A feedback session must be started before you can do that")
                     .WithColor(165, 55, 55).Build());
+                await Task.Delay(5000);
+                await msg.DeleteAsync();
                 return;
             }
             
@@ -461,9 +482,11 @@ namespace BotHATTwaffle2.Commands
                 }
                 else //Workshop builder returned bad / no data. Don't send an embed.
                 {
-                    await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                       $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
-                                                                       $"\nType `>roleme Community Tester` to get this role.");
+                    await ReplyAsync("I attempted to get the running level from the server, but the response did not" +
+                                     " make any sense. I have not announced for your level. Please try again in a moment.");
+
+                    await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
+                    return;
                 }
             }
             else
