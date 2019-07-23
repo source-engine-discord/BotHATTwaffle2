@@ -208,6 +208,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Places yourself in the feedback queue.")]
         public async Task EnterFeedbackQueue()
         {
+            await Context.Message.DeleteAsync();
             if (_playtestService.FeedbackSession == null)
             {
                 var msg = await ReplyAsync(embed: new EmbedBuilder()

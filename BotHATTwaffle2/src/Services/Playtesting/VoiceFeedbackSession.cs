@@ -233,7 +233,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             
             //Alert users
-            var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.");
+            var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` in Discord when you're finished.");
 
             AddUserJobs(user);
 
@@ -243,7 +243,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _ = UpdateTimer();
 
             _ = _rconService.RconCommand(_playtestEvent.ServerLocation,$"say {user.Username} may now begin their feedback!;" +
-                                                   $"say Please let the creator know your in-game name!");
+                                                   $"say Please let the creator know your in-game name!;" +
+                                                   $"say Type >done in Discord when you're finished.");
             await Task.Delay(10000);
             await msg.DeleteAsync();
         }
