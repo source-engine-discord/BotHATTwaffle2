@@ -190,7 +190,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             //Not valid - abort
             if (!_playtestService.PlaytestCommandPreCheck())
             {
-                await _rconService.RconCommand(server.Address, "A playtest command is running, or no valid test exists.");
+                await _rconService.RconCommand(server.Address, "say A playtest command is running, or no valid test exists.");
                 return;
             }
 
@@ -227,6 +227,8 @@ namespace BotHATTwaffle2.Services.SRCDS
                 default:
                     await _rconService.RconCommand(server.Address, "Say Invalid action! Not all commands available " +
                                                                    "from ingame chat.");
+                    //No command running - reset flag.
+                    _playtestService.ResetCommandRunningFlag();
                     break;
             }
         }
