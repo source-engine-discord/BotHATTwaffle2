@@ -51,14 +51,18 @@ namespace BotHATTwaffle2.Commands
                 bool tick = true;
                 foreach (var role in _dataService.RSettings.Lists.Roles)
                 {
+                    string r = role;
+                    if(!Context.IsPrivate)
+                        r = _dataService.Guild.Roles.FirstOrDefault(x => x.Name.Equals(role, StringComparison.OrdinalIgnoreCase))?.Mention;
+
                     if (tick)
                     {
-                        d1 += $"{role}\n";
+                        d1 += $"{r}\n";
                         tick = false;
                     }
                     else
                     {
-                        d2 += $"{role}\n";
+                        d2 += $"{r}\n";
                         tick = true;
                     }
                 }
