@@ -77,6 +77,8 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+
+            roles = roles.Replace("@", "");
             var roleNames = new List<string>();
 
             foreach (var role in _dataService.RSettings.Lists.Roles)
