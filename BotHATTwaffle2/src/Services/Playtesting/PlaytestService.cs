@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -451,7 +453,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                         if (embed.Fields.Count >= 24)
                             break;
 
-                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime}`\nEnd Time: `{item.End.DateTime}`", true);
+                        //Get the moderator for each test
+                        string strippedHtml = item.Description.Replace("<br>", "\n").Replace("&nbsp;", "");
+                        strippedHtml = Regex.Replace(strippedHtml, "<.*?>", string.Empty);
+                        var description = strippedHtml.Trim().Split('\n').Select(line => line.Substring(line.IndexOf(':') + 1).Trim()).ToImmutableArray();
+                        var mod = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
+
+                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime}`\nEnd Time: `{item.End.DateTime}`\nModerator: {mod.Mention}", true);
                     }
                 }
             }
