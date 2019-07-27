@@ -56,6 +56,7 @@ namespace BotHATTwaffle2.Services
 
         public DateTime StartTime;
         public int CommandCount = 0;
+        public int MessageCount = 0;
         public bool IncludePlayerCount { get; set; }
         public string PlayerCount { get; set; }
 

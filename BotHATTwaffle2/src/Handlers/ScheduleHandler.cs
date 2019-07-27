@@ -215,6 +215,9 @@ namespace BotHATTwaffle2.Handlers
                 case "[RunTime]":
                     playing = $"Up For: {DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}";
                     break;
+                case "[MessageCount]":
+                    playing = $"{_dataService.MessageCount} Messages Read";
+                    break;
             }
             await _client.SetGameAsync(playing);
         }

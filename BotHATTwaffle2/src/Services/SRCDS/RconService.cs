@@ -104,7 +104,11 @@ namespace BotHATTwaffle2.Services.SRCDS
 
                     //If the client is null, meaning a connection issue. Continue the loop to try again.
                     if (client == null)
+                    {
+                        //Delay before creating new client.
+                        await Task.Delay(500);
                         continue;
+                    }
                     
                     try
                     {
