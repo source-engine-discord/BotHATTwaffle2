@@ -10,6 +10,7 @@ using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
+using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -48,12 +49,16 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-        //        [Command("Test")]
-        //        [Summary("Used to debug. This should not go live")]
-        //        public async Task TestAsync()
-        //        {
-        //
-        //        }
+//        [Command("Test")]
+//        [Summary("Used to debug. This should not go live")]
+//        public async Task TestAsync()
+//        {
+//            await Context.Message.DeleteAsync();
+//            var msg = await ReplyAsync("Moron");
+//            DemoParser.ParseDemo();
+//            await Task.Delay(500);
+//            await msg.DeleteAsync();
+//        }
 
         [Command("StartFeedback", RunMode = RunMode.Async)]
         [Alias("startfb")]
@@ -580,6 +585,7 @@ namespace BotHATTwaffle2.Commands
                     playtestCommandInfo = _playtestService.GetPlaytestCommandInfo();
                     var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                     await kick.KickPlaytestUser(playtestCommandInfo.ServerAddress);
+                    _playtestService.ResetCommandRunningFlag();
                     break;
 
                 case "end":

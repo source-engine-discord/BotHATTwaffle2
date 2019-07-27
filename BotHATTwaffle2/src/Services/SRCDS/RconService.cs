@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -30,7 +31,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// </summary>
         /// <param name="serverId">Server ID to get client for</param>
         /// <returns>RCON client</returns>
-        private RCON GetOrCreateRconClient(string serverId)
+        private async Task<RCON> GetOrCreateRconClient(string serverId)
         {
             if (!_rconClients.ContainsKey(serverId))
             {
@@ -42,8 +43,19 @@ namespace BotHATTwaffle2.Services.SRCDS
                     throw new NullReferenceException(nameof(serverId));
 
                 var iPHostEntry = GeneralUtil.GetIPHost(server.Address);
-                
+
                 var rconClient = new RCON(iPHostEntry.AddressList.FirstOrDefault(),27015, server.RconPassword);
+
+                //Test sending a command. Should the command fail, return null.
+                try
+                {
+                    await rconClient.SendCommandAsync("//Waking Server");
+                }
+                catch
+                {
+                    return null;
+                }
+
                 _rconClients.Add(serverId, rconClient);
 
                 rconClient.OnDisconnected += () =>
@@ -67,7 +79,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <param name="serverId">Server to send command to</param>
         /// <param name="command">Command to send</param>
         /// <returns>Server reply, if any</returns>
-        public async Task<string> RconCommand(string serverId, string command)
+        public async Task<string> RconCommand(string serverId, string command, bool log = true)
         {
             //Spool all commands if one is in progress.
             while(_running)
@@ -80,65 +92,55 @@ namespace BotHATTwaffle2.Services.SRCDS
 
             string reply = null;
             serverId = GeneralUtil.GetServerCode(serverId);
-            //Retry upper bound amount of times
-            int currentTry = 0;
             RCON client = null;
-
-            CancellationTokenSource tokenSource = new CancellationTokenSource();
-            CancellationToken token = tokenSource.Token;
+            bool loop = true;
 
             //start the task, so we can wait on it later with a timeout timer.
             var t = Task.Run(async () =>
             {
-                while (true)
+                while (loop)
                 {
-                    //Throw out of task if we are cancelling
-                    token.ThrowIfCancellationRequested();
+                    client = await GetOrCreateRconClient(serverId);
 
-                    client = GetOrCreateRconClient(serverId);
+                    //If the client is null, meaning a connection issue. Continue the loop to try again.
+                    if (client == null)
+                        continue;
+                    
                     try
                     {
                         var commandResult = client.SendCommandAsync(command);
-                        if (commandResult == await Task.WhenAny(commandResult, Task.Delay(2000)))
+
+                        if (await Task.WhenAny(commandResult, Task.Delay(2000)) != commandResult)
                         {
-                            reply = await commandResult;
-                            //Success sending, break loop
-                            break;
+                            //Dispose if timeout
+                            client.Dispose();
                         }
+                        reply = await commandResult;
+                        //Success sending, break loop
+                        break;
                     }
                     catch
                     {
                         await _log.LogMessage(
-                            $"Failed to communicate with RCON server {serverId} {currentTry} times. Will retry...", false, color: LOG_COLOR);
+                            $"Failed to communicate with RCON server {serverId}. Will retry...", false, color: LOG_COLOR);
                         client.Dispose();
                     }
-
-                    currentTry++;
-                    //Delay between retries for teardown
-                    await Task.Delay(250);
                 }
             });
             
-            if (await Task.WhenAny(t, Task.Delay(15 * 1000)) != t)
+            //Ultimate timeout
+            if (await Task.WhenAny(t, Task.Delay(10 * 1000)) != t)
             {
+                loop = false;
                 _running = false;
+
                 await _log.LogMessage(
                     $"Failed to communicate with RCON server {serverId} within the timeout period.\nThe following command **was not** sent.\n" +
                     $"`{serverId}`\n`{command}`", color: LOG_COLOR);
-                
-                tokenSource.Cancel();
-
-                try
-                {
-                    client.Dispose();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Failure disposing of RCON client:\n" + e.Message);
-                }
 
                 return $"Failed to communicate with RCON server {serverId} within the timeout period. The server may not be running";
             }
+
             //Release the next instance
             _running = false;
             
@@ -147,8 +149,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             if (string.IsNullOrWhiteSpace(reply))
                 reply = $"{command} was sent, but provided no reply.";
 
-            //Ignore logging status replies... This is a one off that just causes too much spam.
-            if (!command.Contains("status", StringComparison.OrdinalIgnoreCase) && !command.StartsWith("//"))
+            if (log)
                await _log.LogMessage($"**Sending:** `{command}`\n**To:** `{serverId}`\n**Response Was:** `{reply}`", color: LOG_COLOR);
 
             return reply;
@@ -161,7 +162,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <returns></returns>
         public async Task GetPlayCountFromServer(string serverId)
         {
-            var returned = await RconCommand(serverId, "status");
+            var returned = await RconCommand(serverId, "status", false);
             var replyArray = returned.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             
             //Only get the line with player count
@@ -192,9 +193,9 @@ namespace BotHATTwaffle2.Services.SRCDS
         public async Task WakeRconServer(string serverId)
         {
             //Using GUIDs for basically random text.
-            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
-            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
-            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6));
+            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6), false);
+            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6), false);
+            await RconCommand(serverId, "//WakeServer_" + Guid.NewGuid().ToString().Substring(0, 6), false);
         }
 
         /// <summary>

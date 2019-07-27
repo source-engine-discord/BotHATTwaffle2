@@ -63,7 +63,9 @@ namespace BotHATTwaffle2.Handlers
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
             if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
-                  message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
+                  message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
+                  message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
+                  message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos, StringComparison.OrdinalIgnoreCase)) ||
                 message.Author.IsBot)
                 {
                     //Fire and forget listening on the message.

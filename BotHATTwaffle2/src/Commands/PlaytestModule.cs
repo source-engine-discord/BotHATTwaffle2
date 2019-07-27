@@ -68,7 +68,7 @@ namespace BotHATTwaffle2.Commands
             if (command == null)
             {
                 if(_playtestService.CreateVoiceFeedbackSession())
-                    await ReplyAsync(embed: new EmbedBuilder()
+                    await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
                         .WithAuthor("New Feedback Queue Session Started!")
                         .WithDescription("In order to keep things moving and civil, a Feedback Queue has been started!" +
                                          "\n\nUsers can enter the queue with `>q` and wait for their turn. When it is their turn, " +
@@ -128,7 +128,7 @@ namespace BotHATTwaffle2.Commands
                 case "pause":
                     _playtestService.FeedbackSession.PauseFeedback();
                     var msgP = await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor("Pausing after this user...")
+                        .WithAuthor("Pausing Feedback...")
                         .WithColor(165, 55, 55).Build());
                     _ = Task.Run(async () =>
                     {

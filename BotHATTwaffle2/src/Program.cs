@@ -6,6 +6,7 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.YouTube;
+using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -84,6 +85,7 @@ namespace BotHATTwaffle2
             DatabaseUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             DownloadHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>(), _services.GetRequiredService<Random>());
+            DemoParser.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
 
             await _client.StartAsync();
 

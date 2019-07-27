@@ -49,7 +49,7 @@ namespace BotHATTwaffle2.Commands
             };
 
             // Sorts modules alphabetically and adds a field for each one.
-            foreach (var module in _commands.Modules.OrderBy(m => m.Name))
+            foreach (var module in _commands.Modules.OrderBy(m => m.Commands.Count).Reverse())
                 _help.AddModuleField(module, ref embed);
 
             // Replies normally if a direct message fails.

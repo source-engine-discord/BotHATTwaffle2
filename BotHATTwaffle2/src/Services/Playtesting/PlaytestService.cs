@@ -146,12 +146,20 @@ namespace BotHATTwaffle2.Services.Playtesting
                 $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
                 await Task.Delay(15000); //Wait for map to change
                 await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
-                    $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0;" +
-                    "say Please join the level testing voice channel for feedback!;" +
-                    "say Please join the level testing voice channel for feedback!;" +
-                    "say Please join the level testing voice channel for feedback!;" +
-                    "say Please join the level testing voice channel for feedback!;" +
-                    "say Please join the level testing voice channel for feedback!");
+                    $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0;");
+
+                //Display ingame notification for in game voice and make it stick for a while.
+                _ = Task.Run(async () =>
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        _ = _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
+                            "script ScriptPrintMessageCenterAll(\"<font color=\\\"#FFA163\\\">Please join the level testing voice channel for feedback!</font>\");",
+                            false);
+                        await Task.Delay(3000);
+                    }
+                    
+                });
 
                 DownloadHandler.DownloadPlaytestDemo(_playtestCommandInfo);
 
@@ -230,15 +238,18 @@ namespace BotHATTwaffle2.Services.Playtesting
             await Task.Delay(3000);
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                 $"tv_record {_playtestCommandInfo.DemoName}; say Recording {_playtestCommandInfo.DemoName}");
-            await Task.Delay(1000);
-            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
-                $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
-            await Task.Delay(1000);
-            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
-                $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
-            await Task.Delay(1000);
-            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
-                $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
+
+            _ = Task.Run(async () =>
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    _ = _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
+                        "script ScriptPrintMessageCenterAll(\"<font color=\\\"#B5F2A2\\\">Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!</font>\");",
+                        false);
+                    await Task.Delay(3000);
+                }
+
+            });
 
             await Task.Delay(3000);
             var patreonUsers = _dataService.PatreonsRole.Members.ToArray();

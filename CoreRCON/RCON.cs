@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CoreRCON.PacketFormats;
@@ -47,11 +48,20 @@ namespace CoreRCON
             
             try
             {
-                ConnectAsync().Wait();
+                //Setup some async code to timeout the connection
+                Task.Run(async () => 
+                {
+                    var connect = ConnectAsync();
+                    if (await Task.WhenAny(connect, Task.Delay(2000)) != connect)
+                    {
+                        //Client is hung connecting, Likely waiting for an authentication packet.
+                        Dispose();
+                    }
+                }).Wait();
             }
             catch
             {
-                Log($"RCON failed to connect to {_endpoint}");
+                Console.WriteLine($"RCON failed to connect to {_endpoint}");
             }
         }
 

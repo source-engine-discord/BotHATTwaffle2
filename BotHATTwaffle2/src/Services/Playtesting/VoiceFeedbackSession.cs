@@ -28,6 +28,10 @@ namespace BotHATTwaffle2.Services.Playtesting
         private bool _disposed = false;
         private int _duration;
         private TimeSpan _timeLeft = new TimeSpan();
+        private bool _tick = true;
+        private SocketGuildUser _activeUser;
+        private SocketGuildUser _onDeckUser;
+        private bool _abortTimer = false;
 
         public VoiceFeedbackSession(DataService dataService, DiscordSocketClient client, PlaytestEvent playtestEvent,
             RconService rconService)
@@ -125,43 +129,17 @@ namespace BotHATTwaffle2.Services.Playtesting
         private void RemoveUserJobs(ulong userId)
         {
             JobManager.RemoveJob($"[FBQ_UserTimeOut_{userId}]");
-            JobManager.RemoveJob($"[FBQ_Warning_{userId}]");
         }
 
         private void AddUserJobs(SocketGuildUser user)
         {
             JobManager.AddJob(async () => await UserTimeOut(user), s => s
                 .WithName($"[FBQ_UserTimeOut_{user.Id}]").ToRunOnceIn(_duration * 60).Seconds());
-
-            JobManager.AddJob(async () => await UserWarning(user), s => s
-                .WithName($"[FBQ_Warning_{user.Id}]").ToRunOnceIn(_duration * 60 - 20).Seconds());
         }
 
         private async Task UserTimeOut(SocketGuildUser user)
         {
             await RemoveUser(user.Id);
-        }
-
-        /// <summary>
-        /// The message code for warning a user that their turn is ending.
-        /// </summary>
-        /// <param name="user">User to warn</param>
-        /// <returns></returns>
-        private async Task UserWarning(SocketGuildUser user)
-        {
-            string message = $"{user.Mention} - 20 seconds left. Wrap it up!";
-            string rconMessage = $"{user} - 20 seconds left. Wrap it up!";
-
-            if (_userQueue.Count > 1)
-            {
-                message += $"\n{_dataService.GetSocketGuildUser(_userQueue[1]).Mention} you are up next!";
-                rconMessage += $";say {_dataService.GetSocketGuildUser(_userQueue[1])} you are up next!";
-            }
-
-            _ = _rconService.RconCommand(_playtestEvent.ServerLocation, $"say {rconMessage}");
-            var msg = await _dataService.TestingChannel.SendMessageAsync(message);
-            await Task.Delay(10000);
-            await msg.DeleteAsync();
         }
 
         /// <summary>
@@ -231,26 +209,49 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await RemoveUser(user.Id);
                 return;
             }
+
+            //Countdown before next user
+            for (int i = 5; i > 0; i--)
+            {
+                _ = _rconService.RconCommand(_playtestEvent.ServerLocation,
+                    $"script ScriptPrintMessageCenterAll(\"{user.Username}'s turn starts in: {i}\\n<font color=\\\"#FFA163\\\">Start with your in-game name.</font>\");", false);
+                await Task.Delay(1000);
+            }
+            
             
             //Alert users
             var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` in Discord when you're finished.");
 
             AddUserJobs(user);
+            _activeUser = user;
 
             _timeLeft = TimeSpan.FromMinutes(_duration);
 
-            if(!_timerRunning)
+            if (_userQueue.Count > 1)
+            {
+                _onDeckUser = _dataService.GetSocketGuildUser(_userQueue[1]);
+            }
+            
+            if (!_timerRunning)
+            {
+                _abortTimer = false;
                 _ = UpdateTimer();
+            }
 
-            _ = _rconService.RconCommand(_playtestEvent.ServerLocation,$"say {user.Username} may now begin their feedback!;" +
-                                                   $"say Please let the creator know your in-game name!;" +
-                                                   $"say Type >done in Discord when you're finished.");
             await Task.Delay(10000);
             await msg.DeleteAsync();
         }
 
         private async Task UpdateTimer()
         {
+            //Prevent recursive refire of the timer when a user is abruptly removed.
+            if (_abortTimer)
+            {
+                _abortTimer = false;
+                _timerRunning = false;
+                return;
+            }
+
             if (!_running)
             {
                 _timerRunning = false;
@@ -259,9 +260,33 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             _timerRunning = true;
-            _ = _client.SetGameAsync($"Time left: {_timeLeft:mm\\:ss}");
-            await Task.Delay(5000);
-            _timeLeft = _timeLeft.Subtract(TimeSpan.FromSeconds(5));
+
+            //Prevent pounding the discord API like crazy.
+            if (_tick)
+                _ = _client.SetGameAsync($"Time left: {_timeLeft:mm\\:ss}");
+
+            _tick = !_tick;
+
+            string message = $"script ScriptPrintMessageCenterAll(\"{_activeUser.Username}'s " +
+                             $"Time Left: <font color=\\\"#B5F2A2\\\">{_timeLeft:mm\\:ss} ⏰</font>" +
+                             $"\\nType <font color=\\\"#B5F2A2\\\">>done</font> in Discord when finished.";
+
+            if (_userQueue.Count > 1)
+            {
+                if (_userQueue[1] != _onDeckUser.Id)
+                    _onDeckUser = _dataService.GetSocketGuildUser(_userQueue[1]);
+
+                message += $"\\n<font color=\\\"#FFA163\\\">{_onDeckUser.Username} is next</font>";
+            }
+
+            //Need to append the closer characters for the script
+            message += "\");";
+
+            _ = _rconService.RconCommand(_playtestEvent.ServerLocation, message, false);
+
+            await Task.Delay(2000);
+            _timeLeft = _timeLeft.Subtract(TimeSpan.FromSeconds(2));
+            
             _ = UpdateTimer();
         }
 
@@ -288,7 +313,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             await ProcessMute(true, user);
 
             if(processNext)
+            {
+                //Prevent timer from running on old user.
+                _abortTimer = true;
                 await StartNextUserFeedback();
+            }
 
             await UpdateCurrentQueueMessage();
             return true;
@@ -305,6 +334,10 @@ namespace BotHATTwaffle2.Services.Playtesting
                 return false;
 
             _userQueue.Add(user.Id);
+
+            if(_userQueue.Count > 1)
+                _onDeckUser = _dataService.GetSocketGuildUser(_userQueue[1]);
+
             await UpdateCurrentQueueMessage();
             return true;
         }
