@@ -19,6 +19,9 @@ namespace CoreRCON
         private TaskCompletionSource<bool> _authenticationTask;
 
         private bool _connected;
+
+        public bool GetConnected() => _connected;
+        public IPEndPoint GetIpEndPoint() => _endpoint;
         
         private readonly IPEndPoint _endpoint;
 
@@ -28,6 +31,7 @@ namespace CoreRCON
         private readonly string _password;
         private int _staleCounter = 0;
         private uint _reconnectDelay;
+        private bool _disposed = false;
 
         /// <summary>
         ///     Initialize an RCON connection and automatically call ConnectAsync().
@@ -52,7 +56,9 @@ namespace CoreRCON
                 Task.Run(async () => 
                 {
                     var connect = ConnectAsync();
-                    if (await Task.WhenAny(connect, Task.Delay(2000)) != connect)
+
+                    //If we don't connect in under 2 seconds, we can abort.
+                    if (await Task.WhenAny(connect, Task.Delay(3000)) != connect)
                     {
                         //Client is hung connecting, Likely waiting for an authentication packet.
                         Dispose();
@@ -72,7 +78,12 @@ namespace CoreRCON
 
         public void Dispose()
         {
-            OnDisconnected();
+            //Don't dispose if already disposed
+            if (_disposed)
+                return;
+
+            if (OnDisconnected != null) OnDisconnected();
+
             _connected = false;
             try
             {
@@ -91,6 +102,8 @@ namespace CoreRCON
             {
                 Console.WriteLine("Unable to properly dispose TCP Socket. This is likely because of a network issue.");
             }
+
+            _disposed = true;
         }
 
         public event Action OnDisconnected;
@@ -140,6 +153,7 @@ namespace CoreRCON
                 if (!_connected)
                     break;
 
+                //Value is multiplied by 5
                 if(_staleCounter > 120)
                 {
                     Console.WriteLine($"RCON Client for {_endpoint} is stale - Disposing!");
@@ -224,7 +238,18 @@ namespace CoreRCON
         private void TCPPacketReceived(object sender, SocketAsyncEventArgs e)
         {
             // Parse out the actual RCON packet
-            var packet = RCONPacket.FromBytes(e.Buffer);
+            RCONPacket packet = null;
+            try
+            {
+                packet = RCONPacket.FromBytes(e.Buffer);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine("Unable to read packet, this has been observed when trying to communicate" +
+                                  " with a server that is currently booting.\n"+exception.Message);
+                Dispose();
+                return;
+            }
 
             if (packet.Type == PacketType.AuthResponse)
             {

@@ -129,6 +129,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public async Task<PlaytestCommandInfo> PlaytestCommandPost(bool replyInContext)
         {
+            _ = _log.LogMessage("Running Playtest Post Tasks!", color: LOG_COLOR);
             //No context to send these messages to - default them
             if (!replyInContext)
                 await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
@@ -147,8 +148,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                 $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
                 await Task.Delay(15000); //Wait for map to change
+
                 await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
-                    $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0;");
+                    $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0");
 
                 //Display ingame notification for in game voice and make it stick for a while.
                 _ = Task.Run(async () =>
@@ -222,6 +224,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public async Task<PlaytestCommandInfo> PlaytestCommandStart(bool replyInContext)
         {
+            _ = _log.LogMessage("Running Playtest Start Tasks!",color:LOG_COLOR);
+
             //No context to send these messages to - default them
             if (!replyInContext)
                 await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
@@ -246,7 +250,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 for (int i = 0; i < 4; i++)
                 {
                     _ = _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        "script ScriptPrintMessageCenterAll(\"<font color=\\\"#B5F2A2\\\">Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!</font>\");",
+                        $"script ScriptPrintMessageCenterAll(\"<font color=\\\"#B5F2A2\\\">Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!</font>\");",
                         false);
                     await Task.Delay(3000);
                 }
@@ -273,6 +277,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public async Task<PlaytestCommandInfo> PlaytestCommandPre(bool replyInContext)
         {
+            _ = _log.LogMessage("Running Playtest Pre Tasks!", color: LOG_COLOR);
             var config = _calendar.GetTestEventNoUpdate().IsCasual
                 ? _dataService.RSettings.General.CasualConfig
                 : _dataService.RSettings.General.CompConfig;
@@ -327,7 +332,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 //Wait some, reset password
                 await Task.Delay(5000);
-                await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+
+                if(_calendar.GetTestEventNoUpdate().IsCasual)
+                    await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+                        $"sv_password {_dataService.RSettings.General.CasualPassword}");
+                else
+                    await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                     $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
             });
 
@@ -857,7 +867,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     var runningLevel = await _rconService.GetRunningLevelAsync(testEvent.ServerLocation);
 
-                    if (runningLevel.Length == 3 && runningLevel[1] == wsId)
+                    if (runningLevel != null && runningLevel.Length == 3 && runningLevel[1] == wsId)
                         break;
 
                     tries++;

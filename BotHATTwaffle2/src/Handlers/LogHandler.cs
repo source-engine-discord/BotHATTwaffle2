@@ -31,26 +31,26 @@ namespace BotHATTwaffle2.Handlers
         public async Task LogMessage(string msg, bool channel = true, bool console = true, bool alert = false,
             ConsoleColor color = ConsoleColor.White)
         {
+            string date = DateTime.Now.ToString("HH:mm:ss.fff - dddd, MMMM dd yyyy");
             if (alert)
                 msg = _dataService.AlertUser.Mention + "\n" + msg;
 
             if (msg.Length > 1950)
                 msg = msg.Substring(0, 1950);
 
+            if (console)
+            {
+                Console.ForegroundColor = color;
+                Console.WriteLine(date + "\n" + msg.Replace("```", "") + "\n");
+                Console.ResetColor();
+            }
+
             if (channel)
                 await _dataService.LogChannel.SendMessageAsync(embed: new EmbedBuilder()
                     .WithDescription(msg)
                     .WithColor(GeneralUtil.ColorFromConsoleColor(color))
-                    .WithCurrentTimestamp()
+                    .WithFooter(date)
                     .Build());
-
-
-            if (console)
-            {
-                Console.ForegroundColor = color;
-                Console.WriteLine(msg.Replace("```","") + "\n");
-                Console.ResetColor();
-            }
         }
     }
 }
