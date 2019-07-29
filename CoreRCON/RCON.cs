@@ -52,22 +52,11 @@ namespace CoreRCON
             
             try
             {
-                //Setup some async code to timeout the connection
-                Task.Run(async () => 
-                {
-                    var connect = ConnectAsync();
-
-                    //If we don't connect in under 2 seconds, we can abort.
-                    if (await Task.WhenAny(connect, Task.Delay(3000)) != connect)
-                    {
-                        //Client is hung connecting, Likely waiting for an authentication packet.
-                        Dispose();
-                    }
-                }).Wait();
+                ConnectAsync().Wait();
             }
-            catch
+            catch(Exception e)
             {
-                Console.WriteLine($"RCON failed to connect to {_endpoint}");
+                Console.WriteLine($"RCON failed to connect to {_endpoint}\n{e}");
             }
         }
 
@@ -154,7 +143,7 @@ namespace CoreRCON
                     break;
 
                 //Value is multiplied by 5
-                if(_staleCounter > 120)
+                if(_staleCounter > 180)
                 {
                     Console.WriteLine($"RCON Client for {_endpoint} is stale - Disposing!");
                     Dispose();

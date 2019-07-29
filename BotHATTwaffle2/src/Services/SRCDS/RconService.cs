@@ -93,7 +93,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             _running = true;
 
             serverId = GeneralUtil.GetServerCode(serverId);
-            string reply = null;
+            string reply = "";
             RCON client = null;
             int reconnectCount = 0;
 
@@ -119,7 +119,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                     if (reconnectCount > 2)
                     {
                         reply =
-                            $"Failed to establish connection to rcon server." +
+                            $"Failed to establish connection to rcon server. Is SRCDS running?" +
                             $"\nIPEndPoint: {client.GetIpEndPoint()}\nConnected: {client.GetConnected()}";
                         break;
                     }
@@ -145,7 +145,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             });
 
             //Ultimate timeout, should hopefully never be here.
-            if (await Task.WhenAny(t, Task.Delay(10 * 1000)) != t)
+            if (await Task.WhenAny(t, Task.Delay(15 * 1000)) != t)
             {
                 try
                 {
