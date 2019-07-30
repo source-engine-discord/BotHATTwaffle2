@@ -94,7 +94,7 @@ namespace BotHATTwaffle2.Services.Steam
                 catch (Exception e)
                 {
                     //Something happened getting the response from Steam. We got a response but it wasn't valid?
-                    Console.WriteLine("JSON RESPONSE WAS:\n" + resultContentItem);
+                    Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultContentItem);
                     Console.WriteLine(e);
                     return null;
                 }

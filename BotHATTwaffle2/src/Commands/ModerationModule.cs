@@ -793,6 +793,15 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            if (command.Contains("exit", StringComparison.OrdinalIgnoreCase) ||
+                command.Contains("quit", StringComparison.OrdinalIgnoreCase))
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Quit and Exit not allowed!", _dataService.Guild.IconUrl)
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
             await Context.Channel.TriggerTypingAsync();
             string reply;
             IUserMessage delayed = null;
