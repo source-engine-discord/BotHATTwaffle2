@@ -116,7 +116,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     // These variables just exist to make names shorter
                     DateTime playtestSDT = playtestEvent.Start.DateTime.Value;
-                    int numDaysSeparate = (playtestSDT.Day - currentDateTime.Day);
+                    int numDaysSeparate = Convert.ToInt32((playtestSDT - currentDateTime).TotalDays);
                     string shortenedEventSummary = "";
 
                     // Here we're just grabbing the mapname from the playtest title
