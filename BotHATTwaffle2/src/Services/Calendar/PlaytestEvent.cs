@@ -9,7 +9,7 @@ namespace BotHATTwaffle2.Services.Calendar
 {
     public class PlaytestEvent
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkGray;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
 
@@ -39,51 +39,28 @@ namespace BotHATTwaffle2.Services.Calendar
         public bool CanUseGallery { get; private set; }
         public DateTime? LastEditTime { get; set; }
         public string CompPassword { get; set; }
-        public string CompCasualServer { get; set; }
 
         public void SetGameMode(string input)
         {
             if (input.Contains("comp", StringComparison.OrdinalIgnoreCase))
             {
+                var dbValue = DatabaseUtil.GetCompPw();
+                if (dbValue != null && dbValue.EventEditTime == EventEditTime)
+                {
+                    CompPassword = dbValue.CompPassword;
+                }
+                else
+                {
+                    var i = new Random().Next(_dataService.RSettings.General.CompPasswords.Length);
+                    CompPassword = _dataService.RSettings.General.CompPasswords[i];
+                    DatabaseUtil.StoreCompPw(this);
+                }
                 IsCasual = false;
-                var i = new Random().Next(_dataService.RSettings.General.CompPasswords.Length);
-                CompPassword = _dataService.RSettings.General.CompPasswords[i];
-
                 _ = _log.LogMessage($"Competitive password for `{Title}` is: `{CompPassword}`");
             }
             else
             {
                 IsCasual = true;
-            }
-        }
-
-        /// <summary>
-        /// Finds a free server to load the comp level onto
-        /// </summary>
-        private void SetCompCasualServer()
-        {
-            var destServer = DatabaseUtil.GetTestServer(GeneralUtil.GetServerCode(ServerLocation));
-            var allServers = DatabaseUtil.GetAllTestServers();
-
-            //If for some reason the DB does not contain servers, abort.
-            if (destServer == null || allServers == null)
-                return;
-
-            if (IsCasual)
-                return;
-
-            while (true)
-            {
-                var selectedServer = allServers.ToArray()[new Random().Next(allServers.Count())];
-                if (destServer.Id != selectedServer.Id)
-                {
-                    CompCasualServer = selectedServer.Address;
-
-                    if (_dataService.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Casual server to mirror competitive is {CompCasualServer}", false, color: LOG_COLOR);
-
-                    return;
-                }
             }
         }
 
@@ -108,8 +85,6 @@ namespace BotHATTwaffle2.Services.Calendar
 
                 if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage($"Test event is valid!\n{ToString()}", false, color: LOG_COLOR);
-
-                SetCompCasualServer();
 
                 IsValid = true;
 
@@ -150,7 +125,6 @@ namespace BotHATTwaffle2.Services.Calendar
             Description = null;
             ServerLocation = null;
             CompPassword = null;
-            CompCasualServer = null;
         }
 
         public override string ToString()

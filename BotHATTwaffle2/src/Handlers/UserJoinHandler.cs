@@ -9,7 +9,7 @@ using FluentScheduler;
 
 namespace BotHATTwaffle2.Handlers
 {
-    internal class UserHandler
+    public class UserHandler
     {
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
@@ -57,18 +57,27 @@ namespace BotHATTwaffle2.Handlers
 
         public async Task UserWelcomeMessage(SocketGuildUser user)
         {
+            DatabaseUtil.RemoveJoinedUser(user.Id);
+
+            if (_dataService.GetSocketGuildUser(user.Id) == null)
+            {
+                await _log.LogMessage($"Attempted to send welcome message to `{user.Username}` `{user.Id}` but they left the guild.");
+                return;
+            }
+
             try
             {
-                await _log.LogMessage($"Welcomed {user.Username} at {DateTime.Now}, and assigning them the Playtester role!");
+                await _log.LogMessage($"Welcomed `{user.Username}` `{user.Id}` at `{DateTime.Now}`, and assigning them the Playtester role!");
                 await user.AddRoleAsync(_dataService.PlayTesterRole);
                 await user.SendMessageAsync(embed:WelcomeEmbed(user));
             }
             catch
             {
-                await _log.LogMessage($"Attempted to send welcome message to {user.Username}, but failed. " +
-                                      $"They either have DMs off, or left the server.");
+                await _log.LogMessage($"Attempted to send welcome message to `{user.Username}` `{user.Id}`, but failed. " +
+                                      $"They might have DMs of - I'll try in the BotChannel.");
+
+                await _dataService.BotChannel.SendMessageAsync(user.Mention, embed: WelcomeEmbed(user));
             }
-            DatabaseUtil.RemoveJoinedUser(user.Id);
         }
 
         private Embed WelcomeEmbed(SocketGuildUser user)

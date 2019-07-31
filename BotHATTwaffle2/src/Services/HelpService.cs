@@ -23,13 +23,22 @@ namespace BotHATTwaffle2.Services
         {
             var commands = new StringBuilder();
 
+            var addedCommands = new List<string>();
+            
             // Sorts commands alphabetically and builds the help strings.
             foreach (var cmd in module.Commands.OrderBy(c => c.Name))
-                commands.AppendLine($"`{cmd.Name}` - {cmd.Summary}");
+            {
+                //If a command has an overload, skip adding it multiple times.
+                if (addedCommands.Contains(cmd.Name))
+                    continue;
+
+                commands.AppendLine($"`{cmd.Name}`");
+                addedCommands.Add(cmd.Name);
+            }
 
             // Adds a field for the module if any commands for it were found. Removes 'Module' from the module's name.
             if (commands.Length != 0)
-                embed.AddField(module.Name.Replace("Module", string.Empty), commands.ToString());
+                embed.AddField(module.Name.Replace("Module", string.Empty), commands.ToString(), true);
         }
 
         /// <inheritdoc />

@@ -20,7 +20,7 @@ namespace BotHATTwaffle2.Services.Calendar
 {
     public class GoogleCalendar
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Gray;
         private static PlaytestEvent _testEvent;
         private readonly CalendarService _calendar;
         private readonly DataService _dataService;
@@ -30,7 +30,7 @@ namespace BotHATTwaffle2.Services.Calendar
         {
             _log = log;
             _dataService = dataService;
-            Console.Write("Getting or checking Sheets OAuth Credentials... ");
+            Console.Write("Getting or checking Calendar OAuth Credentials... ");
             _calendar = new CalendarService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = GetCalendarCredentials(),
@@ -145,7 +145,7 @@ namespace BotHATTwaffle2.Services.Calendar
             _testEvent.EndDateTime = eventItem.End.DateTime;
 
             //Creators
-            _testEvent.Creators = _dataService.GetSocketUser(description.ElementAtOrDefault(0), ',');
+            _testEvent.Creators = _dataService.GetSocketUsers(description.ElementAtOrDefault(0), ',');
 
             //Imgur Album
             _testEvent.ImageGallery = GeneralUtil.ValidateUri(description.ElementAtOrDefault(1));

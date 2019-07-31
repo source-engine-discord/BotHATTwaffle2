@@ -2,12 +2,14 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
@@ -15,8 +17,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
-using Google.Apis.Calendar.v3.Data;
-using Google.Apis.YouTube.v3.Data;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -29,12 +29,14 @@ namespace BotHATTwaffle2.Commands
         private readonly ReservationService _reservationService;
         private readonly GoogleCalendar _calendar;
         private readonly PlaytestService _playtestService;
-        CalendarBuilder calendarBuilder = new CalendarBuilder();
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
+        private readonly RconService _rconService;
+        private readonly ScheduleHandler _scheduleHandler;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
-            ReservationService reservationService,
-            InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService)
+            ReservationService reservationService, RconService rconService,
+            InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService,
+            ScheduleHandler scheduleHandler)
         {
             _playtestService = playtestService;
             _client = client;
@@ -43,6 +45,224 @@ namespace BotHATTwaffle2.Commands
             _interactive = interactive;
             _log = log;
             _calendar = calendar;
+            _rconService = rconService;
+            _scheduleHandler = scheduleHandler;
+        }
+
+        [Command("FeedbackQueue", RunMode = RunMode.Async)]
+        [Alias("fbq")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Moderator tool for voice feedback")]
+        [Remarks("Use without any parameters to start a new voice feedback session. `>fbq` Otherwise format is:" +
+                 "`>fbq [command] [user]` where user may be empty depending on the command." +
+                 "\n`s` / `start` - Starts the feedback session. Requires users to be in the queue." +
+                 "\n`e` / `end` - Ends the feedback session completely, which disposes of the queue." +
+                 "\n`p` / `pause` - Pauses the feedback session." +
+                 "\n`push` / `pri` - Pushes a user to be next after the current user giving feedback." +
+                 "\n`pop` / `remove` - Removes a user from the queue." +
+                 "\n`#` - Changes feedback duration. Example: `>fbq 5` sets to 5 minutes.")]
+        public async Task FeedbackQueueAsync([Optional]string command, [Optional]SocketUser user)
+        {
+            await Context.Message.DeleteAsync();
+            if (command == null)
+            {
+                if(_playtestService.CreateVoiceFeedbackSession())
+                    await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithAuthor("New Feedback Queue Session Started!")
+                        .WithDescription("In order to keep things moving and civil, a Feedback Queue has been started!" +
+                                         "\n\nUsers can enter the queue with `>q` and wait for their turn. When it is their turn, " +
+                                         $"they will have {_dataService.RSettings.General.FeedbackDuration} minutes to give their feedback. " +
+                                         $"This is to give everyone a chance to speak, without some users taking a long time." +
+                                         $"\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
+                                         $"already given their feedback." +
+                                         $"\n\nWhen done with your feedback, or to remove yourself from the queue, type `>done`." +
+                                         $"\n\nIf you need to go sooner, please let a moderator know.")
+                        .WithColor(55,165,55)
+                        .Build());
+                else
+                    await ReplyAsync(
+                        "Unable to create new feedback session. Either no playtest exists, or a session already exists.");
+                return;
+            }
+
+            //Check if we can actually run the command.
+            if (!await IsValid())
+                return;
+
+            //Set duration
+            if (int.TryParse(command, out var duration))
+            {
+                _playtestService.FeedbackSession.SetDuration(duration);
+                return;
+            }
+
+            switch (command.ToLower())
+            {
+                case "s":
+                case "start":
+                    if (!await _playtestService.FeedbackSession.StartFeedback())
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("Feedback already started!")
+                            .WithColor(165, 55, 55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+
+                        return;
+                    }
+                    _scheduleHandler.DisablePlayingUpdate();
+                    break;
+                case "e":
+                case "end":
+                    _playtestService.EndVoiceFeedbackSession();
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Feedback Ended!")
+                        .WithColor(165, 55, 55).Build());
+                    _scheduleHandler.EnablePlayingUpdate();
+                    break;
+                case "p":
+                case "pause":
+                    _playtestService.FeedbackSession.PauseFeedback();
+                    var msgP = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Pausing Feedback...")
+                        .WithColor(165, 55, 55).Build());
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(5000);
+                        await msgP.DeleteAsync();
+                    });
+                    break;
+                case "push":
+                case "pri":
+                    if (user == null)
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("User cannot be empty.")
+                            .WithColor(165,55,55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                        return;
+                    }
+
+                    await _playtestService.FeedbackSession.AddUserToTopQueue(user);
+                    break;
+                case "pop":
+                case "remove":
+                    if (user == null)
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("User cannot be empty.")
+                            .WithColor(165, 55, 55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                        return;
+                    }
+                    if (!await _playtestService.FeedbackSession.RemoveUser(user.Id))
+                    {
+                        var msg = await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("User not currently in queue")
+                            .WithColor(165, 55, 55).Build());
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                    }
+                    break;
+                default:
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Unknown command")
+                        .WithDescription("Please see `>help fbq`")
+                        .WithColor(165, 55, 55).Build());
+                    break;
+            }
+
+            async Task<bool> IsValid()
+            {
+                if (_playtestService.FeedbackSession == null)
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("A feedback session must be started first")
+                        .WithDescription("Please see `>help fbq`")
+                        .WithColor(165, 55, 55).Build());
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [Command("Queue", RunMode = RunMode.Async)]
+        [Alias("q")]
+        [RequireContext(ContextType.Guild)]
+        [Summary("Places yourself in the feedback queue.")]
+        public async Task EnterFeedbackQueue()
+        {
+            await Context.Message.DeleteAsync();
+            if (_playtestService.FeedbackSession == null)
+            {
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("A feedback session must be started before you can do that")
+                    .WithColor(165, 55, 55).Build());
+                await Task.Delay(5000);
+                await msg.DeleteAsync();
+                return;
+            }
+
+            if(!await _playtestService.FeedbackSession.AddUserToQueue(Context.User))
+            {
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{Context.User} unable to be added to queue.")
+                    .WithDescription("To enter the queue, you must be in a voice channel.\n" +
+                                     "Or you are already in the queue.")
+                    .WithColor(165, 55, 55).Build());
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    await msg.DeleteAsync();
+                });
+            }
+
+        }
+
+        [Command("FeedbackDone", RunMode = RunMode.Async)]
+        [Alias("fbd","done")]
+        [RequireContext(ContextType.Guild)]
+        [Summary("Signals that you're done giving feedback, or want to remove yourself from the queue.")]
+        public async Task DoneFeedbackQueue()
+        {
+            await Context.Message.DeleteAsync();
+            if (_playtestService.FeedbackSession == null)
+            {
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("A feedback session must be started before you can do that")
+                    .WithColor(165, 55, 55).Build());
+                await Task.Delay(5000);
+                await msg.DeleteAsync();
+                return;
+            }
+            
+            if (!await _playtestService.FeedbackSession.RemoveUser(Context.User.Id))
+            {
+                var msg = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{Context.User} is not in the queue")
+                    .WithColor(165, 55, 55).Build());
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    await msg.DeleteAsync();
+                });
+            }
         }
 
         [Command("Schedule", RunMode = RunMode.Async)]
@@ -56,12 +276,11 @@ namespace BotHATTwaffle2.Commands
             var display = await ReplyAsync(embed: embed.Build());
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
 
-            if (user.Roles.Contains(_dataService.ModeratorRole)
-            || user.Roles.Contains(_dataService.AdminRole))
+            if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
             {
                 _dataService.IgnoreListenList.Add(Context.User);
 
-                var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar);
+                var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
                 await requestBuilder.SchedulePlaytestAsync(display);
 
                 _dataService.IgnoreListenList.Remove(Context.User);
@@ -81,7 +300,7 @@ namespace BotHATTwaffle2.Commands
         public async Task PlaytestRequestAsync([Summary("A pre-built playtest event based on the template.")][Optional][Remainder]string playtestInformation)
         {
             _dataService.IgnoreListenList.Add(Context.User);
-            var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar);
+            var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
 
             if (playtestInformation != null)
             {
@@ -187,7 +406,7 @@ namespace BotHATTwaffle2.Commands
             if (workshopId != null)
                 rconCommand += $"; host_workshop_map {workshopId}";
 
-            await _dataService.RconCommand(server.Address, rconCommand);
+            _ = _rconService.RconCommand(server.Address, rconCommand);
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"{server.Address} is reserved for 2 hours!",
@@ -234,6 +453,14 @@ namespace BotHATTwaffle2.Commands
 
             var server = DatabaseUtil.GetTestServer(reservation.ServerId);
 
+            var result = await _rconService.GetRunningLevelAsync(server.Address);
+            if (result == null)
+            {
+                await ReplyAsync("I attempted to get the running level from the server, but the response did not" +
+                                 " make any sense. I have not announced for your level. Please try again in a moment.");
+                return;
+            }
+
             string mention = null;
             if (!reservation.Announced)
             {
@@ -242,21 +469,28 @@ namespace BotHATTwaffle2.Commands
                 DatabaseUtil.UpdateAnnouncedServerReservation(Context.User.Id);
             }
 
-            var result = await _playtestService.GetRunningLevelAsync(server.Address);
-
             var embed = new EmbedBuilder();
-
-            Console.WriteLine(string.Join("\n", result));
 
             //Length 3 means workshop
             if (result.Length == 3)
             {
                 embed = await new Workshop().HandleWorkshopEmbeds(Context.Message, _dataService, inputId: result[1]);
 
-                await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                   $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
-                                                                   $"\nType `>roleme Community Tester` to get this role.",
-                    embed: embed.Build());
+                if(embed != null)
+                {
+                    await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                                                                       $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                                       $"\nType `>roleme Community Tester` to get this role.",
+                        embed: embed.Build());
+                }
+                else //Workshop builder returned bad / no data. Don't send an embed.
+                {
+                    await ReplyAsync("I attempted to get the running level from the server, but the response did not" +
+                                     " make any sense. I have not announced for your level. Please try again in a moment.");
+
+                    await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
+                    return;
+                }
             }
             else
             {
@@ -292,7 +526,7 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            var levelInfo = await _playtestService.GetRunningLevelAsync(reservation.ServerId);
+            var levelInfo = await _rconService.GetRunningLevelAsync(reservation.ServerId);
             if (levelInfo.Length != 3)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
@@ -314,7 +548,7 @@ namespace BotHATTwaffle2.Commands
             switch (command.ToLower())
             {
                 case"start":
-                    var demoReply = await _dataService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord; tv_record {testInfo.DemoName}" +
+                    var demoReply = await _rconService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord; tv_record {testInfo.DemoName}" +
                                                                                            $";say {testInfo.DemoName} now recording!");
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Command sent to {testInfo.ServerAddress}", _dataService.Guild.IconUrl)
@@ -323,7 +557,7 @@ namespace BotHATTwaffle2.Commands
                     break;
 
                 case "stop":
-                    var stopReply = await _dataService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
+                    var stopReply = await _rconService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
 
                     //Download demo, don't wait.
                     _ = Task.Run(() =>
@@ -434,20 +668,36 @@ namespace BotHATTwaffle2.Commands
             {
                 if (command.Equals("kick", StringComparison.OrdinalIgnoreCase))
                 {
-                    var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
+                    var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                     await kick.KickPlaytestUser(server.Address);
                     return;
                 }
 
-                var result = await _dataService.RconCommand(server.Address, command);
-
-                if (result.Length > 1000)
-                    result = result.Substring(0, 1000) + "[OUTPUT OMITTED]";
+                await Context.Channel.TriggerTypingAsync();
+                string reply;
+                IUserMessage delayed = null;
+                var rconCommand = _rconService.RconCommand(server.Address, command);
+                var waiting = Task.Delay(4000);
+                if (rconCommand == await Task.WhenAny(rconCommand, waiting))
+                {
+                    reply = await rconCommand;
+                }
+                else
+                {
+                    delayed = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription($"⏰RCON command to `{server.Address}` is taking longer than normal...\nSit tight while I'll " +
+                                         "try a few more times.")
+                        .WithColor(new Color(165, 55, 55)).Build());
+                    reply = await rconCommand;
+                }
 
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"Command sent to {server.Address}", _dataService.Guild.IconUrl)
-                    .WithDescription($"```{result}```")
+                    .WithDescription($"```{reply}```")
                     .WithColor(new Color(55, 165, 55)).Build());
+
+                if (delayed != null)
+                    await delayed.DeleteAsync();
             }
             else
             {
@@ -545,7 +795,7 @@ namespace BotHATTwaffle2.Commands
         public async Task PlaytesterAsync()
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
-            if (user.Roles.Contains(_dataService.PlayTesterRole))
+            if (user.Roles.Any(x=>x.Id == _dataService.PlayTesterRole.Id))
             {
                 await ReplyAsync($"Sorry to see you go from playtest notifications {Context.User.Mention}!");
                 await user.RemoveRoleAsync(_dataService.PlayTesterRole);

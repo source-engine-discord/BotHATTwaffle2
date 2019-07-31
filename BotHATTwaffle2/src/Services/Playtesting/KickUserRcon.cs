@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.Services.SRCDS;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -13,14 +14,14 @@ namespace BotHATTwaffle2.Services.Playtesting
     {
         private readonly SocketCommandContext _context;
         private readonly InteractiveService _interactive;
-        private readonly DataService _dataService;
+        private readonly RconService _rconService;
         private readonly LogHandler _log;
 
-        public KickUserRcon(SocketCommandContext context, InteractiveService interactive, DataService data, LogHandler log)
+        public KickUserRcon(SocketCommandContext context, InteractiveService interactive, RconService rconService, LogHandler log)
         {
             _context = context;
             _interactive = interactive;
-            _dataService = data;
+            _rconService = rconService;
             _log = log;
         }
 
@@ -35,7 +36,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             string description = null;
 
             //Get the raw status data
-            string input = await _dataService.RconCommand(serverAddress, "status");
+            string input = await _rconService.RconCommand(serverAddress, "status");
 
             //Format the raw data into an array and do some cleanup
             var players = input.Replace('\r', '\0').Split('\n').Where(x => x.StartsWith("#")).Select(y => y.Trim('#').Trim()).ToList();
@@ -63,9 +64,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var display = await _context.Channel.SendMessageAsync(embed: embed.Build());
             var choice = await _interactive.NextMessageAsync(_context, timeout:TimeSpan.FromSeconds(20));
-            if (choice != null && !choice.Content.Equals("0"))
+            if (choice != null && !choice.Content.Equals("exit"))
             {
-                string kickMessage = await _dataService.RconCommand(serverAddress, $"kickid {choice.Content}");
+                string kickMessage = await _rconService.RconCommand(serverAddress, $"kickid {choice.Content}");
                 await choice.DeleteAsync();
 
                 embed.WithColor(new Color(55, 165, 55)).WithAuthor(kickMessage).WithDescription("");

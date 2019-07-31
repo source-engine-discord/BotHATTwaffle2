@@ -9,6 +9,8 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.SRCDS;
+using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -20,20 +22,21 @@ namespace BotHATTwaffle2.Commands
 {
     public class ModerationModule : InteractiveBase
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkGreen;
         private static readonly Dictionary<ulong, string> ServerDictionary = new Dictionary<ulong, string>();
-        private static PlaytestCommandInfo _playtestCommandInfo;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
+        private readonly LogReceiverService _logReceiverService;
         private readonly PlaytestService _playtestService;
         private readonly Random _random;
+        private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
-
+        
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
-            Random random)
+            Random random, RconService rconService, LogReceiverService logReceiverService)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -42,8 +45,106 @@ namespace BotHATTwaffle2.Commands
             _interactive = interactive;
             _reservationService = reservationService;
             _random = random;
+            _rconService = rconService;
+            _logReceiverService = logReceiverService;
         }
-        
+
+//        [Command("Test")]
+//        [Summary("Used to debug. This should not go live")]
+//        public async Task TestAsync()
+//        {
+//            await Context.Message.DeleteAsync();
+//            var msg = await ReplyAsync("Moron");
+//            DemoParser.ParseDemo();
+//            await Task.Delay(500);
+//            await msg.DeleteAsync();
+//        }
+
+        [Command("StartFeedback", RunMode = RunMode.Async)]
+        [Alias("startfb")]
+        [Summary("Starts server listening for in game feedback")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task StartServerFeedbackAsync()
+        {
+            if (_logReceiverService.EnableLog)
+            {
+                var result = _logReceiverService.EnableFeedback(_playtestService.GetPlaytestCommandInfo().DemoName);
+
+                if(result)
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Started new feedback listener")
+                        .WithDescription(
+                            $"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback in game.")
+                        .WithColor(new Color(55, 165, 55)).Build());
+                }
+                else
+                {
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Unable to start feedback listening")
+                        .WithDescription("The server is already listening for feedback.")
+                        .WithColor(new Color(165, 55, 55)).Build());
+                }
+            }
+            else
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Unable to start feedback listening")
+                    .WithDescription("This command requires that a listening session already be enabled running. Use `>startl [server]` to start a session.")
+                    .WithColor(new Color(165, 55, 55)).Build());
+            }
+        }
+
+        [Command("StartListen", RunMode = RunMode.Async)]
+        [Alias("startl")]
+        [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]
+        [Remarks("If you have been added to the Steam ID whitelist, you can use `>rcon [command]` in the server to " +
+                 "send RCON commands to it. Regular users can use `>feedback [message]` to leave feedback on the map.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task StartServerListenAsync([Summary("Server to start listening on")]
+            string server)
+        {
+            if (_logReceiverService.EnableLog)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Unable to start new listener")
+                    .WithDescription("You cannot start another log session until the existing session on " +
+                                     $"`{_logReceiverService.ActiveServer.Address}` is ended")
+                    .WithColor(new Color(55, 55, 165)).Build());
+                return;
+            }
+
+            _logReceiverService.StartLogReceiver(server);
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Started new Listener")
+                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is now listening to ingame chat.")
+                .WithColor(new Color(55, 165, 55)).Build());
+        }
+
+        [Command("StopListen", RunMode = RunMode.Async)]
+        [Alias("stopl")]
+        [Summary("Stops server listening to disallow ingame chat to call certain bot functions.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task StopServerListenAsync()
+        {
+            if (!_logReceiverService.EnableLog)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("A listener isn't started")
+                    .WithColor(new Color(55, 55, 165)).Build());
+                return;
+            }
+
+            _logReceiverService.StopLogReceiver();
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Stopped Listener")
+                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is no longer listening to ingame chat.")
+                .WithColor(new Color(165, 55, 55)).Build());
+        }
+
         [Command("Mute")]
         [Summary("Mutes a user.")]
         [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
@@ -59,7 +160,9 @@ namespace BotHATTwaffle2.Commands
             [Summary("Reason the user has been muted")] [Remainder]
             string reason)
         {
+            //Convert to total minutes, used later for mute extensions
             var duration = muteLength.TotalMinutes;
+
             //Variables used if we are extending a mute.
             double oldMuteTime = 0;
             var muteStartTime = DateTime.Now;
@@ -69,7 +172,7 @@ namespace BotHATTwaffle2.Commands
             var embed = new EmbedBuilder();
 
             //This is all for a shitpost on mods trying to mute admins
-            if (user.Roles.Contains(_dataService.AdminRole) || user.IsBot)
+            if (user.Roles.Any(x => x.Id == _dataService.AdminRole.Id) || user.IsBot)
             {
                 user = Context.User as SocketGuildUser;
                 muteLength = new TimeSpan(0, 69, 0);
@@ -113,7 +216,7 @@ namespace BotHATTwaffle2.Commands
                     //Remove old mute from job manager
                     JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
 
-                    reason = "Extended from previous mute: " + reason.Substring(reason.IndexOf(' '));
+                    reason = "Extended from previous mute:" + reason.Substring(reason.IndexOf(' '));
                 }
             }
 
@@ -137,7 +240,8 @@ namespace BotHATTwaffle2.Commands
                     await user.AddRoleAsync(_dataService.MuteRole);
 
                     JobManager.AddJob(async () => await _dataService.UnmuteUser(user.Id), s => s
-                        .WithName($"[UnmuteUser_{user.Id}]").ToRunOnceAt(DateTime.Now.Add(muteLength)));
+                        .WithName($"[UnmuteUser_{user.Id}]")
+                        .ToRunOnceAt(DateTime.Now.AddMinutes(duration + oldMuteTime)));
                 }
                 catch
                 {
@@ -170,12 +274,12 @@ namespace BotHATTwaffle2.Commands
                 await ReplyAsync(embed: embed
                     .WithAuthor($"{user.Username} Muted")
                     .WithDescription(
-                        $"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
+                        $"Muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
                     .WithColor(new Color(165, 55, 55))
                     .Build());
 
                 await _log.LogMessage(
-                    $"`{Context.User}` muted `{user}` `{user.Id}` for `{formatted.Trim().TrimEnd(',')}` because `{reason}`",
+                    $"`{Context.User}` muted `{user}` `{user.Id}`\nFor: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`",
                     color: LOG_COLOR);
 
                 try
@@ -183,13 +287,19 @@ namespace BotHATTwaffle2.Commands
                     await user.SendMessageAsync(embed: embed
                         .WithAuthor("You have been muted")
                         .WithDescription(
-                            $"`{Context.User}` muted you for `{formatted.Trim().TrimEnd(',')}` because `{reason}`")
+                            $"You have been muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
                         .WithColor(new Color(165, 55, 55))
                         .Build());
                 }
                 catch
                 {
-                    //Can't DM then
+                    //Can't DM then, send in void instead
+                    await _dataService.VoidChannel.SendMessageAsync(embed: embed
+                        .WithAuthor("You have been muted")
+                        .WithDescription(
+                            $"You have been muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
+                        .WithColor(new Color(165, 55, 55))
+                        .Build());
                 }
             }
             else
@@ -252,7 +362,7 @@ namespace BotHATTwaffle2.Commands
                 foreach (var mute in allMutes)
                 {
                     var mod = _dataService.GetSocketUser(mute.ModeratorId);
-                    string modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
+                    var modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     embed.AddField(mute.Username,
                         $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod: `{modString}`");
                 }
@@ -296,8 +406,8 @@ namespace BotHATTwaffle2.Commands
                     foreach (var mutePage in allMutes.Reverse())
                     {
                         var mod = _dataService.GetSocketUser(mutePage.ModeratorId);
-                        string modString = mod == null ? $"{mutePage.ModeratorId}" : mod.ToString();
-                        
+                        var modString = mod == null ? $"{mutePage.ModeratorId}" : mod.ToString();
+
                         fullListing += $"**{mutePage.MuteTime.ToString()}**" +
                                        $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
                                        $"\nReason: `{mutePage.Reason}`" +
@@ -324,7 +434,7 @@ namespace BotHATTwaffle2.Commands
                 foreach (var mute in allMutes.Reverse())
                 {
                     var mod = _dataService.GetSocketUser(mute.ModeratorId);
-                    string modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
+                    var modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     fullListing += $"**{mute.MuteTime.ToString()}**" +
                                    $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
                                    $"\nReason: `{mute.Reason}`" +
@@ -357,140 +467,125 @@ namespace BotHATTwaffle2.Commands
             "`u` / `unpause` - Unpauses a live test.\n" +
             "`s` / `scramble` - Scrambles teams on test server. This command will restart the test. Don't run it after running `start`\n" +
             "`k` / `kick` - Kicks a player from the playtest.\n" +
-            "`end` - Officially ends a playtest which allows community server reservations.")]
+            "`end` - Officially ends a playtest which allows community server reservations.\n" +
+            "`reset` - Resets the running flag. Really should not need to be used except edge cases.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task PlaytestAsync([Summary("Playtesting Sub-command")] string command)
         {
-            //Reload the last used playtest if the current event is null
-            if (_playtestCommandInfo == null)
-                _playtestCommandInfo = DatabaseUtil.GetPlaytestCommandInfo();
-
-
-            //Make sure we have a valid event, if not, abort.
-            if (!_calendar.GetTestEventNoUpdate().IsValid)
+            if (command.Equals("reset", StringComparison.OrdinalIgnoreCase))
             {
-                await ReplyAsync("This command requires a valid playtest event.");
+                _playtestService.ResetCommandRunningFlag();
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithDescription("The running flag has been reset.")
+                    .WithColor(55, 165, 55)
+                    .Build());
+                return;
+            }
+
+            //Not valid - abort
+            if (!_playtestService.PlaytestCommandPreCheck())
+            {
+                await ReplyAsync(embed:new EmbedBuilder()
+                    .WithDescription("There is already a playtest command running. Only 1 may be running at a time." +
+                                     " To force a reset of the running flag, use `>p reset`. This only needs to be done if there" +
+                                     "was some issue with the Discord API.\n\n" +
+                                     "Or no valid test is found.")
+                    .WithColor(165,55,55)
+                    .Build());
                 return;
             }
 
             //Setup a few variables we'll need later
-            var config = _calendar.GetTestEventNoUpdate().IsCasual
-                ? _dataService.RSettings.General.CasualConfig
-                : _dataService.RSettings.General.CompConfig;
-
+            PlaytestCommandInfo playtestCommandInfo;
             switch (command.ToLower())
             {
                 case "prestart":
                 case "pre":
+                    var preMessage = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription("⏰ Running Playtest Pre-start...").WithColor(new Color(165, 55, 55)).Build());
 
-                    //Store test information for later use. Will be written to the DB.
-                    var gameMode = _calendar.GetTestEventNoUpdate().IsCasual ? "casual" : "comp";
-                    string mentions = null;
-                    _calendar.GetTestEventNoUpdate().Creators.ForEach(x => mentions += $"{x.Mention} ");
-                    _playtestCommandInfo = new PlaytestCommandInfo
-                    {
-                        Id = 1, //Only storing 1 of these in the DB at a time, so hard code to 1.
-                        Mode = gameMode,
-                        DemoName = $"{_calendar.GetTestEventNoUpdate().StartDateTime:MM_dd_yyyy}" +
-                                   $"_{_calendar.GetTestEventNoUpdate().Title.Substring(0, _calendar.GetTestEventNoUpdate().Title.IndexOf(' '))}" +
-                                   $"_{gameMode}",
-                        WorkshopId =
-                            GeneralUtil.GetWorkshopIdFromFqdn(_calendar.GetTestEventNoUpdate().WorkshopLink.ToString()),
-                        ServerAddress = _calendar.GetTestEventNoUpdate().ServerLocation,
-                        Title = _calendar.GetTestEventNoUpdate().Title,
-                        ThumbNailImage = _calendar.GetTestEventNoUpdate().CanUseGallery
-                            ? _calendar.GetTestEventNoUpdate().GalleryImages[0]
-                            : _dataService.RSettings.General.FallbackTestImageUrl,
-                        ImageAlbum = _calendar.GetTestEventNoUpdate().ImageGallery.ToString(),
-                        CreatorMentions = mentions,
-                        StartDateTime = _calendar.GetTestEventNoUpdate().StartDateTime.Value
-                    };
+                    playtestCommandInfo = await _playtestService.PlaytestCommandPre(true);
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Pre-start playtest of {playtestCommandInfo.Title}")
+                        .WithColor(new Color(55, 55, 165))
+                        .WithDescription($"\nOn **{playtestCommandInfo.ServerAddress}**" +
+                                         $"\nWith config of **{playtestCommandInfo.Mode}**" +
+                                         $"\nWorkshop ID **{playtestCommandInfo.WorkshopId}**").Build());
 
-                    //Write to the DB so we can restore this info next boot
-                    DatabaseUtil.StorePlaytestCommandInfo(_playtestCommandInfo);
-
-                    await ReplyAsync($"Pre-start playtest of **{_playtestCommandInfo.Title}**" +
-                                     $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
-                                     $"\nWith config of **{config}**" +
-                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**");
-
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
-                    await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        $"host_workshop_map {_playtestCommandInfo.WorkshopId}");
+                    await preMessage.DeleteAsync();
                     break;
 
                 case "start":
-                    await ReplyAsync($"Start playtest of **{_playtestCommandInfo.Title}**" +
-                                     $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
-                                     $"\nWith config of **{config}**" +
-                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**" +
-                                     $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
+                    var startMessage = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription("⏰ Running Playtest Start...").WithColor(new Color(165, 55, 55)).Build());
 
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
-                    await Task.Delay(3000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        $"tv_record {_playtestCommandInfo.DemoName}; say Recording {_playtestCommandInfo.DemoName}");
-                    await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
-                    await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
-                    await Task.Delay(1000);
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        $"say Playtest of {_playtestCommandInfo.Title} is live! Be respectful and GLHF!");
+                    playtestCommandInfo = await _playtestService.PlaytestCommandStart(true);
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Start playtest of {playtestCommandInfo.Title}")
+                        .WithColor(new Color(55, 55, 165))
+                        .WithDescription($"\nOn **{playtestCommandInfo.ServerAddress}**" +
+                                         $"\nWith config of **{playtestCommandInfo.Mode}**" +
+                                         $"\nWorkshop ID **{playtestCommandInfo.WorkshopId}**" +
+                                         $"\nDemo Name **{playtestCommandInfo.DemoName}**").Build());
 
-                    await Task.Delay(3000);
-                    var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
-                    GeneralUtil.Shuffle(patreonUsers);
-                    string thanks = "";
-                    foreach (var patreonsRoleMember in patreonUsers)
-                    {
-                        thanks += $"{patreonsRoleMember.Username}, ";
-                    }
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
+                    await startMessage.DeleteAsync();
                     break;
 
                 case "post":
-                    //This is fired and forgotten. All error handling will be done in the method itself.
-                    await ReplyAsync($"Post playtest of **{_playtestCommandInfo.Title}**" +
-                                     $"\nOn **{_playtestCommandInfo.ServerAddress}**" +
-                                     $"\nWorkshop ID **{_playtestCommandInfo.WorkshopId}**" +
-                                     $"\nDemo Name **{_playtestCommandInfo.DemoName}**");
+                    var postMessage = await ReplyAsync(embed: new EmbedBuilder()
+                        .WithDescription("⏰ Running Playtest post...").WithColor(new Color(165, 55, 55)).Build());
 
-                    PlaytestPostTasks(_playtestCommandInfo);
+                    playtestCommandInfo = await _playtestService.PlaytestCommandPost(true);
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Post playtest of {playtestCommandInfo.Title}")
+                        .WithColor(new Color(55, 55, 165))
+                        .WithDescription($"\nOn **{playtestCommandInfo.ServerAddress}**" +
+                                         $"\nWorkshop ID **{playtestCommandInfo.WorkshopId}**" +
+                                         $"\nDemo Name **{playtestCommandInfo.DemoName}**").Build());
 
-                    //Test over - stop asking for player counts.
-                    JobManager.RemoveJob("[QueryPlayerCount]");
+                    await postMessage.DeleteAsync();
                     break;
 
                 case "pause":
                 case "p":
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        @"mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!");
-                    await ReplyAsync($"```Pausing playtest on {_playtestCommandInfo.ServerAddress}!```");
+                    playtestCommandInfo = await _playtestService.PlaytestcommandGenericAction(true,
+                        "mp_pause_match;say Pausing Match!;say Pausing Match!;say Pausing Match!;say Pausing Match!");
+
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Pausing Playtest On {playtestCommandInfo.ServerAddress}")
+                        .WithColor(new Color(55, 55, 165))
+                        .Build());
                     break;
 
                 case "unpause":
                 case "u":
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress,
-                        @"mp_unpause_match;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!");
-                    await ReplyAsync($"```Unpausing playtest on {_playtestCommandInfo.ServerAddress}!```");
+                    playtestCommandInfo = await _playtestService.PlaytestcommandGenericAction(true,
+                        "mp_unpause_match;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!;say Unpausing Match!");
+
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Unpausing Playtest On {playtestCommandInfo.ServerAddress}")
+                        .WithColor(new Color(55, 55, 165))
+                        .Build());
                     break;
 
                 case "scramble":
                 case "s":
-                    await _dataService.RconCommand(_playtestCommandInfo.ServerAddress, "mp_scrambleteams 1" +
-                                                                                       ";say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
-                    await ReplyAsync($"```Scrambling teams on {_playtestCommandInfo.ServerAddress}!```");
+                    playtestCommandInfo = await _playtestService.PlaytestcommandGenericAction(true,
+                        "mp_scrambleteams 1;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!;say Scrambling Teams!");
+
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Scrambling teams on {playtestCommandInfo.ServerAddress}")
+                        .WithColor(new Color(55, 55, 165))
+                        .Build());
                     break;
 
                 case "kick":
                 case "k":
-                    var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
-                    await kick.KickPlaytestUser(_playtestCommandInfo.ServerAddress);
+                    playtestCommandInfo = _playtestService.GetPlaytestCommandInfo();
+                    var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
+                    await kick.KickPlaytestUser(playtestCommandInfo.ServerAddress);
+                    _playtestService.ResetCommandRunningFlag();
                     break;
 
                 case "end":
@@ -503,49 +598,6 @@ namespace BotHATTwaffle2.Commands
                     await ReplyAsync("Invalid action, please consult the help document for this command.");
                     break;
             }
-        }
-
-        /// <summary>
-        ///     Handles post playtest tasks.
-        /// </summary>
-        /// <param name="playtestCommandInfo"></param>
-        internal async void PlaytestPostTasks(PlaytestCommandInfo playtestCommandInfo)
-        {
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress,
-                $"host_workshop_map {playtestCommandInfo.WorkshopId}");
-            await Task.Delay(15000); //Wait for map to change
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress,
-                $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0;" +
-                "say Please join the level testing voice channel for feedback!;" +
-                "say Please join the level testing voice channel for feedback!;" +
-                "say Please join the level testing voice channel for feedback!;" +
-                "say Please join the level testing voice channel for feedback!;" +
-                "say Please join the level testing voice channel for feedback!");
-
-            DownloadHandler.DownloadPlaytestDemo(playtestCommandInfo);
-
-            const string demoUrl = "http://demos.tophattwaffle.com";
-
-            var embed = new EmbedBuilder()
-                .WithAuthor($"Download playtest demo for {playtestCommandInfo.Title}", _dataService.Guild.IconUrl,
-                    demoUrl)
-                .WithThumbnailUrl(playtestCommandInfo.ThumbNailImage)
-                .WithColor(new Color(243, 128, 72))
-                .WithDescription(
-                    $"[Download Demo Here]({demoUrl}) | [Map Images]({playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
-
-            await _dataService.TestingChannel.SendMessageAsync(playtestCommandInfo.CreatorMentions,
-                embed: embed.Build());
-
-            await Task.Delay(30000);
-            var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
-            GeneralUtil.Shuffle(patreonUsers);
-            string thanks = "";
-            foreach (var patreonsRoleMember in patreonUsers)
-            {
-                thanks += $"{patreonsRoleMember.Username}, ";
-            }
-            await _dataService.RconCommand(playtestCommandInfo.ServerAddress, $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
         }
 
         [Command("Active")]
@@ -572,7 +624,7 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task CompetitiveTesterAsync([Summary("User to give role to")] SocketGuildUser user)
         {
-            if (user.Roles.Contains(_dataService.CompetitiveTesterRole))
+            if (user.Roles.Any(x => x.Id == _dataService.CompetitiveTesterRole.Id))
             {
                 await Context.Message.DeleteAsync();
                 await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
@@ -602,14 +654,14 @@ namespace BotHATTwaffle2.Commands
             await Context.Message.DeleteAsync();
 
             //Do nothing if a test is not valid.
-            if (!_calendar.GetTestEventNoUpdate().IsValid)
+            if (!_calendar.GetTestEventNoUpdate().IsValid || _calendar.GetTestEventNoUpdate().IsCasual)
             {
                 await ReplyAsync("There is no valid test that I can invite that user to.");
                 return;
             }
 
             await _log.LogMessage(
-                $"{user} has been invite to the competitive test of {_calendar.GetTestEventNoUpdate().Title} by {Context.User}");
+                $"`{user}` has been invited to the competitive test of `{_calendar.GetTestEventNoUpdate().Title}` by `{Context.User}`");
 
             try
             {
@@ -736,15 +788,47 @@ namespace BotHATTwaffle2.Commands
             //Quick kick feature
             if (command.StartsWith("kick", StringComparison.OrdinalIgnoreCase))
             {
-                var kick = new KickUserRcon(Context, _interactive, _dataService, _log);
+                var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                 await kick.KickPlaytestUser(targetServer);
                 return;
             }
 
+            if (command.Contains("exit", StringComparison.OrdinalIgnoreCase) ||
+                command.Contains("quit", StringComparison.OrdinalIgnoreCase))
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Quit and Exit not allowed!", _dataService.Guild.IconUrl)
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
+            await Context.Channel.TriggerTypingAsync();
+            string reply;
+            IUserMessage delayed = null;
+            var rconCommand = _rconService.RconCommand(targetServer, command);
+            var waiting = Task.Delay(4000);
+            if (rconCommand == await Task.WhenAny(rconCommand, waiting))
+            {
+                reply = await rconCommand;
+            }
+            else
+            {
+                delayed = await ReplyAsync(embed: new EmbedBuilder()
+                    .WithDescription(
+                        $"⏰RCON command to `{targetServer}` is taking longer than normal...\nSit tight while I'll " +
+                        "try a few more times.")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                reply = await rconCommand;
+            }
+
+
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _dataService.Guild.IconUrl)
-                .WithDescription($"```{await _dataService.RconCommand(targetServer, command)}```")
+                .WithDescription($"```{reply}```")
                 .WithColor(new Color(55, 165, 55)).Build());
+
+            if (delayed != null)
+                await delayed.DeleteAsync();
         }
 
         [Command("ClearReservation")]

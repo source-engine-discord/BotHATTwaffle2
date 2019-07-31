@@ -1,6 +1,6 @@
 ﻿namespace BotHATTwaffle2.Models.LiteDB
 {
-    class Server
+    public class Server
     {
         public int Id { get; set; }
         public string ServerId { get; set; }

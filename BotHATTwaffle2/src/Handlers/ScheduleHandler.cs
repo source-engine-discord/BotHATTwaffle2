@@ -10,9 +10,9 @@ using FluentScheduler;
 
 namespace BotHATTwaffle2.Handlers
 {
-    internal class ScheduleHandler
+    public class ScheduleHandler
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkMagenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
@@ -21,6 +21,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly Random _random;
         private readonly ReservationService _reservationService;
         private int _playtestCount = 0;
+        private bool _allowPlayingCycle = true;
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService
         , UserHandler userHandler, Random random, ReservationService reservationService)
@@ -73,9 +74,9 @@ namespace BotHATTwaffle2.Handlers
 
             //Add schedule for playtest count update, will do every few hours, and now to seed the value.
             JobManager.AddJob(UpdatePlayTestCount, s => s
-                .WithName("[PlayingUpdate]").ToRunEvery(2).Hours());
+                .WithName("[PlaytestCountUpdate]").ToRunEvery(2).Hours());
             JobManager.AddJob(UpdatePlayTestCount, s => s
-                .WithName("[PlayingUpdate]").ToRunNow());
+                .WithName("[PlaytestCountUpdateNow]").ToRunNow());
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
@@ -197,13 +198,32 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         private async Task UpdatePlaying()
         {
+            //Allow us to turn this off.
+            if (!_allowPlayingCycle)
+                return;
+
             string playing = _dataService.RSettings.Lists.Playing[_random.Next(_dataService.RSettings.Lists.Playing.Count)];
 
-            if (playing == "[TestCount]")
-                playing = $"{_playtestCount} Playtests Run";
-
+            switch (playing)
+            {
+                case "[TestCount]":
+                    playing = $"{_playtestCount} Playtests Run";
+                    break;
+                case "[CommandCount]":
+                    playing = $"{_dataService.CommandCount} Commands Run";
+                    break;
+                case "[RunTime]":
+                    playing = $"Up For: {DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}";
+                    break;
+                case "[MessageCount]":
+                    playing = $"{_dataService.MessageCount} Messages Read";
+                    break;
+            }
             await _client.SetGameAsync(playing);
         }
+
+        public void DisablePlayingUpdate() => _allowPlayingCycle = false;
+        public void EnablePlayingUpdate() => _allowPlayingCycle = true;
 
         /// <summary>
         /// Updates the number of playtest files found on the local machine.

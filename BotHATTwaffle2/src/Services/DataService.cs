@@ -2,26 +2,24 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Util;
-using Discord;
 using Discord.WebSocket;
 using Newtonsoft.Json;
-using RCONServerLib;
 
 namespace BotHATTwaffle2.Services
 {
     public class DataService
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Blue;
         private readonly DiscordSocketClient _client;
         private LogHandler _log;
 
         public DataService(DiscordSocketClient client)
         {
+            StartTime = DateTime.Now;
             _client = client;
             // Some settings are needed before the client connects (e.g. token).
             ReadConfig();
@@ -38,6 +36,10 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel TestingChannel { get; private set; }
         public SocketTextChannel CompetitiveTestingChannel { get; private set; }
         public SocketTextChannel WebhookChannel { get; private set; }
+        public SocketTextChannel AdminChannel { get; private set; }
+        public SocketTextChannel VoidChannel { get; private set; }
+        public SocketTextChannel BotChannel { get; private set; }
+        public SocketVoiceChannel LevelTestVoiceChannel { get; private set; }
 
         // Roles
         public SocketRole PlayTesterRole { get; private set; }
@@ -50,7 +52,11 @@ namespace BotHATTwaffle2.Services
         public SocketRole AdminRole { get; private set; }
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
+        public SocketRole PlaytestAdmin { get; private set; }
 
+        public DateTime StartTime;
+        public int CommandCount = 0;
+        public int MessageCount = 0;
         public bool IncludePlayerCount { get; set; }
         public string PlayerCount { get; set; }
 
@@ -128,8 +134,20 @@ namespace BotHATTwaffle2.Services
 
             Console.WriteLine($"Active Guild: {Guild?.Name}\n");
 
+            LevelTestVoiceChannel = Guild.GetVoiceChannel(RSettings.General.LevelTestingVoice);
+            Console.WriteLine($"LevelTestVoiceChannel ID:{LevelTestVoiceChannel.Id} Discovered Name:{LevelTestVoiceChannel.Name}");
+
             LogChannel = await ParseChannel(RSettings.ProgramSettings.LogChannel);
             Console.WriteLine($"LogChannel ID:{LogChannel.Id} Discovered Name:{LogChannel.Name}");
+
+            AdminChannel = await ParseChannel(RSettings.General.AdminChannel);
+            Console.WriteLine($"AdminChannel ID:{AdminChannel.Id} Discovered Name:{AdminChannel.Name}");
+
+            VoidChannel = await ParseChannel(RSettings.General.VoidChannel);
+            Console.WriteLine($"VoidChannel ID:{VoidChannel.Id} Discovered Name:{VoidChannel.Name}");
+
+            BotChannel = await ParseChannel(RSettings.General.BotChannel);
+            Console.WriteLine($"BotChannel ID:{BotChannel.Id} Discovered Name:{BotChannel.Name}");
 
             if (RSettings.ProgramSettings.Debug)
             {
@@ -201,74 +219,75 @@ namespace BotHATTwaffle2.Services
         /// <exception cref="InvalidOperationException">Thrown when a role can't be found.</exception>
         private void GetRoles()
         {
-            var guild = _client.Guilds.FirstOrDefault();
-
             Console.ForegroundColor = LOG_COLOR;
 
             if (RSettings.ProgramSettings.Debug)
             {
                 Console.WriteLine("\nSetting roles based on debug values!!!");
 
-                ModeratorRole = guild.GetRole(RSettings.DebugValues.Moderator);
+                ModeratorRole = Guild.GetRole(RSettings.DebugValues.Moderator);
                 Console.WriteLine($"Moderator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
 
-                PlayTesterRole = guild.GetRole(RSettings.DebugValues.Playtester);
+                PlayTesterRole = Guild.GetRole(RSettings.DebugValues.Playtester);
                 Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
 
-                MuteRole = guild.GetRole(RSettings.DebugValues.Muted);
+                MuteRole = Guild.GetRole(RSettings.DebugValues.Muted);
                 Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
 
-                ActiveRole = guild.GetRole(RSettings.DebugValues.Active);
+                ActiveRole = Guild.GetRole(RSettings.DebugValues.Active);
                 Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
 
-                PatreonsRole = guild.GetRole(RSettings.DebugValues.Patreons);
+                PatreonsRole = Guild.GetRole(RSettings.DebugValues.Patreons);
                 Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
 
-                CommunityTesterRole = guild.GetRole(RSettings.DebugValues.CommunityTester);
+                CommunityTesterRole = Guild.GetRole(RSettings.DebugValues.CommunityTester);
                 Console.WriteLine(
                     $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
 
-                BotsRole = guild.GetRole(RSettings.DebugValues.Bots);
+                BotsRole = Guild.GetRole(RSettings.DebugValues.Bots);
                 Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
 
-                AdminRole = guild.GetRole(RSettings.DebugValues.Admin);
+                AdminRole = Guild.GetRole(RSettings.DebugValues.Admin);
                 Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
 
-                CompetitiveTesterRole = guild.GetRole(RSettings.DebugValues.CompetitiveTester);
+                CompetitiveTesterRole = Guild.GetRole(RSettings.DebugValues.CompetitiveTester);
                 Console.WriteLine(
                     $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
             }
             else
             {
-                ModeratorRole = guild.GetRole(RSettings.UserRoles.Moderator);
+                ModeratorRole = Guild.GetRole(RSettings.UserRoles.Moderator);
                 Console.WriteLine($"\nModerator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
 
-                PlayTesterRole = guild.GetRole(RSettings.UserRoles.Playtester);
+                PlayTesterRole = Guild.GetRole(RSettings.UserRoles.Playtester);
                 Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
 
-                MuteRole = guild.GetRole(RSettings.UserRoles.Muted);
+                MuteRole = Guild.GetRole(RSettings.UserRoles.Muted);
                 Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
 
-                ActiveRole = guild.GetRole(RSettings.UserRoles.Active);
+                ActiveRole = Guild.GetRole(RSettings.UserRoles.Active);
                 Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
 
-                PatreonsRole = guild.GetRole(RSettings.UserRoles.Patreons);
+                PatreonsRole = Guild.GetRole(RSettings.UserRoles.Patreons);
                 Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
 
-                CommunityTesterRole = guild.GetRole(RSettings.UserRoles.CommunityTester);
+                CommunityTesterRole = Guild.GetRole(RSettings.UserRoles.CommunityTester);
                 Console.WriteLine(
                     $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
 
-                BotsRole = guild.GetRole(RSettings.UserRoles.Bots);
+                BotsRole = Guild.GetRole(RSettings.UserRoles.Bots);
                 Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
 
-                AdminRole = guild.GetRole(RSettings.UserRoles.Admin);
+                AdminRole = Guild.GetRole(RSettings.UserRoles.Admin);
                 Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
 
-                CompetitiveTesterRole = guild.GetRole(RSettings.UserRoles.CompetitiveTester);
+                CompetitiveTesterRole = Guild.GetRole(RSettings.UserRoles.CompetitiveTester);
                 Console.WriteLine(
                     $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
             }
+
+            PlaytestAdmin = Guild.GetRole(RSettings.UserRoles.PlaytestAdmin);
+            Console.WriteLine($"Moderator ID:{PlaytestAdmin.Id} Discovered Name:{PlaytestAdmin.Name}");
 
             Console.ResetColor();
         }
@@ -334,12 +353,22 @@ namespace BotHATTwaffle2.Services
         /// <param name="input">String containing users</param>
         /// <param name="splitChar">Char to split with</param>
         /// <returns>List of SocketUsers</returns>
-        public List<SocketUser> GetSocketUser(string input, char splitChar)
+        public List<SocketUser> GetSocketUsers(string input, char splitChar)
         {
             var users = new List<SocketUser>();
             var creators = input.Split(splitChar).Select(c => c.Trim()).ToArray();
 
-            foreach (var c in creators) users.Add(GetSocketUser(c));
+            foreach (var c in creators) users.Add(GetSocketUser(c.Trim()));
+
+            return users;
+        }
+
+        public List<SocketGuildUser> GetSocketGuildUsers(string input, char splitChar)
+        {
+            var users = new List<SocketGuildUser>();
+            var creators = input.Split(splitChar).Select(c => c.Trim()).ToArray();
+
+            foreach (var c in creators) users.Add(GetSocketGuildUser(c));
 
             return users;
         }
@@ -354,8 +383,14 @@ namespace BotHATTwaffle2.Services
             SocketGuildUser user = null;
             try
             {
-                //Check if username#1234 was provided
-                if (input.Contains('#'))
+                
+                if (input.StartsWith("<@") && input.EndsWith(">"))
+                {
+                    input = input.Replace("<@", "").Replace(">","");
+                    if (ulong.TryParse(input, out var id))
+                        user = Guild.GetUser(id);
+                }
+                else if (input.Contains('#'))//Check if username#1234 was provided
                 {
                     var split = input.Split('#');
                     ushort.TryParse(split[1], out var disc);
@@ -400,123 +435,6 @@ namespace BotHATTwaffle2.Services
             }
 
             return user;
-        }
-
-        /// <summary>
-        ///     Sends a RCON command to a playtest server.
-        /// </summary>
-        /// <param name="serverId">ID of server to send command to</param>
-        /// <param name="command">RCON Command to send</param>
-        /// <returns></returns>
-        public async Task<string> RconCommand(string serverId, string command)
-        {
-            string reply = null;
-
-            var server = DatabaseUtil.GetTestServer(serverId);
-
-            if (server == null)
-                return null;
-
-            IPHostEntry iPHostEntry = null;
-            try
-            {
-                iPHostEntry = Dns.GetHostEntry(server.Address);
-
-                if (RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Server Address: {iPHostEntry.AddressList.FirstOrDefault()}", false,
-                        color: LOG_COLOR);
-            }
-            catch
-            {
-                //No address
-            }
-
-            var retryCount = 0;
-            var client = new RemoteConClient();
-
-            client.Connect(iPHostEntry.AddressList.FirstOrDefault().ToString(), 27015);
-
-            //Delay until the client is connected, time out after 20 tries
-            while (!client.Authenticated && client.Connected && retryCount < 20)
-            {
-                await Task.Delay(50);
-                client.Authenticate(server.RconPassword);
-                retryCount++;
-
-                if (RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Waiting for authentication from rcon server, tried: {retryCount} time.",
-                        false, color: LOG_COLOR);
-            }
-
-            //Are we connected and authenticated?
-            if (client.Connected && client.Authenticated)
-            {
-                //Send command and and store the server's response in reply.
-                //However for some reason it takes a while for the server to reply
-                //As a result we will wait for a proper reply below.
-                client.SendCommand(command, result => { reply = result; });
-
-                //Ignore logging status requests
-                if(command != "status")
-                    await _log.LogMessage($"Sending RCON command: `{command}` To server: `{server.Address}`", true,
-                    color: LOG_COLOR);
-
-                retryCount = 0;
-
-                //Delay until we have a proper reply from the server.
-                while (reply == null && retryCount < 20)
-                {
-                    await Task.Delay(50);
-                    retryCount++;
-
-                    if (RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Waiting for string from rcon server, tried: {retryCount} time.", false,
-                            color: LOG_COLOR);
-                }
-
-                client.Disconnect();
-            }
-            else
-            {
-                reply = $"Unable to connect or authenticate to RCON server with the ID of {serverId}.";
-            }
-
-            var finalReply = FormatRconServerReply(reply);
-
-            if (string.IsNullOrWhiteSpace(finalReply))
-                return $"{command} was sent, but provided no reply.";
-
-            return finalReply;
-        }
-
-        private string FormatRconServerReply(string input)
-        {
-            if (input == null)
-                return "No response from server, but the command may still have been sent.";
-
-            var replyArray = input.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
-            input = string.Join("\n", replyArray.Where(x => !x.Trim().StartsWith("L ")));
-
-            return input;
-        }
-
-        /// <summary>
-        /// Gets status from server, then sets a parameter containing the player count of the server.
-        /// </summary>
-        /// <param name="serverId">SeverId to get status from</param>
-        /// <returns></returns>
-        public async Task GetPlayCountFromServer(string serverId)
-        {
-            var returned = await RconCommand(serverId, "status");
-            var replyArray = returned.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
-
-            //Only get the line with player count
-            var results = replyArray.Where(l => l.StartsWith("players"));
-
-            //Remove extra information from string
-            var formatted = results.FirstOrDefault()?.Substring(10);
-
-            PlayerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
         }
 
         /// <summary>

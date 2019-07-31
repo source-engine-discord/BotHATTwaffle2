@@ -51,14 +51,18 @@ namespace BotHATTwaffle2.Commands
                 bool tick = true;
                 foreach (var role in _dataService.RSettings.Lists.Roles)
                 {
+                    string r = role;
+                    if(!Context.IsPrivate)
+                        r = _dataService.Guild.Roles.FirstOrDefault(x => x.Name.Equals(role, StringComparison.OrdinalIgnoreCase))?.Mention;
+
                     if (tick)
                     {
-                        d1 += $"{role}\n";
+                        d1 += $"{r}\n";
                         tick = false;
                     }
                     else
                     {
-                        d2 += $"{role}\n";
+                        d2 += $"{r}\n";
                         tick = true;
                     }
                 }
@@ -73,6 +77,8 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+
+            roles = roles.Replace("@", "");
             var roleNames = new List<string>();
 
             foreach (var role in _dataService.RSettings.Lists.Roles)
@@ -104,7 +110,7 @@ namespace BotHATTwaffle2.Commands
 
             // Updates roles.
             foreach (var role in rolesValid)
-                if (user.Roles.Contains(role))
+                if (user.Roles.Any(x=>x.Id == role.Id))
                 {
                     await user.RemoveRoleAsync(role);
                     rolesRemoved.Add(role);

@@ -49,7 +49,7 @@ namespace BotHATTwaffle2.Commands
             };
 
             // Sorts modules alphabetically and adds a field for each one.
-            foreach (var module in _commands.Modules.OrderBy(m => m.Name))
+            foreach (var module in _commands.Modules.OrderBy(m => m.Commands.Count).Reverse())
                 _help.AddModuleField(module, ref embed);
 
             // Replies normally if a direct message fails.
@@ -152,7 +152,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "About Ido",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Url = "https://www.tophattwaffle.com/",
                 ThumbnailUrl = _client.CurrentUser.GetAvatarUrl(),
@@ -180,7 +180,11 @@ namespace BotHATTwaffle2.Commands
                 "[LiteDB](https://www.litedb.org/)\n" +
                 "[Imgur.API](https://github.com/DamienDennehy/Imgur.API)\n" +
                 "[FluentScheduler](https://github.com/fluentscheduler/FluentScheduler)\n" +
-                "[Source RCON Library](https://github.com/Subtixx/source-rcon-library)", true);
+                "[CoreRCON](https://github.com/ScottKaye/CoreRCON)\n" +
+                "[FluentFTP](https://github.com/robinrodricks/FluentFTP)\n" +
+                "[HtmlAgilityPack](https://html-agility-pack.net/)\n" +
+                "[Google APIs](https://github.com/googleapis/google-api-dotnet-client)\n" +
+                "[SSHNet](https://github.com/JohnTheGr8/Renci.SshNet.Async)", true);
 
             embed.WithFooter("Build date");
             embed.WithTimestamp(buildDate);

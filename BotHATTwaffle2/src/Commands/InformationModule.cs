@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Web;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.YouTube;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -191,7 +192,7 @@ namespace BotHATTwaffle2.Commands
 
             // Build the embed based on results from GET request
             var informationEmbed = new EmbedBuilder()
-                .WithAuthor($"Valve Developer Community Wiki", _client.Guilds.FirstOrDefault()?.IconUrl, "https://developer.valvesoftware.com/wiki/Main_Page")
+                .WithAuthor($"Valve Developer Community Wiki", _dataService.Guild.IconUrl, "https://developer.valvesoftware.com/wiki/Main_Page")
                 .WithImageUrl("https://developer.valvesoftware.com/w/skins/valve/images-valve/logo.png")
                 .WithColor(new Color(71, 126, 159))
                 .WithFooter("This search is limited to the first 5 results");
@@ -329,6 +330,20 @@ namespace BotHATTwaffle2.Commands
             }
 
             await ReplyAsync(embed:embed.Build());
+        }
+
+        [Command("TanookiIRL", RunMode = RunMode.Async)]
+        [Summary("Displays Tanooki looking at stuff!")]
+        [Alias("TanookiLooksAtThings")]
+        public async Task TanookiLookAsync()
+        {
+            var embed = new EmbedBuilder
+            {
+                ImageUrl = GeneralUtil.GetRandomImgFromUrl("https://content.tophattwaffle.com/BotHATTwaffle/kimjongillookingatthings/"),
+                Color = new Color(138, 43, 226)
+            };
+
+            await ReplyAsync(string.Empty, false, embed.Build());
         }
     }
 }

@@ -18,6 +18,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class RequestBuilder
     {
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Red;
+
         //The values that are used by the wizard to build the test. Also used for editing the event.
         private readonly string[] _arrayValues =
         {
@@ -29,18 +31,20 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly SocketCommandContext _context;
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
+        private readonly bool _isDms;
         private readonly LogHandler _log;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
+        private readonly PlaytestService _playtestService;
 
         //Help text used for the wizard / Updating information
         private readonly string[] _wizardText =
         {
-            "Enter the desired time for the test in the __**CT timezone**__. Ideal times are between `12:00-18:00 CT`. Required format: `MM/DD/YYYY HH:MM`\n" +
+            "Enter the desired time for the test in the `CT timezone`. Ideal times are between `12:00-18:00 CT`. Required format: `MM/DD/YYYY HH:MM`\n" +
             "Example: `2/17/2019 14:00`",
             "Enter email addresses of the creators in a comma separated format.\n" +
             "Example: `tophattwaffle@gmail.com, doug@tophattwaffle.com`",
             "Enter the map name.\n" +
             "Example: `Facade 2`",
+            "To add yourself as the creator, mention yourself.\n" +
             "Please provide creators in a comma separated list.\n <https://support.discordapp.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->\n" +
             "Example: `111939018500890624, 560667510580576266`",
             "Please provide the imgur album containing your level images.\n" +
@@ -64,23 +68,23 @@ namespace BotHATTwaffle2.Services.Playtesting
         private IUserMessage _embedMessage;
 
         private IUserMessage _instructionsMessage;
-        private readonly bool _isDms;
+
+        private IEnumerable<PlaytestRequest> _otherRequests;
         private bool _requireAbort;
+        private Events _scheduledTests;
         private PlaytestRequest _testRequest;
         private SocketMessage _userMessage;
 
-        private IEnumerable<PlaytestRequest> _otherRequests;
-        private Events _scheduledTests;
-
         public RequestBuilder(SocketCommandContext context, InteractiveService interactive, DataService data,
             LogHandler log,
-            GoogleCalendar calendar)
+            GoogleCalendar calendar, PlaytestService playtestService)
         {
             _context = context;
             _interactive = interactive;
             _dataService = data;
             _log = log;
             _calendar = calendar;
+            _playtestService = playtestService;
 
             //Make the test object
             _testRequest = new PlaytestRequest();
@@ -91,7 +95,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Entry point for moderation staff to work with playtest requests.
+        ///     Entry point for moderation staff to work with playtest requests.
         /// </summary>
         /// <param name="display">The embed message to attach to for displaying updates</param>
         /// <returns></returns>
@@ -104,16 +108,16 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (playtestRequests.Count == 0)
                 return;
 
-            await _embedMessage.ModifyAsync(x=>x.Content = "Type `exit` to abort at any time.");
+            await _embedMessage.ModifyAsync(x => x.Content = "Type `exit` to abort at any time.");
             _instructionsMessage = await _context.Channel.SendMessageAsync("Type the ID of the playtest to schedule.");
-            
+
             //Finds the correct playtest request to work with.
-            int id = 0;
+            var id = 0;
             while (true)
             {
                 _userMessage = await _interactive.NextMessageAsync(_context);
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -133,41 +137,90 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Allows moderator to update or delete a playtest request. If confirmed, the event is added to the calendar.
+        ///     Allows moderator to update or delete a playtest request. If confirmed, the event is added to the calendar.
         /// </summary>
         /// <returns></returns>
         private async Task ConfirmSchedule()
         {
             while (true)
             {
+                //Variables used later.
+                int index = -1;
+                bool isValid = false;
+
                 await Display(
                     "Type the ID of the field you want to edit or type `Schedule` to schedule the playtest.\n" +
                     "Type `delete` to delete this request completely.");
-                _userMessage = await _interactive.NextMessageAsync(_context);
-                if (_userMessage.Content.Equals("schedule", StringComparison.OrdinalIgnoreCase))
-                    break;
 
-                if (_userMessage.Content == null ||
+                //User's input
+                _userMessage = await _interactive.NextMessageAsync(_context);
+
+                //We want to schedule the event
+                if (_userMessage.Content.Equals("schedule", StringComparison.OrdinalIgnoreCase))
+                {
+                    //Server cannot be none when scheduling. Require it to be valid.
+                    if (_testRequest.Preferredserver == "No preference")
+                    {
+                        index = 10;
+                        isValid = true;
+                    }
+                    else
+                        break;
+                }
+
+                //Exiting
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
                     return;
                 }
 
-                if (int.TryParse(_userMessage.Content, out var index) && index >= 0 && index <= 10)
-                {
-                    await Display(_wizardText[index]);
-                    _userMessage = await _interactive.NextMessageAsync(_context);
-                    await ParseTestInformation(_arrayValues[index], _userMessage.Content);
-                }
-
+                //Deleting test
                 if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
                 {
                     DatabaseUtil.RemovePlaytestRequest(_testRequest);
-                    await _embedMessage.ModifyAsync(x=>x.Embed = RebuildEmbed().WithColor(25,25,25).Build());
+                    await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
                     await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
                     await _userMessage.DeleteAsync();
                     return;
+                }
+
+                //Get the relevant index from the user message only if we aren't getting here from a forced server schedule.
+                if(!isValid)
+                    isValid = int.TryParse(_userMessage.Content, out index);
+                
+                //Valid number, and between the valid indexes?
+                if (isValid && index >= 0 && index <= 10)
+                {
+                    //Validate based on the index.
+                    await Display(_wizardText[index]);
+                    _userMessage = await _interactive.NextMessageAsync(_context);
+                    if (_userMessage == null ||
+                        _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await CancelRequest();
+                        return;
+                    }
+
+                    //Loop until valid, or allow an exit.
+                    while (!await ParseTestInformation(_arrayValues[index], _userMessage.Content))
+                    {
+                        //Invalid, let's try again.
+                        _userMessage = await _interactive.NextMessageAsync(_context);
+
+                        if (_userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            break;
+                        }
+
+                        //No reply - fully exit
+                        if (_userMessage == null)
+                        {
+                            await CancelRequest();
+                            return;
+                        }
+                    }
                 }
             }
 
@@ -189,7 +242,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 //Workshop embed.
                 var ws = new Workshop();
-                var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService, $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
+                var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService,
+                    $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
                 await _dataService.TestingChannel.SendMessageAsync(
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)",
@@ -198,7 +252,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //Remove the test from the DB.
                 DatabaseUtil.RemovePlaytestRequest(_testRequest);
 
-                await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest.ToString()}",color: LOG_COLOR);
+                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
 
                 return;
             }
@@ -206,15 +260,16 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Failed to add to calendar.
             finalEmbed.WithColor(new Color(20, 20, 20));
             await _embedMessage.ModifyAsync(x => x.Embed = finalEmbed.Build());
-            await _instructionsMessage.ModifyAsync(x => x.Content = "An error occured working with the Google APIs, consult the logs.\n" +
-            "The playtest event may still have been created.");
+            await _instructionsMessage.ModifyAsync(x => x.Content =
+                "An error occured working with the Google APIs, consult the logs.\n" +
+                "The playtest event may still have been created.");
         }
 
         /// <summary>
-        /// Used to confirm if a user wants to submit their playtest request, or make further changes.
+        ///     Used to confirm if a user wants to submit their playtest request, or make further changes.
         /// </summary>
         /// <returns></returns>
-        private async Task ConfirmTest()
+        private async Task ConfirmRequest()
         {
             while (true)
             {
@@ -224,7 +279,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_userMessage.Content.Equals("submit", StringComparison.OrdinalIgnoreCase))
                     break;
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -244,12 +299,20 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Attempt to store request in the DB
             if (DatabaseUtil.AddPlaytestRequests(_testRequest))
             {
-                await _instructionsMessage.ModifyAsync(x => x.Content = "Request Submitted!");
+                await _instructionsMessage.ModifyAsync(x =>
+                    x.Content =
+                        $"Request Submitted! If you have any feedback or suggestions of the scheduling process, please send {_dataService.AlertUser} a message!");
                 await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(240, 240, 240).Build());
 
                 //Give them the quick request if they want to re-test.
                 await _context.Channel.SendMessageAsync(
                     $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
+
+                var schedule = await _playtestService.GetUpcomingEvents(true, false);
+
+                await _dataService.AdminChannel.SendMessageAsync(
+                    $"{_dataService.PlaytestAdmin.Mention} a new playtest request has been submitted!",
+                    embed: schedule.Build());
 
                 //Users to mention.
                 string mentions = null;
@@ -262,7 +325,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL)))
                     .Build());
 
-                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest.ToString()}", color: LOG_COLOR);
+                await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest}", color: LOG_COLOR);
             }
             else
             {
@@ -276,7 +339,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Validates a specific playtest element as valid.
+        ///     Validates a specific playtest element as valid.
         /// </summary>
         /// <param name="type">Type of data to validate</param>
         /// <param name="data">Data to validate</param>
@@ -297,7 +360,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 data = _userMessage.Content;
 
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -307,7 +370,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Entry point for users requesting a playtest using interactive mode.
+        ///     Entry point for users requesting a playtest using interactive mode.
         /// </summary>
         /// <returns></returns>
         public async Task BuildPlaytestRequestWizard()
@@ -315,10 +378,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Make sure users have at least been to the website to consume the playtest requirements.
             while (true)
             {
-                await Display("Please refer to the above message to see current tests in the queue, and currently scheduled tests." +
-                              " To confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
+                await Display(
+                    "Please refer to the above message to see current tests in the queue, and currently scheduled tests." +
+                    " To confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -326,7 +390,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
 
                 //They got the message correct!
-                if (_userMessage.Content.Equals("I have read and understand the playtesting requirements", StringComparison.OrdinalIgnoreCase))
+                if (_userMessage.Content.Equals("I have read and understand the playtesting requirements",
+                    StringComparison.OrdinalIgnoreCase))
                     break;
             }
 
@@ -336,7 +401,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 await Display(_wizardText[i]);
                 _userMessage = await _interactive.NextMessageAsync(_context);
-                if (_userMessage.Content == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -348,7 +413,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     //Invalid, let's try again.
                     _userMessage = await _interactive.NextMessageAsync(_context);
 
-                    if (_userMessage.Content == null ||
+                    if (_userMessage == null ||
                         _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                     {
                         await CancelRequest();
@@ -358,11 +423,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Everything is valid - move onto confirmation
-            await ConfirmTest();
+            await ConfirmRequest();
         }
 
         /// <summary>
-        /// Entry point for someone submitting a playtest request from the bulk request template
+        ///     Entry point for someone submitting a playtest request from the bulk request template
         /// </summary>
         /// <param name="input">Prebuilt template containing all playtest information</param>
         /// <returns></returns>
@@ -376,11 +441,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Move onto confirmation
-            await ConfirmTest();
+            await ConfirmRequest();
         }
 
         /// <summary>
-        /// Updates the instructions and display embed to reflect the current state of the playtest request.
+        ///     Updates the instructions and display embed to reflect the current state of the playtest request.
         /// </summary>
         /// <param name="instructions">Instructions to display to the user</param>
         /// <returns></returns>
@@ -403,7 +468,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Rebuilds the playtest embed with the most up to date information.
+        ///     Rebuilds the playtest embed with the most up to date information.
         /// </summary>
         /// <returns>EmbedBuilder object containing all relevant information</returns>
         private EmbedBuilder RebuildEmbed()
@@ -472,7 +537,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_scheduledTests != null && _scheduledTests.Items.Count > 0)
                 foreach (var item in _scheduledTests.Items)
                     if (item.Summary.Contains("unavailable", StringComparison.OrdinalIgnoreCase))
-                        conflicts += "**Reason:** `TopHATTwaffle is Unavailable`\n";
+                        conflicts += $"**Reason:** `{item.Summary.Replace(" - Click for details","")}`\n";
                     else
                         conflicts +=
                             $"**Map:** `{item.Summary}`\n**Test Date:** `{item.Start.DateTime}`\n**Status:** `Scheduled`";
@@ -487,18 +552,22 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Cancels the request. Does some basic cleanup tasks.
+        ///     Cancels the request. Does some basic cleanup tasks.
         /// </summary>
         /// <returns></returns>
         private async Task CancelRequest()
         {
-            await _context.Channel.SendMessageAsync("Request cancelled!");
+            if(_userMessage != null)
+                await _context.Channel.SendMessageAsync("Request cancelled!");
+            else
+                await _context.Channel.SendMessageAsync("Interactive builder timed out!");
+
             await _embedMessage.DeleteAsync();
             await _instructionsMessage.DeleteAsync();
         }
 
         /// <summary>
-        /// Parses, and validates information before it is stored in a playtest request object.
+        ///     Parses, and validates information before it is stored in a playtest request object.
         /// </summary>
         /// <param name="type">Type of data to parse</param>
         /// <param name="data">Data to parse</param>
@@ -517,6 +586,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _dateChecked = false;
                         return true;
                     }
+
                     await Display($"Unable to parse DateTime.\nYou provided `{data}`\n" + _wizardText[0]);
                     return false;
 
@@ -538,6 +608,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                           _wizardText[1]);
                             return false;
                         }
+
                     return true;
 
                 case "mapname":
@@ -565,6 +636,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                             return false;
                         }
                     }
+
                     return true;
 
                 case "imgur":
@@ -574,6 +646,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                       $"You provided `{data}`\n" + _wizardText[4]);
                         return false;
                     }
+
                     _testRequest.ImgurAlbum = data;
                     return true;
 
@@ -583,6 +656,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         _testRequest.WorkshopURL = data;
                         return true;
                     }
+
                     await Display("Invalid Steam Workshop URL!\n" +
                                   $"You provided `{data}`\n" + _wizardText[5]);
                     return false;
@@ -605,6 +679,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                         return true;
                     }
+
                     await Display("Unable to parse number of spawns\n" +
                                   $"You provided `{data}`\n" + _wizardText[8]);
                     return false;
@@ -623,10 +698,11 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                         return true;
                     }
+
                     var servers = DatabaseUtil.GetAllTestServers();
                     await Display("Unable to to find a valid server\n" +
                                   $"You provided `{data}`\n" +
-                                  "Please provide a valid server id. Possible servers are:\n" +
+                                  "Please provide a valid server id. Type `None` for no preference. Possible servers are:\n" +
                                   $"`{string.Join("\n", servers.Select(x => x.ServerId).ToArray())}`");
                     return false;
 

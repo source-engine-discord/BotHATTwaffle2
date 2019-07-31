@@ -13,7 +13,7 @@ namespace BotHATTwaffle2.Handlers
 {
     class DownloadHandler
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static LogHandler _log;
         private static DataService _dataService;
 

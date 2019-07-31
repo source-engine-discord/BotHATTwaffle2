@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Services;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -13,10 +14,12 @@ namespace BotHATTwaffle2.Commands
     public class ToolsModule : ModuleBase<SocketCommandContext>
     {
         private readonly DiscordSocketClient _client;
+        private readonly DataService _dataService;
 
-        public ToolsModule(DiscordSocketClient client)
+        public ToolsModule(DiscordSocketClient client, DataService dataService)
         {
             _client = client;
+            _dataService = dataService;
         }
 
         [Command("VTFEdit")]
@@ -29,7 +32,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download VTFEdit",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://www.tophattwaffle.com/downloads/vtfedit/",
@@ -53,7 +56,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download GCFScape",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://www.tophattwaffle.com/downloads/gcfscape/",
@@ -76,7 +79,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download Crowbar",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://steamcommunity.com/groups/CrowbarTool",
@@ -100,7 +103,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download VMT Editor",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://gira-x.github.io/VMT-Editor/",
@@ -123,7 +126,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download VIDE",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://www.tophattwaffle.com/downloads/vide/",
@@ -147,7 +150,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download CompilePal",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://compilepal.ruar.ai//",
@@ -169,7 +172,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Check out Wall Worm",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://dev.wallworm.com/",
@@ -192,7 +195,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download BSPSource",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://www.tophattwaffle.com/downloads/bspsource/",
@@ -216,7 +219,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Download Terri's Auto Radar",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "https://github.com/Terri00/CS-GO-Auto-Radar/blob/tavr/README.md",
@@ -224,6 +227,29 @@ namespace BotHATTwaffle2.Commands
                 Color = new Color(50, 50, 50),
                 Description = "Automatically make a radar with every compile of a map you do. Specify the layout in " +
                               "hammer by adding brushes to a visgroup named 'tar_layout', and Auto Radar will do the rest."
+            };
+
+            await ReplyAsync(string.Empty, false, embed.Build());
+        }
+
+        [Command("BlenderSourceTools")]
+        [Summary("Provides a download link to the latest version of Blender Source Tools.")]
+        [Alias("bst")]
+        public async Task BstAsync()
+        {
+            var embed = new EmbedBuilder
+            {
+                Author = new EmbedAuthorBuilder
+                {
+                    Name = "Download Blender Source Tools",
+                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                },
+                Title = "Click Here",
+                Url = "https://github.com/Artfunkel/BlenderSourceTools",
+                ThumbnailUrl = "https://www.blendswap.com/files/images/2017/07/23/Blend/89002/dffa3371bf3bd129701856cef1d37ed1.jpg",
+                Color = new Color(50, 50, 50),
+                Description = "Blender Source Tools allow Blender to import and export Studiomdl Data and DMX model files,  " +
+                              "as well as automatically generating .qc files."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -239,7 +265,7 @@ namespace BotHATTwaffle2.Commands
                 Author = new EmbedAuthorBuilder
                 {
                     Name = "Interlopers Compile Log Checker",
-                    IconUrl = _client.Guilds.FirstOrDefault()?.IconUrl
+                    IconUrl = _dataService.Guild.IconUrl
                 },
                 Title = "Click Here",
                 Url = "http://www.interlopers.net/errors",

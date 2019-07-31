@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.TypeReader;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -19,8 +20,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
-        private readonly Workshop _workshop = new Workshop();
-
+        
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)
         {
@@ -58,12 +58,16 @@ namespace BotHATTwaffle2.Handlers
             var message = messageParam as SocketUserMessage;
             if (message == null) return;
 
+            _dataService.MessageCount++;
+
             // Create a number to track where the prefix ends and the command begins
             var argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
             if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
-                  message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
+                  message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
+                  message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
+                  message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos, StringComparison.OrdinalIgnoreCase)) ||
                 message.Author.IsBot)
                 {
                     //Fire and forget listening on the message.
@@ -85,7 +89,10 @@ namespace BotHATTwaffle2.Handlers
                 _service);
 
             if (result.Error is null || result.Error == CommandError.UnknownCommand)
+            {
+                _dataService.CommandCount++;
                 return; // Ignores successful executions and unknown commands.
+            }
 
             var logMessage =
                 $"Command: {message}\nInvoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
@@ -173,10 +180,11 @@ namespace BotHATTwaffle2.Handlers
             if (message.Author.IsBot) return;
 
             // Embed Steam workshop links
-            if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/?id=")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
+            if ((message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/")) || (message.Content.Contains("://steamcommunity.com/workshop/filedetails/")))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                await _workshop.SendWorkshopEmbed(message, _dataService);
+                Workshop workshop = new Workshop();
+                await workshop.SendWorkshopEmbed(message, _dataService);
                 return;
             }
 
@@ -209,6 +217,23 @@ namespace BotHATTwaffle2.Handlers
                 return;
             }
 
+            var converted = UnitConverter.AutoConversion(message.Content);
+            if (converted.Count > 0)
+            {
+                string formatted = null;
+                int counter = 0;
+                foreach (var c in converted)
+                {
+                    formatted += $"`{c.Key.ToLower()}` = `{c.Value}` | ";
+                    counter++;
+
+                    if (counter > 5)
+                        break;
+                }
+                await message.Channel.SendMessageAsync(formatted.TrimEnd('|', ' '));
+            }
+
+
             // Methods for building the embeds that the if statements caught above
             async Task PlaytestRequest()
             {
@@ -219,9 +244,9 @@ namespace BotHATTwaffle2.Handlers
                 //Get the creator
                 var creator = _dataService.GetSocketUser(input[1]);
                 string creatorMention = creator != null ? creator.Mention : input[1];
-
+                Workshop workshop = new Workshop();
                 await _dataService.TestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
-                    (await _workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
+                    (await workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
                     .Build());
             }
 

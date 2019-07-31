@@ -19,10 +19,6 @@ namespace BotHATTwaffle2.Services.Steam
     public class Workshop
     {
         private static RootWorkshop workshopJsonGameData;
-        public Workshop()
-        {
-            EnsureGameListCache();
-        }
 
         private bool EnsureGameListCache()
         {
@@ -73,16 +69,35 @@ namespace BotHATTwaffle2.Services.Steam
                     kvp1,kvp2
                 });
 
-                // Send the actual post request
-                clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
-                var resultItem = await clientItem.PostAsync("", contentItem);
-                string resultContentItem = await resultItem.Content.ReadAsStringAsync();
+                string resultContentItem;
+                try
+                {
+                    // Send the actual post request
+                    clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
+                    var resultItem = await clientItem.PostAsync("", contentItem);
+                    resultContentItem = await resultItem.Content.ReadAsStringAsync();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return null;
+                }
 
                 //Check if response is empty
                 if (resultContentItem == "{}") return null;
-
+                RootWorkshop workshopJsonItem;
                 // Build workshop item embed, and set up author and game data embeds here for scoping reasons
-                RootWorkshop workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
+                try
+                {
+                    workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
+                }
+                catch (Exception e)
+                {
+                    //Something happened getting the response from Steam. We got a response but it wasn't valid?
+                    Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultContentItem);
+                    Console.WriteLine(e);
+                    return null;
+                }
                 RootWorkshop workshopJsonAuthor;
 
                 // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us

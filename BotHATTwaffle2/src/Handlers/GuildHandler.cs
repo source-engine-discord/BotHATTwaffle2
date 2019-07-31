@@ -8,7 +8,7 @@ namespace BotHATTwaffle2.Handlers
 {
     internal class GuildHandler
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkGreen;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkMagenta;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;

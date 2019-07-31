@@ -7,7 +7,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class AnnouncementMessage
     {
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Magenta;
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
         private static int _lastImageIndex;
         private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
@@ -92,8 +92,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             var pst = TimeZoneInfo
                 .ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"))
                 .ToString("ddd HH:mm");
-            var gmt = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"))
-                .ToString("ddd HH:mm");
+            //No more GMT, replaced by UTC
+//            var gmt = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"))
+//                .ToString("ddd HH:mm");
 
             //Figure out how far away from start we are
             string countdownString = null;
@@ -129,8 +130,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play. 15 minutes before start time, you can use the following to check the level out in a sandbox server:*\n" +
-                                          $"`connect {_calendar.GetTestEventNoUpdate().CompCasualServer}; password {_dataService.RSettings.General.CasualPassword}`";
+                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play.*";
                 footer = "Connection info hidden due to competitive test";
             }
 
@@ -148,7 +148,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             playtestEmbed.AddField("Moderator",
                 $"[{testEvent.Moderator.Username}](https://discordapp.com/users/{testEvent.Moderator.Id})", true);
 
-            if (_dataService.IncludePlayerCount)
+            //Make sure player count isn't null. It may be null if RCON is failing for some reason.
+            if (_dataService.IncludePlayerCount && _dataService.PlayerCount != null)
             {
                 playtestEmbed.AddField("Players Connected", _dataService.PlayerCount, true);
             }
@@ -172,7 +173,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 playtestEmbed.ImageUrl = embedImageUrl;
                 playtestEmbed.ThumbnailUrl = thumbnailUrl;
                 playtestEmbed.AddField("When",
-                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {gmt} GMT");
+                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {utcTime} UTC");
             }
 
             playtestEmbed.AddField("Information",information);

@@ -4,7 +4,9 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
+using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.YouTube;
+using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -26,8 +28,14 @@ namespace BotHATTwaffle2
         {
             Console.Title = "Bot Ido";
 
+            //Always download users to make sure we can always get them
+            var config = new DiscordSocketConfig
+            {
+                AlwaysDownloadUsers = true
+            };
+
             // Dependency injection. All objects use constructor injection.
-            _client = new DiscordSocketClient();
+            _client = new DiscordSocketClient(config);
             _commands = new CommandService();
             _services = new ServiceCollection()
                 .AddSingleton(_client)
@@ -43,6 +51,9 @@ namespace BotHATTwaffle2
                 .AddSingleton<YouTube>()
                 .AddSingleton<ReservationService>()
                 .AddSingleton<PlaytestService>()
+                .AddSingleton<RconService>()
+                .AddSingleton<LogReceiverService>()
+                .AddSingleton<VoiceChannelHandler>()
                 .AddSingleton<IHelpService, HelpService>()
                 .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(5)))
                 .BuildServiceProvider();
@@ -53,6 +64,7 @@ namespace BotHATTwaffle2
             _services.GetRequiredService<ScheduleHandler>();
             await _services.GetRequiredService<CommandHandler>().InstallCommandsAsync();
             _services.GetRequiredService<UserHandler>();
+            _services.GetRequiredService<VoiceChannelHandler>();
 
             //Google APIs
             _services.GetRequiredService<GoogleCalendar>();
@@ -72,7 +84,8 @@ namespace BotHATTwaffle2
             //Set handlers for static classes
             DatabaseUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
             DownloadHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
-            GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
+            GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>(), _services.GetRequiredService<Random>());
+            DemoParser.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
 
             await _client.StartAsync();
 
