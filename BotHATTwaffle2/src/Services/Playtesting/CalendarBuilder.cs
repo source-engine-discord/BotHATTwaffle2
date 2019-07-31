@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using SixLabors.Fonts;
 using Google.Apis.Calendar.v3.Data;
 using System.IO;
+using System.Numerics;
 using Discord.Commands;
 
 namespace BotHATTwaffle2.Services.Playtesting
@@ -18,25 +19,23 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             // Gonna just yeet out of here if there are no playtests
             if (calPlaytestEvents.Items.Count == 0) return;
-
-
+            
 
             // Here's a bunch of stuff you can easily change
             // WARNING: Take caution before modifying width and/or height, as font scaling has not been implemented
             int width = 1372;
             int height = 1029;
-            Rgba32 dateColor = Rgba32.Black;
-            Rgba32 playtestTitleColor = Rgba32.GhostWhite;
-            Rgba32 playtestTimeColor = Rgba32.Black;
-            Rgba32 backgroundColor = new Rgba32(.21176f, .22353f, .24706f); // This is Discord's dark theme's exact background color
-            Rgba32 lineColor = Rgba32.Black;
+            Rgba32 dateColor = new Rgba32(142, 146, 151);
+            Rgba32 playtestTitleColor = new Rgba32(255,255,255);
+            Rgba32 playtestTimeColor = new Rgba32(142, 146, 151);
+            Rgba32 backgroundColor = new Rgba32(47, 49, 54);
+            Rgba32 lineColor = new Rgba32(32, 34, 37);
+            Rgba32 todayDateColor = new Rgba32(255, 161, 99);
             string playtestDateFontName = "Arial";
             string playtestMapFontName = "Arial";
             string playtestTimeFontName = "Arial";
             // Modifying anything besides these variables may cause instability, so be extremely cautious if you do so
-
-
-
+            
 
             using (Image<Rgba32> image = new Image<Rgba32>(width, height))
             {
@@ -96,10 +95,15 @@ namespace BotHATTwaffle2.Services.Playtesting
                     foreach (var xPos in xPosList)
                     {
                         customDateTime = currentDateTime.AddDays(iterator);
-                        customSize = TextMeasurer.Measure($"{customDateTime.ToString("MMM")} {customDateTime.Day}", new RendererOptions(fontDates));
+                        customSize = TextMeasurer.Measure($"{customDateTime.ToString("ddd MMM")} {customDateTime.Day}", new RendererOptions(fontDates));
+
+                        Rgba32 usedDateColor = dateColor;
+
+                        if (currentDateTime == customDateTime)
+                            usedDateColor = todayDateColor;
 
                         image.Mutate(x => x
-                            .DrawText($"{customDateTime.ToString("MMM")} {customDateTime.Day}", fontDates, dateColor, new PointF(xPos - (customSize.Width / 2), yPos)));
+                            .DrawText($"{customDateTime.ToString("ddd MMM")} {customDateTime.Day}", fontDates, usedDateColor, new PointF(xPos - (customSize.Width / 2), yPos)));
                         iterator++;
                     }
                 }
@@ -169,9 +173,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     numOfPlaytests[numDaysSeparate]++;
                 }
 
-                image.Save("finishedCalendar.png");
-                await calContext.Channel.SendFileAsync("finishedCalendar.png");
-                image.Dispose();
+                image.Save("renderedCalendar.png");
             }
         }
     }

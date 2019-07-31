@@ -379,8 +379,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             while (true)
             {
                 await Display(
-                    "Please refer to the above message to see current tests in the queue, and currently scheduled tests." +
-                    " To confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
+                    "Please look at the calendar above, and the list of current requests. Then try to pick a date that isn't already taken." +
+                    "\nTo confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
