@@ -265,7 +265,7 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
-        [Command("Schedule", RunMode = RunMode.Async)]
+        [Command("Schedule")]
         [Alias("pts")]
         [Summary("Allows users to view testing queue and schedule.")]
         [Remarks("For members, displays test in the queue and scheduled on the calendar." +
@@ -286,7 +286,8 @@ namespace BotHATTwaffle2.Commands
                 _dataService.IgnoreListenList.Remove(Context.User);
             }
 
-            var nextMonthEvents = _calendar.GetNextMonthAsync(DateTime.Now).Result;
+            var nextMonthEvents = await _calendar.GetNextMonthAsync(DateTime.Now);
+            var calendarBuilder = new CalendarBuilder();
             await calendarBuilder.DiscordPlaytestCalender(Context, nextMonthEvents);
         }
 
