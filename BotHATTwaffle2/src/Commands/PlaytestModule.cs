@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,12 +12,15 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.Steam;
+using BotHATTwaffle2.src.Services.Calendar;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
+using Google.Apis.Calendar.v3.Data;
+using Google.Apis.Download;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -265,39 +269,41 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
-        [Command("Schedule", RunMode = RunMode.Async)]
+        [Command("Schedule")]
         [Alias("pts")]
         [Summary("Allows users to view testing queue and schedule.")]
         [Remarks("For members, displays test in the queue and scheduled on the calendar." +
                  "If you're moderation staff, allows for officially scheduling the playtest event after making any needed changes.")]
-        public async Task ScheduleTestAsync([Summary("If `true`, displays scheduled tests as well.")][Optional]bool getAll)
+        public async Task ScheduleTestAsync([Summary("If `true`, displays scheduled tests as well.")][Optional]bool getList)
         {
-            var user = _dataService.GetSocketGuildUser(Context.User.Id);
-            var embed = await _playtestService.GetUpcomingEvents(true, getAll);
-
-            if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
+            if (!getList)
             {
-                _dataService.IgnoreListenList.Add(Context.User);
-                
-                var display = await ReplyAsync(embed: embed.Build());
-
-                var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
-                await requestBuilder.SchedulePlaytestAsync(display);
-
-                _dataService.IgnoreListenList.Remove(Context.User);
-                return;
-            }
-
-            if (!getAll)
-            {
-                var nextMonthEvents = await _calendar.GetNextMonthAsync(DateTime.Now);
-                var calendarBuilder = new CalendarBuilder();
-                await calendarBuilder.DiscordPlaytestCalender(Context, nextMonthEvents);
-                await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled Tests**",
-                    embed: embed.Build());
+                var calendarBuilder = new CalendarBuilder(await _calendar.GetNextMonthAsync(DateTime.Now),
+                    DatabaseUtil.GetAllPlaytestRequests());
+                await calendarBuilder.DiscordPlaytestCalender(Context);
+                await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled and Requested Tests**" +
+                "\nGreen are scheduled tests, blue are requested.\nType `>pts true` to get a list of test instead of an image.");
             }
             else
+            {
+                var user = _dataService.GetSocketGuildUser(Context.User.Id);
+                var embed = await _playtestService.GetUpcomingEvents(true, true);
+
+                if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
+                {
+                    _dataService.IgnoreListenList.Add(Context.User);
+
+                    var display = await ReplyAsync(embed: embed.Build());
+
+                    var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
+                    await requestBuilder.SchedulePlaytestAsync(display);
+
+                    _dataService.IgnoreListenList.Remove(Context.User);
+                    return;
+                }
+
                 await ReplyAsync(embed: embed.Build());
+            }
         }
 
         [Command("Request", RunMode = RunMode.Async)]
@@ -328,12 +334,11 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
-                var upcoming = await _playtestService.GetUpcomingEvents(true, false);
-                var nextMonthEvents = await _calendar.GetNextMonthAsync(DateTime.Now);
-                var calendarBuilder = new CalendarBuilder();
-                await calendarBuilder.DiscordPlaytestCalender(Context, nextMonthEvents);
-                await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled Tests**",
-                    embed: upcoming.Build());
+                var calendarBuilder = new CalendarBuilder(await _calendar.GetNextMonthAsync(DateTime.Now),
+                    DatabaseUtil.GetAllPlaytestRequests());
+                await calendarBuilder.DiscordPlaytestCalender(Context);
+                await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled and Requested Tests**" +
+                                                                            "\nGreen are scheduled tests, blue are requested.");
 
                 await requestBuilder.BuildPlaytestRequestWizard();
             }

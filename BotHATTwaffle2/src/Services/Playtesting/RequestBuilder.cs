@@ -379,7 +379,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             while (true)
             {
                 await Display(
-                    "Please look at the calendar above, and the list of current requests. Then try to pick a date that isn't already taken." +
+                    "Please look at the calendar above. Green items are scheduled, blue are already requested. Then try to pick a date that isn't already taken." +
                     "\nTo confirm that you've read the testing requirements, click `View Testing Requirements`, look for Ido's demands and follow the instructions.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 if (_userMessage == null ||

@@ -9,24 +9,57 @@ using SixLabors.Fonts;
 using Google.Apis.Calendar.v3.Data;
 using System.IO;
 using System.Numerics;
+using BotHATTwaffle2.Models.LiteDB;
+using BotHATTwaffle2.src.Services.Calendar;
 using Discord.Commands;
 
 namespace BotHATTwaffle2.Services.Playtesting
 {
     public class CalendarBuilder
     {
-        public async Task DiscordPlaytestCalender(SocketCommandContext calContext, Events calPlaytestEvents)
+        private readonly List<Playtest> _calPlaytestEvents = new List<Playtest>();
+
+        public CalendarBuilder(Events scheduledEvents, IEnumerable<PlaytestRequest> requestedEvents)
+        {
+            foreach (var e in scheduledEvents.Items)
+            {
+                _calPlaytestEvents.Add(new Playtest(e));
+            }
+
+            foreach (var e in requestedEvents)
+            {
+                _calPlaytestEvents.Add(new Playtest(e));
+            }
+        }
+
+        public CalendarBuilder(Events scheduledEvents)
+        {
+            foreach (var e in scheduledEvents.Items)
+            {
+                _calPlaytestEvents.Add(new Playtest(e));
+            }
+        }
+
+        public CalendarBuilder(IEnumerable<PlaytestRequest> requestedEvents)
+        {
+            foreach (var e in requestedEvents)
+            {
+                _calPlaytestEvents.Add(new Playtest(e));
+            }
+        }
+
+        public async Task DiscordPlaytestCalender(SocketCommandContext calContext)
         {
             // Gonna just yeet out of here if there are no playtests
-            if (calPlaytestEvents.Items.Count == 0) return;
+            if (_calPlaytestEvents.Count == 0) return;
             
-
             // Here's a bunch of stuff you can easily change
             // WARNING: Take caution before modifying width and/or height, as font scaling has not been implemented
             int width = 1372;
             int height = 1029;
             Rgba32 dateColor = new Rgba32(142, 146, 151);
-            Rgba32 playtestTitleColor = new Rgba32(255,255,255);
+            Rgba32 playtestScheduleTitleColor = new Rgba32(121, 226, 88);
+            Rgba32 playtestRequestTitleColor = new Rgba32(84, 127, 190);
             Rgba32 playtestTimeColor = new Rgba32(142, 146, 151);
             Rgba32 backgroundColor = new Rgba32(47, 49, 54);
             Rgba32 lineColor = new Rgba32(32, 34, 37);
@@ -36,7 +69,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             string playtestTimeFontName = "Arial";
             // Modifying anything besides these variables may cause instability, so be extremely cautious if you do so
             
-
             using (Image<Rgba32> image = new Image<Rgba32>(width, height))
             {
 
@@ -79,6 +111,16 @@ namespace BotHATTwaffle2.Services.Playtesting
                 var fontPTName = SystemFonts.CreateFont(playtestMapFontName, 23, FontStyle.Regular);
                 var fontPT = SystemFonts.CreateFont(playtestTimeFontName, 25, FontStyle.Regular);
                 var currentDateTime = DateTime.Now;
+                var lastSunday = currentDateTime;
+
+                while (true)
+                {
+                    if (lastSunday.Date.DayOfWeek == DayOfWeek.Sunday)
+                    {
+                        break;
+                    }
+                    lastSunday = lastSunday.Subtract(TimeSpan.FromDays(1));
+                }
 
                 // Here are the coordinate lists for the date headings (and xPos is also used by the playtest events)
                 List<float> xPosList = new List<float>() { (widthF * .07148f), (widthF * .21384f), (widthF * .35667f), (widthF * .49854f), (widthF * .64114f), (widthF * .78337f), (widthF * .92706f) };
@@ -94,12 +136,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     foreach (var xPos in xPosList)
                     {
-                        customDateTime = currentDateTime.AddDays(iterator);
+                        customDateTime = lastSunday.AddDays(iterator);
                         customSize = TextMeasurer.Measure($"{customDateTime.ToString("ddd MMM")} {customDateTime.Day}", new RendererOptions(fontDates));
 
                         Rgba32 usedDateColor = dateColor;
 
-                        if (currentDateTime == customDateTime)
+                        if (currentDateTime.Date == customDateTime.Date)
                             usedDateColor = todayDateColor;
 
                         image.Mutate(x => x
@@ -116,21 +158,24 @@ namespace BotHATTwaffle2.Services.Playtesting
                 // Here's the big boi. Putting the playtest events on the calendar
                 List<int> numOfPlaytests = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-                foreach (var playtestEvent in calPlaytestEvents.Items)
+                foreach (var playtestEvent in _calPlaytestEvents)
                 {
                     // These variables just exist to make names shorter
-                    DateTime playtestSDT = playtestEvent.Start.DateTime.Value;
-                    int numDaysSeparate = Convert.ToInt32((playtestSDT - currentDateTime).TotalDays);
-                    string shortenedEventSummary = "";
+                    DateTime playtestSDT = playtestEvent.StartTime;
+                    int numDaysSeparate = Convert.ToInt32((playtestSDT.Date - lastSunday.Date).TotalDays);
+                    string shortenedEventSummary;
 
-                    // Here we're just grabbing the mapname from the playtest title
-                    foreach (var entry in playtestEvent.Summary.Split(" "))
+                    Rgba32 playtestTitleColor;
+                    // Get the correct date, and set title color for later user
+                    if (playtestEvent.TestType == (int)Playtest.TypeOfTest.Scheduled)
                     {
-                        if (entry != "by")
-                        {
-                            shortenedEventSummary += entry;
-                        }
-                        else break;
+                        shortenedEventSummary = playtestEvent.TestName.Substring(0, playtestEvent.TestName.IndexOf("by",StringComparison.OrdinalIgnoreCase)).Trim();
+                        playtestTitleColor = playtestScheduleTitleColor;
+                    }
+                    else
+                    {
+                        shortenedEventSummary = playtestEvent.TestName;
+                        playtestTitleColor = playtestRequestTitleColor;
                     }
 
                     // These are the sizes of the info from the calendar. They are required to center the text properly
@@ -138,7 +183,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     SizeF timeSize = TextMeasurer.Measure($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", new RendererOptions(fontPT));
 
                     // Break out of this iteration if the current date already has 2 playtests
-                    if (numOfPlaytests[numDaysSeparate] > 1) continue;
+                    if (numDaysSeparate < 0 || numDaysSeparate > numOfPlaytests.Count || numOfPlaytests[numDaysSeparate] > 1) continue;
 
                     // Basically this finds out where in the Y postition lists we should start (since they are broken up into sets)
                     int groupStartIndex;
