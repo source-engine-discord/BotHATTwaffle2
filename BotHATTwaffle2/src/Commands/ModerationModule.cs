@@ -67,31 +67,26 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task StartServerFeedbackAsync()
         {
-            if (_logReceiverService.EnableLog)
+            if (!_logReceiverService.EnableLog)
             {
-                var result = _logReceiverService.EnableFeedback(_playtestService.GetPlaytestCommandInfo().DemoName);
+                _logReceiverService.StartLogReceiver(_playtestService.GetPlaytestCommandInfo().ServerAddress);
+            }
 
-                if(result)
-                {
-                    await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor("Started new feedback listener")
-                        .WithDescription(
-                            $"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback in game.")
-                        .WithColor(new Color(55, 165, 55)).Build());
-                }
-                else
-                {
-                    await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor("Unable to start feedback listening")
-                        .WithDescription("The server is already listening for feedback.")
-                        .WithColor(new Color(165, 55, 55)).Build());
-                }
+            var result = _logReceiverService.EnableFeedback(_playtestService.GetPlaytestCommandInfo().DemoName);
+
+            if(result)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Started new feedback listener")
+                    .WithDescription(
+                        $"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback in game.")
+                    .WithColor(new Color(55, 165, 55)).Build());
             }
             else
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Unable to start feedback listening")
-                    .WithDescription("This command requires that a listening session already be enabled running. Use `>startl [server]` to start a session.")
+                    .WithDescription("The server is already listening for feedback.")
                     .WithColor(new Color(165, 55, 55)).Build());
             }
         }

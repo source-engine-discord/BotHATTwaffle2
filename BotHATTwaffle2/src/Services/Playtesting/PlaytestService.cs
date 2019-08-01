@@ -218,6 +218,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             //Reset the flag as we are done running
             _playtestCommandRunning = false;
+            _logReceiverService.SetNotActive();
 
             return _playtestCommandInfo;
         }
@@ -763,7 +764,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_calendar.GetTestEvent().IsCasual)
             {
                 await _rconService.RconCommand(testEvent.ServerLocation,
-                    $"sv_cheats 0; sv_password {_dataService.RSettings.General.CasualPassword}");
+                    $"sv_cheats 0");
+                await _rconService.RconCommand(testEvent.ServerLocation,
+                    $"sv_password {_dataService.RSettings.General.CasualPassword}");
                 unsubInfo = "\nType `>playtester` to stop getting these notifications.";
             }
             else
@@ -793,7 +796,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .Build());
 
                 await _rconService.RconCommand(testEvent.ServerLocation,
-                    $"sv_cheats 0; sv_password {testEvent.CompPassword}");
+                    $"sv_cheats 0");
+                await _rconService.RconCommand(testEvent.ServerLocation,
+                    $"sv_password {testEvent.CompPassword}");
             }
 
             //Skip the alert.

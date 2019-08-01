@@ -21,8 +21,10 @@ namespace BotHATTwaffle2.Services.SRCDS
         public bool EnableLog = false;
         private bool _enableFeedback = false;
         public Server ActiveServer;
-        private string path;
-
+        private string _path;
+        private static bool _isActive = false;
+        private static string _lastKnownPath = null;
+        
         public LogReceiverService(DataService dataService, RconService rconService, LogHandler logHandler)
         {
             _rconService = rconService;
@@ -99,10 +101,30 @@ namespace BotHATTwaffle2.Services.SRCDS
             _enableFeedback = false;
         }
 
+        /// <summary>
+        /// Restarts the log listener if for some reason a discord disconnect happens.
+        /// </summary>
+        public void RestartLogAfterDisconnect()
+        {
+            //Don't do anything unless we are active.
+            if (!_isActive)
+                return;
+
+            StartLogReceiver(ActiveServer.ServerId);
+            EnableFeedback(_lastKnownPath);
+        }
+
+        public void SetNotActive()
+        {
+            _isActive = false;
+        }
+
         public bool EnableFeedback(string feedbackLogName)
         {
             if (EnableLog && !_enableFeedback)
             {
+                _isActive = true;
+                _lastKnownPath = feedbackLogName;
                 SetFileName(feedbackLogName);
                 _enableFeedback = true;
                 //Seed the feedback log with the current timestamp
@@ -152,10 +174,10 @@ namespace BotHATTwaffle2.Services.SRCDS
         {
             Directory.CreateDirectory("Feedback");
 
-            if (!File.Exists(path))
+            if (!File.Exists(_path))
             {
                 // Create a file to write to.
-                using (StreamWriter sw = File.CreateText(path))
+                using (StreamWriter sw = File.CreateText(_path))
                 {
                     sw.WriteLine($"{DateTime.Now} - {message.Player.Name} ({message.Player.Team}): {message.Message}");
                 }
@@ -163,7 +185,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             else
             // This text is always added, making the file longer over time
             // if it is not deleted.
-            using (StreamWriter sw = File.AppendText(path))
+            using (StreamWriter sw = File.AppendText(_path))
             {
                 sw.WriteLine($"{message.Player.Name} ({message.Player.Team}): {message.Message}");
             }
@@ -174,12 +196,12 @@ namespace BotHATTwaffle2.Services.SRCDS
         private void SetFileName(string fileName)
         {
             if (fileName.Contains(".txt"))
-                path = "Feedback\\" + fileName;
+                _path = "Feedback\\" + fileName;
 
-            path = "Feedback\\" + fileName + ".txt";
+            _path = "Feedback\\" + fileName + ".txt";
         }
 
-        public string GetFilePath() => path;
+        public string GetFilePath() => _path;
 
         private async void HandlePlaytestCommand(Server server, PlaytestMessage message)
         {

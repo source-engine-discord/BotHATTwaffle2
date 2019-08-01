@@ -92,9 +92,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             var pst = TimeZoneInfo
                 .ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"))
                 .ToString("ddd HH:mm");
+            var utc = utcTime.ToString("ddd HH:mm");
             //No more GMT, replaced by UTC
-//            var gmt = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"))
-//                .ToString("ddd HH:mm");
+            //            var gmt = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"))
+            //                .ToString("ddd HH:mm");
 
             //Figure out how far away from start we are
             string countdownString = null;
@@ -173,7 +174,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 playtestEmbed.ImageUrl = embedImageUrl;
                 playtestEmbed.ThumbnailUrl = thumbnailUrl;
                 playtestEmbed.AddField("When",
-                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {utcTime} UTC");
+                    $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {utc} UTC");
             }
 
             playtestEmbed.AddField("Information",information);

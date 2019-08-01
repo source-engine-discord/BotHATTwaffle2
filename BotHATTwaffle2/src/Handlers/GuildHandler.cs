@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.SRCDS;
 using Discord;
 using Discord.WebSocket;
 
@@ -13,9 +14,11 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly ScheduleHandler _schedule;
+        private readonly LogReceiverService _logReceiverService;
         private static bool attemptingReconnect = false;
 
-        public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule)
+        public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule,
+            LogReceiverService logReceiverService)
         {
             Console.WriteLine("Setting up GuildHandler...");
 
@@ -23,6 +26,7 @@ namespace BotHATTwaffle2.Handlers
             _dataService = data;
             _client = client;
             _schedule = schedule;
+            _logReceiverService = logReceiverService;
 
             _client.GuildAvailable += GuildAvailableEventHandler;
             _client.GuildUnavailable += GuildUnavailableEventHandler;
@@ -36,6 +40,8 @@ namespace BotHATTwaffle2.Handlers
             await _dataService.DeserializeConfig();
 
             _schedule.AddRequiredJobs();
+
+            _logReceiverService.RestartLogAfterDisconnect();
         }
 
         /// <summary>
