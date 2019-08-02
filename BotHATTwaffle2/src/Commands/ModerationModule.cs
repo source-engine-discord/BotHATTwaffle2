@@ -51,13 +51,11 @@ namespace BotHATTwaffle2.Commands
 
 //        [Command("Test")]
 //        [Summary("Used to debug. This should not go live")]
-//        public async Task TestAsync()
+//        public async Task TestAsync([Remainder]string path)
 //        {
-//            await Context.Message.DeleteAsync();
-//            var msg = await ReplyAsync("Moron");
-//            DemoParser.ParseDemo();
-//            await Task.Delay(500);
-//            await msg.DeleteAsync();
+//            var result = DemoParser.ParseDemo(path);
+//
+//            await ReplyAsync(result.ToString());
 //        }
 
         [Command("StartFeedback", RunMode = RunMode.Async)]

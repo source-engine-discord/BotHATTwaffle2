@@ -8,6 +8,7 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.SRCDS;
+using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;
@@ -165,9 +166,20 @@ namespace BotHATTwaffle2.Services.Playtesting
                     
                 });
 
-                DownloadHandler.DownloadPlaytestDemo(_playtestCommandInfo);
+                var demoPath = await DownloadHandler.DownloadPlaytestDemo(_playtestCommandInfo);
+
+                FileInfo jasonFile = null;
+                try
+                {
+                    jasonFile = DemoParser.ParseDemo(Path.GetDirectoryName(demoPath));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("JIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\n"+e.Message);
+                }
 
                 const string demoUrl = "http://demos.tophattwaffle.com";
+                const string demoSiteUrlBase = @"https://www.tophattwaffle.com/demos/?demo=";
 
                 var embed = new EmbedBuilder()
                     .WithAuthor($"Download playtest demo for {_playtestCommandInfo.Title}", _dataService.Guild.IconUrl,
@@ -176,6 +188,10 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .WithColor(new Color(243, 128, 72))
                     .WithDescription(
                         $"[Download Demo Here]({demoUrl}) | [Map Images]({_playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
+
+//                if (jasonFile != null)
+//                    embed.AddField("Analyzed Demo",
+//                        $"[View Processed Demo Here!]({demoSiteUrlBase}{jasonFile.Name.Replace(jasonFile.Extension, "")})");
 
                 //Stop getting more feedback
                 _logReceiverService.DisableFeedback();

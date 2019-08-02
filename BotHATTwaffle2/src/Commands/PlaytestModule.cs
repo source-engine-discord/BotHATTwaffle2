@@ -269,7 +269,7 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
-        [Command("Schedule")]
+        [Command("Schedule", RunMode = RunMode.Async)]
         [Alias("pts")]
         [Summary("Allows users to view testing queue and schedule.")]
         [Remarks("For members, displays test in the queue and scheduled on the calendar." +
@@ -278,6 +278,7 @@ namespace BotHATTwaffle2.Commands
         {
             if (!getList)
             {
+                await Context.Channel.TriggerTypingAsync();
                 var calendarBuilder = new CalendarBuilder(await _calendar.GetNextMonthAsync(DateTime.Now),
                     DatabaseUtil.GetAllPlaytestRequests());
                 await calendarBuilder.DiscordPlaytestCalender(Context);
@@ -334,6 +335,7 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
+                await Context.Channel.TriggerTypingAsync();
                 var calendarBuilder = new CalendarBuilder(await _calendar.GetNextMonthAsync(DateTime.Now),
                     DatabaseUtil.GetAllPlaytestRequests());
                 await calendarBuilder.DiscordPlaytestCalender(Context);
@@ -583,7 +585,7 @@ namespace BotHATTwaffle2.Commands
                     //Download demo, don't wait.
                     _ = Task.Run(() =>
                     {
-                        DownloadHandler.DownloadPlaytestDemo(testInfo);
+                        _ = DownloadHandler.DownloadPlaytestDemo(testInfo);
                     });
                     
                     const string demoUrl = "http://demos.tophattwaffle.com";

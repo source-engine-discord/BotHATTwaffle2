@@ -52,7 +52,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             // Gonna just yeet out of here if there are no playtests
             if (_calPlaytestEvents.Count == 0) return;
-            
+
             // Here's a bunch of stuff you can easily change
             // WARNING: Take caution before modifying width and/or height, as font scaling has not been implemented
             int width = 1372;

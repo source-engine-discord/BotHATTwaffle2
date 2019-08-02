@@ -15,5 +15,9 @@ namespace BotHATTwaffle2
         public string PlaytestDemoPath { get; set; }
         public string SteamworksAPI { get; set; }
         public ushort ListenPort { get; set; }
+        public string DemoFtpUser { get; set; }
+        public string DemoFtpPassword { get; set; }
+        public string DemoFtpPath { get; set; }
+        public string DemoFtpServer { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Security.Authentication;
+using System.Threading.Tasks;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Util;
@@ -23,12 +24,12 @@ namespace BotHATTwaffle2.Handlers
             _log = log;
         }
 
-        public static async void DownloadPlaytestDemo(PlaytestCommandInfo playtestCommandInfo)
+        public static async Task<string> DownloadPlaytestDemo(PlaytestCommandInfo playtestCommandInfo)
         {
             var server = DatabaseUtil.GetTestServer(playtestCommandInfo.ServerAddress);
 
             if (server == null)
-                return;
+                return null;
 
             string dateInsert = "";
             //Arrived from a public test, where a proper start time did not exist.
@@ -61,7 +62,7 @@ namespace BotHATTwaffle2.Handlers
                         catch (Exception e)
                         {
                             await _log.LogMessage($"Failed to connect to FTP server. {server.Address}\n {e.Message}", alert: true, color:LOG_COLOR);
-                            return;
+                            return null;
                         }
 
                         try
@@ -96,7 +97,7 @@ namespace BotHATTwaffle2.Handlers
                         catch (Exception e)
                         {
                             await _log.LogMessage($"Failed to connect to SFTP server. {server.Address}\n {e.Message}", alert: true, color: LOG_COLOR);
-                            return;
+                            return null;
                         }
 
                         Directory.CreateDirectory(localPath);
@@ -130,6 +131,9 @@ namespace BotHATTwaffle2.Handlers
                     await _log.LogMessage($"The FTP type on the server is incorrectly set. {server.Address} is using {server.FtpType}",alert:true, color: LOG_COLOR);
                     break;
             }
+
+            //Return the path to the demo.
+            return Directory.GetFiles(localPath).FirstOrDefault(x => x.EndsWith(".dem",StringComparison.OrdinalIgnoreCase));
         }
 
         private static string GetFile(FtpClient client, string path, string name)
