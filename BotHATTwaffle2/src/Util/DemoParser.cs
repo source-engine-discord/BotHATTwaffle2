@@ -68,6 +68,7 @@ namespace BotHATTwaffle2.src.Util
             //Delete all files in the directory.
             foreach (var file in localDirectoryInfo.EnumerateFiles())
             {
+                _ = _log.LogMessage($"Deleting: {file.FullName}",channel: false, color: LOG_COLOR);
                 file.Delete();
             }
 
@@ -110,6 +111,7 @@ namespace BotHATTwaffle2.src.Util
                 client.Disconnect();
             }
 
+            _ = _log.LogMessage($"Uploaded {file.FullName} to server where it can be viewed.", color: LOG_COLOR);
             return true;
         }
     }

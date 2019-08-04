@@ -139,6 +139,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Mute")]
+        [Alias("Banish")]
         [Summary("Mutes a user.")]
         [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
                  "you may leave off any unit of time. For example `>Mute [user] 1D5H [reason]` will mute for 1 day 5 hours. " +
