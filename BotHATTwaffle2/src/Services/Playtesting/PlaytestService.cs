@@ -258,7 +258,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 : _dataService.RSettings.General.CompConfig;
 
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
-            await Task.Delay(3000);
+            await Task.Delay(5000);
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                 $"tv_record {_playtestCommandInfo.DemoName}; say Recording {_playtestCommandInfo.DemoName}");
 
