@@ -39,7 +39,7 @@ namespace BotHATTwaffle2.src.Util
             //Unable to start for some reason. Bail.
             if (demoProcess == null)
             {
-                _ = _log.LogMessage("Failed to file process to parse demo. Aborting Demo parse.",alert:true, color: LOG_COLOR);
+                _ = _log.LogMessage("Failed to find process to parse demo. Aborting Demo parse.",alert:true, color: LOG_COLOR);
                 return null;
             }
 

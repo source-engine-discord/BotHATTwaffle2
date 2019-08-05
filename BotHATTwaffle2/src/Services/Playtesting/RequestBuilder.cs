@@ -225,7 +225,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Scheduling
-            await _userMessage.DeleteAsync();
+            if(!_context.IsPrivate)
+                await _userMessage.DeleteAsync();
+
             var finalEmbed = RebuildEmbed();
 
             //Try added to calendar, if true we can move forward with alerting user of the schedule.
