@@ -72,18 +72,22 @@ namespace BotHATTwaffle2.Commands
             if (command == null)
             {
                 if(_playtestService.CreateVoiceFeedbackSession())
+                {
                     await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
                         .WithAuthor("New Feedback Queue Session Started!")
-                        .WithDescription("In order to keep things moving and civil, a Feedback Queue has been started!" +
-                                         "\n\nUsers can enter the queue with `>q` and wait for their turn. When it is their turn, " +
-                                         $"they will have {_dataService.RSettings.General.FeedbackDuration} minutes to give their feedback. " +
-                                         $"This is to give everyone a chance to speak, without some users taking a long time." +
-                                         $"\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
-                                         $"already given their feedback." +
-                                         $"\n\nWhen done with your feedback, or to remove yourself from the queue, type `>done`." +
-                                         $"\n\nIf you need to go sooner, please let a moderator know.")
-                        .WithColor(55,165,55)
+                        .WithDescription(
+                            "In order to keep things moving and civil, a Feedback Queue has been started!" +
+                            "\n\nUsers can enter the queue with `>q` and wait for their turn. When it is their turn, " +
+                            $"they will have {_dataService.RSettings.General.FeedbackDuration} minutes to give their feedback. " +
+                            $"This is to give everyone a chance to speak, without some users taking a long time." +
+                            $"\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
+                            $"already given their feedback." +
+                            $"\n\nWhen done with your feedback, or to remove yourself from the queue, type `>done`." +
+                            $"\n\nIf you need to go sooner, please let a moderator know.")
+                        .WithColor(55, 165, 55)
                         .Build());
+                    await _log.LogMessage($"`{Context.User}` has started a feedback queue!", color: LOG_COLOR);
+                }
                 else
                     await ReplyAsync(
                         "Unable to create new feedback session. Either no playtest exists, or a session already exists.");
@@ -118,6 +122,7 @@ namespace BotHATTwaffle2.Commands
 
                         return;
                     }
+                    await _log.LogMessage($"`{Context.User}` has started listening to user feedback", color: LOG_COLOR);
                     _scheduleHandler.DisablePlayingUpdate();
                     break;
                 case "e":
@@ -127,10 +132,12 @@ namespace BotHATTwaffle2.Commands
                         .WithAuthor("Feedback Ended!")
                         .WithColor(165, 55, 55).Build());
                     _scheduleHandler.EnablePlayingUpdate();
+                    await _log.LogMessage($"`{Context.User}` has ended a feedback queue!", color: LOG_COLOR);
                     break;
                 case "p":
                 case "pause":
                     _playtestService.FeedbackSession.PauseFeedback();
+                    await _log.LogMessage($"`{Context.User}` has paused a feedback queue!", color: LOG_COLOR);
                     var msgP = await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor("Pausing Feedback...")
                         .WithColor(165, 55, 55).Build());
@@ -154,8 +161,8 @@ namespace BotHATTwaffle2.Commands
                         });
                         return;
                     }
-
                     await _playtestService.FeedbackSession.AddUserToTopQueue(user);
+                    await _log.LogMessage($"`{Context.User}` has pushed {user} to the top of the feedback queue", color: LOG_COLOR);
                     break;
                 case "pop":
                 case "remove":
@@ -182,6 +189,7 @@ namespace BotHATTwaffle2.Commands
                             await msg.DeleteAsync();
                         });
                     }
+                    await _log.LogMessage($"`{Context.User}` has removed {user} from the feedback queue", color: LOG_COLOR);
                     break;
                 default:
                     await ReplyAsync(embed: new EmbedBuilder()

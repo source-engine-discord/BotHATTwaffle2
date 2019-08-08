@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Util;
+using Discord;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 
@@ -435,6 +436,18 @@ namespace BotHATTwaffle2.Services
             }
 
             return user;
+        }
+
+        /// <summary>
+        /// Gets a message object
+        /// </summary>
+        /// <param name="channel">Channel to look in</param>
+        /// <param name="messageId">ID of message</param>
+        /// <returns></returns>
+        public async Task<IMessage> GetSocketMessage(ISocketMessageChannel channel, ulong messageId)
+        {
+            var msg = await channel.GetMessageAsync(messageId);
+            return msg;
         }
 
         /// <summary>

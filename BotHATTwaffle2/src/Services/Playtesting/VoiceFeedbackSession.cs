@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.SRCDS;
 using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
-using Google.Apis.YouTube.v3;
 
 namespace BotHATTwaffle2.Services.Playtesting
 {
@@ -26,12 +22,13 @@ namespace BotHATTwaffle2.Services.Playtesting
         private bool _timerRunning = false;
         private string _status = "Idle 🛑";
         private bool _disposed = false;
-        private int _duration;
+        private TimeSpan _duration;
         private TimeSpan _timeLeft = new TimeSpan();
         private bool _tick = true;
         private SocketGuildUser _activeUser;
         private SocketGuildUser _onDeckUser;
         private bool _abortTimer = false;
+        private bool _paused = false;
 
         public VoiceFeedbackSession(DataService dataService, DiscordSocketClient client, PlaytestEvent playtestEvent,
             RconService rconService)
@@ -43,7 +40,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             _client.UserVoiceStateUpdated += UserVoiceStateUpdated;
 
-            _duration = _dataService.RSettings.General.FeedbackDuration;
+            _duration = TimeSpan.FromMinutes(_dataService.RSettings.General.FeedbackDuration);
 
             //Mute everyone on start
             foreach (var user in _dataService.LevelTestVoiceChannel.Users)
@@ -60,7 +57,8 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <param name="duration"></param>
         public void SetDuration(int duration)
         {
-            _duration = duration > 0 ? duration : _dataService.RSettings.General.FeedbackDuration;
+            int rawDuration = duration > 0 ? duration : _dataService.RSettings.General.FeedbackDuration;
+            _duration = TimeSpan.FromMinutes(duration);
             _ = UpdateCurrentQueueMessage();
         }
 
@@ -134,7 +132,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private void AddUserJobs(SocketGuildUser user)
         {
             JobManager.AddJob(async () => await UserTimeOut(user), s => s
-                .WithName($"[FBQ_UserTimeOut_{user.Id}]").ToRunOnceIn(_duration * 60).Seconds());
+                .WithName($"[FBQ_UserTimeOut_{user.Id}]").ToRunOnceAt(DateTime.Now.Add(_timeLeft)));
         }
 
         private async Task UserTimeOut(SocketGuildUser user)
@@ -147,16 +145,15 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// </summary>
         public void PauseFeedback()
         {
-            _status = "Idle 🛑";
-            _running = false;
+            _status = "Paused ⏸";
+            _paused = true;
 
             if (_userQueue.Count > 0)
             {
-                var user = _dataService.GetSocketGuildUser(_userQueue[0]);
                 RemoveUserJobs(_userQueue[0]);
-                _ = ProcessMute(true, user);
             }
             _ = _client.SetStatusAsync(UserStatus.AFK);
+            _ = UpdateCurrentQueueMessage();
         }
         /// <summary>
         /// Starts user feedback
@@ -164,7 +161,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns>True if started, false otherwise</returns>
         public async Task<bool> StartFeedback()
         {
-            if (_running)
+            if (_running && !_paused)
             {
                 return false;
             }
@@ -173,6 +170,21 @@ namespace BotHATTwaffle2.Services.Playtesting
             _running = true;
             _ = _client.SetStatusAsync(UserStatus.DoNotDisturb);
             await UpdateCurrentQueueMessage();
+
+            if (_paused)
+            {
+                _paused = false;
+
+                if (_userQueue.Count > 0)
+                {
+                    RemoveUserJobs(_userQueue[0]);
+                    var user = _dataService.GetSocketGuildUser(_userQueue[0]);
+                    AddUserJobs(user);
+                    await UpdateTimer();
+                }
+                return true;
+            }
+
             await StartNextUserFeedback();
             return true;
         }
@@ -222,10 +234,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Alert users
             var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` in Discord when you're finished.");
 
-            AddUserJobs(user);
             _activeUser = user;
 
-            _timeLeft = TimeSpan.FromMinutes(_duration);
+            _timeLeft = _duration;
+
+            AddUserJobs(user);
 
             if (_userQueue.Count > 1)
             {
@@ -256,6 +269,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 _timerRunning = false;
                 _ = _client.SetGameAsync($"Waiting...");
+                return;
+            }
+
+            if (_paused)
+            {
                 return;
             }
 
@@ -390,7 +408,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             
             var embed = new EmbedBuilder()
-                .WithAuthor($"Feedback Queue - {_duration}min - {_status}")
+                .WithAuthor($"Feedback Queue - {_duration:mm\\:ss}min - {_status}")
                 .WithColor(_running ? new Color(55, 165, 55) : new Color(222, 130, 50))
                 .AddField("On Deck", _dataService.GetSocketUser(_userQueue[0]).Mention)
                 .WithFooter("Type >q to enter the queue");

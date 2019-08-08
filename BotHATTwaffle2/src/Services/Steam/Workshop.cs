@@ -103,7 +103,6 @@ namespace BotHATTwaffle2.Services.Steam
                 // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us
                 if (workshopJsonItem.response.publishedfiledetails[0].result == 9) return null;
                 if (workshopJsonItem.response.publishedfiledetails[0].filename.Contains("/screenshots/".ToLower())) return null;
-                if (workshopJsonItem.response.publishedfiledetails[0].filename == "") return null;
 
                 // Send the GET request for the author information
                 using (var clientAuthor = new HttpClient())
@@ -144,7 +143,11 @@ namespace BotHATTwaffle2.Services.Steam
 
                 // Add every other field now
                 // Get tags from Json object
-                workshopItemEmbed.AddField("Tags", string.Join(", ", workshopJsonItem.response.publishedfiledetails[0].tags.Select(x => x.tag)), true);
+                string tags = string.Join(", ",
+                    workshopJsonItem.response.publishedfiledetails[0].tags.Select(x => x.tag));
+
+                if(!string.IsNullOrWhiteSpace(tags))
+                    workshopItemEmbed.AddField("Tags", tags, true);
 
                 // If test type is null or empty, it will not be included in the embed (bot only)
                 if (!string.IsNullOrEmpty(testType))
@@ -154,7 +157,9 @@ namespace BotHATTwaffle2.Services.Steam
 
                 // TODO: Strip BB Codes
                 string shortDescription = Regex.Replace(workshopJsonItem.response.publishedfiledetails[0].description, @"\t|\n|\r", " ");
-                workshopItemEmbed.AddField("Description", shortDescription.Length > 497 ? shortDescription.Substring(0,497) + "..." : shortDescription);
+
+                if (!string.IsNullOrWhiteSpace(shortDescription))
+                    workshopItemEmbed.AddField("Description", shortDescription.Length > 497 ? shortDescription.Substring(0,497) + "..." : shortDescription);
 
                 // If images is null or empty, it will not be included in the embed (bot only)
                 if (!string.IsNullOrEmpty(images))
@@ -168,9 +173,15 @@ namespace BotHATTwaffle2.Services.Steam
 
         public async Task SendWorkshopEmbed(SocketMessage message, DataService _dataService)
         {
+            //If the invoking message has an embed, do nothing.
+            await Task.Delay(2000);
+            var refreshedMessage = await _dataService.GetSocketMessage(message.Channel, message.Id);
+            if (refreshedMessage.Embeds.Count > 0)
+                return;
+
             var embed = await HandleWorkshopEmbeds(message, _dataService);
 
-            if(embed != null)
+            if (embed != null)
                 await message.Channel.SendMessageAsync(embed: embed.Build());
         }
     }

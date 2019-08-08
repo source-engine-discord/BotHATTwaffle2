@@ -533,21 +533,42 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var conflicts = "";
             if (_otherRequests != null && _otherRequests.ToList().Count > 0)
+            {
                 foreach (var req in _otherRequests.Where(x => x.TestDate == _testRequest.TestDate))
                     conflicts +=
-                        $"**Map:** `{req.MapName}`\n**Test Date:** `{req.TestDate}`\nType: {req.TestType}\n**Status:** `Test Requested`\n\n";
+                        $"**Map:** `{req.MapName}`\n**Test Date:** `{req.TestDate}`\n**Status:** `Test Requested`\n\n";
+            }
+
+            string modConflicts = "";
+
             if (_scheduledTests != null && _scheduledTests.Items.Count > 0)
+            {
                 foreach (var item in _scheduledTests.Items)
+                {
                     if (item.Summary.Contains("unavailable", StringComparison.OrdinalIgnoreCase))
-                        conflicts += $"**Reason:** `{item.Summary.Replace(" - Click for details","")}`\n";
+                    {
+                        modConflicts += $"`{item.Summary.Replace(" - Click for details", "")}`\n";
+                    }
                     else
+                    {
                         conflicts +=
-                            $"**Map:** `{item.Summary}`\n**Test Date:** `{item.Start.DateTime}`\n**Status:** `Scheduled`";
+                            $"**Map:** `{item.Summary}`\n**Test Date:** `{item.Start.DateTime}`\n**Status:** `Scheduled`\n\n";
+                    }
+                }
+            }
             if (conflicts.Length > 1)
             {
                 conflicts = conflicts.Trim() +
                             " ```Schedule conflicts have been detected. You may continue to schedule, but your chances of being scheduled are less likely.```";
-                embed.AddField("Schedule Conflicts Detected", conflicts).WithColor(new Color(255, 0, 0));
+                embed.AddField("Schedule Conflicts Detected", conflicts);
+                embed.WithColor(255, 0, 0);
+            }
+
+            if (modConflicts.Length > 1)
+            {
+                modConflicts = modConflicts.Trim() +
+                            " ```These moderators are unavailable to run this test. You may still continue scheduling, as another moderator may accept this test.```";
+                embed.AddField("Moderators Unavailable", modConflicts);
             }
 
             return embed;
