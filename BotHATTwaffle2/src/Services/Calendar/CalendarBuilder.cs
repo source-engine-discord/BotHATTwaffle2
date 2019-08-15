@@ -156,7 +156,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 List<float> playtestTimesYPosList = new List<float>()  { (heightF * .07689f),  (heightF * .15388f),   (heightF * .27605f),  (heightF * .35304f),   (heightF * .47522f), (heightF * .55220f),    (heightF * .67438f), (heightF * .75136f),   (heightF * .87354f), (height * .95232f),  };
 
                 // Here's the big boi. Putting the playtest events on the calendar
-                List<int> numOfPlaytests = Enumerable.Repeat(0, 31).ToList();
+                List<int> numOfPlaytests = Enumerable.Repeat(0, 35).ToList();
                 
                 foreach (var playtestEvent in _calPlaytestEvents)
                 {
