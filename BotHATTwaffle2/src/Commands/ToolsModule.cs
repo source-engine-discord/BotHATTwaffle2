@@ -142,7 +142,7 @@ namespace BotHATTwaffle2.Commands
 
         [Command("CompilePal")]
         [Summary("Provides a download link to CompilePal.")]
-        [Alias("cp")]
+        [Alias("cpal")]
         public async Task CompilePalAsync()
         {
             var embed = new EmbedBuilder
