@@ -1,0 +1,165 @@
+{
+  "ProgramSettings": {
+    "BotToken": "CHANGEME",
+    "LogChannel": "387838861855686656",
+    "CommandPrefix": ">",
+    "AlertUser": "111939018500890624",
+    "PlaytestDemoPath": "X:\\Playtesting Demos",
+    "TestCalendarID": "CHANGEME",
+    "ImgurAPI": "CHANGEME",
+    "Debug": "false",
+    "SteamworksAPI": "CHANGEME",
+	"ListenPort": "42069",
+	"DemoFtpUser": "CHANGEME",
+	"DemoFtpPassword": "CHANGEME",
+	"DemoFtpPath": "CHANGEME",
+	"DemoFtpServer": "CHANGEME"
+  },
+  "UserRoles": {
+    "Moderator": "188015393233698816",
+    "Admin": "111951329265471488",
+    "Playtester": "259202044378742785",
+    "Active": "249671633696981002",
+    "Patreons": "279918640256778240",
+    "CommunityTester": "424239050812293121",
+    "Muted": "209947543201775618",
+    "CompetitiveTester": "534304520847491072",
+    "Bots": "166407161293963264",
+	"PlaytestAdmin":"347453477926207498"
+  },
+  "General": {
+    "WelcomeMessage": "Welcome, [USER], to the Source Engine Discord! Please take a moment to look at [WELCOME] for the rules!",
+	"FeedbackDuration": "5",
+	"LevelTestingVoice": "180891634513346561",
+	"AdminChannel": "210576858553647105",
+	"VoidChannel": "443884538511360004",
+	"BotChannel": "484579013994479616",
+    "CasualConfig": "thwc",
+    "CompConfig": "thw",
+    "PostgameConfig": "postgame",
+    "GeneralChannel": "111951182947258368",
+    "WelcomeChannel": "195009920414908416",
+    "AnnouncementChannel": "202532581541937153",
+    "TestingChannel": "180891595107860490",
+    "CompetitiveTestingChannel": "534304699042496512",
+	"WebhookChannel": "592996227751084052",
+    "FallbackTestImageURL": "https://www.tophattwaffle.com/wp-content/uploads/2017/11/header.png",
+    "CompPasswords": [
+      "goodPassword",
+	  "PASSWORD"
+    ],
+    "CasualPassword": "se"
+  },
+  "Lists": {
+    "Roles": [
+	  "Playtester",
+      "CSGO",
+	  "CSS",
+	  "TF2",
+	  "Portal",
+	  "Portal2",
+	  "HL2",
+	  "L4D",
+	  "GMOD",
+	  "DODS",
+	  "Insurgency",
+	  "Blender",
+	  "Maya",
+	  "3dsmax",
+	  "Texture Artist",
+	  "Level Designer",
+	  "Programmer",
+	  "Community Tester"
+    ],
+    "PublicCommands": [
+      "host_workshop_map",
+      "map",
+      "changelevel",
+      "mp_restartgame",
+      "sv_cheats",
+      "say",
+      "exec thw",
+      "exec thwc",
+      "exec postgame",
+      "exec gamemode",
+      "status",
+      "mp_warmup_end",
+      "mp_warmuptime",
+      "mp_pause_match",
+      "mp_unpause_match",
+      "changelevel",
+      "kick",
+      "bot_kick",
+      "bot_add",
+      "bot_stop",
+      "bot_quota",
+      "bot_mimic",
+      "game_mode",
+      "game_type",
+      "mp_ignore_round_win_conditions",
+      "sv_showimpacts",
+      "sv_alltalk",
+      "sv_deadtalk",
+      "mp_buy_anywhere"
+    ],
+    "Playing": [
+      ">Help",
+      ">About",
+      "[TestCount]",
+	  "[CommandCount]",
+	  "[RunTime]",
+	  "[MessageCount]",
+      ">RoleMe",
+	  "@ T Spawn",
+	  "@ Long A"
+    ],
+    "SteamIDs": [
+      "STEAM_1:1:11383969",
+	  "STEAM_1:0:40651982",
+	  "STEAM_1:1:87037387"
+    ]
+  },
+  "AutoReplies": {
+    "Packing": [
+      "how do i pack",
+      "how can i pack",
+      "how to pack",
+      "how to use vide",
+      "help me pack"
+    ],
+    "Pakrat": [
+      "use pakrat",
+      "download pakrat",
+      "get pakrat",
+      "use packrat",
+      "get packrat"
+    ],
+    "Carve": [
+      "use carve",
+      "carve is good"
+    ],
+    "Propper": [
+      "use propper",
+      "download propper",
+      "get propper",
+      "configure propper",
+      "setup propper"
+    ]
+  },
+  "DebugValues": {
+    "Moderator": "188015393233698816",
+    "Admin": "111951329265471488",
+    "Playtester": "208068701499424768",
+    "Muted": "208068701499424768",
+    "Active": "208068701499424768",
+    "Patreons": "208068701499424768",
+    "CommunityTester": "208068701499424768",
+    "CompetitiveTester": "208068701499424768",
+    "Bots": "166407161293963264",
+    "GeneralChannel": "363682633235824660",
+    "WelcomeChannel": "363682633235824660",
+    "AnnouncementChannel": "363682633235824660",
+    "TestingChannel": "363682633235824660",
+    "CompetitiveTestingChannel": "363682633235824660"
+  }
+}
