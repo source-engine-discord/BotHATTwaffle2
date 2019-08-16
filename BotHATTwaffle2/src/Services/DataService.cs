@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
@@ -346,6 +347,16 @@ namespace BotHATTwaffle2.Services
             }
 
             return user;
+        }
+
+        public SocketGuildUser GetSocketGuildUserFromSteamId(string steamId)
+        {
+            var foundUser = DatabaseUtil.GetUserSteamID(steamId: steamId);
+
+            if (foundUser == null)
+                return null;
+
+            return GetSocketGuildUser(foundUser.UserId);
         }
 
         /// <summary>

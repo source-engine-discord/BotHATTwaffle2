@@ -53,9 +53,7 @@ namespace BotHATTwaffle2.Commands
 //        [Summary("Used to debug. This should not go live")]
 //        public async Task TestAsync([Remainder]string path)
 //        {
-//            var result = DemoParser.ParseDemo(path);
 //
-//            await ReplyAsync(result.ToString());
 //        }
 
         [Command("StartFeedback", RunMode = RunMode.Async)]

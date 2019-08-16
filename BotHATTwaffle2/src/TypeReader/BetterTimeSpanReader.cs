@@ -59,7 +59,7 @@ namespace BotHATTwaffle2.TypeReader
                                     break;
                                 default:
                                     //Non-valid character.
-                                    return Task.FromResult(TypeReaderResult.FromError(CommandError.ParseFailed, "Count not parse TimeSpan"));
+                                    return Task.FromResult(TypeReaderResult.FromError(CommandError.ParseFailed, "Could not parse TimeSpan"));
                             }
 
                             input = input.Remove(0, pointer + 1);

@@ -71,17 +71,9 @@ namespace BotHATTwaffle2.Services.SRCDS
             //and removes this client so we can make another one later on.
             await Task.Run(async () =>
             {
-                log.Listen<FeedbackMessage>(chat =>
-                {
-                    if(_enableFeedback)
-                        HandleInGameFeedback(ActiveServer, chat);
-                });
-
-                log.Listen<RconMessage>(rcon => { InGameRcon(ActiveServer, rcon); });
-
-                log.Listen<PlaytestMessage>(pt => { HandlePlaytestCommand(ActiveServer, pt); });
-
-                if(_dataService.RSettings.ProgramSettings.Debug)
+                log.Listen<GenericCommand>(ganericCommand => { HandleIngameCommand(ActiveServer, ganericCommand);});
+                
+                if (_dataService.RSettings.ProgramSettings.Debug)
                     log.ListenRaw(msg => { Console.WriteLine("RAW: "+msg); });
 
                 while (EnableLog)
@@ -104,11 +96,17 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <summary>
         /// Restarts the log listener if for some reason a discord disconnect happens.
         /// </summary>
-        public void RestartLogAfterDisconnect()
+        public async Task RestartLogAfterDisconnect()
         {
             //Don't do anything unless we are active.
             if (!_isActive)
                 return;
+
+            //If we are still running, stop.
+            StopLogReceiver();
+            
+            //All time for the existing log receiver to be completely closed, if running.
+            await Task.Delay(5000);
 
             StartLogReceiver(ActiveServer.ServerId);
             EnableFeedback(_lastKnownPath);
@@ -128,7 +126,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 SetFileName(feedbackLogName);
                 _enableFeedback = true;
                 //Seed the feedback log with the current timestamp
-                HandleInGameFeedback(ActiveServer, new FeedbackMessage
+                HandleInGameFeedback(ActiveServer, new GenericCommand
                 {
                     Message = $"Log Started at {DateTime.Now} CT",
                     Player = new Player
@@ -149,13 +147,38 @@ namespace BotHATTwaffle2.Services.SRCDS
             _enableFeedback = false;
         }
 
+        private async void HandleIngameCommand(Server server, GenericCommand genericCommand)
+        {
+            switch (genericCommand.Command.Trim().ToLower())
+            {
+                case "fb":
+                case "feedback":
+                    HandleInGameFeedback(server, genericCommand);
+                    break;
+
+                case "p":
+                case "playtest":
+                    HandlePlaytestCommand(server, genericCommand);
+                    break;
+
+                case "r":
+                case "rcon":
+                    HandleInGameRcon(server, genericCommand);
+                    break;
+
+                default:
+                    await _rconService.RconCommand(server.Address, $"say Unknown Command from {genericCommand.Player.Name}");
+                    break;
+            }
+        }
+
         /// <summary>
         /// Checks if the user trying to use RCON is in the SteamID whitelist.
         /// </summary>
         /// <param name="server">Server to send RCON to</param>
         /// <param name="rconMessage">Command to send</param>
         /// <returns></returns>
-        private async void InGameRcon(Server server, RconMessage rconMessage)
+        private async void HandleInGameRcon(Server server, GenericCommand rconMessage)
         {
             //Make sure the user has access
             if (!_dataService.RSettings.Lists.SteamIDs.Any(x => x.Contains(rconMessage.Player.SteamId)))
@@ -170,7 +193,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <param name="server">Server to send acks to</param>
         /// <param name="message">Message to log</param>
         /// <returns></returns>
-        private async void HandleInGameFeedback(Server server, FeedbackMessage message)
+        private async void HandleInGameFeedback(Server server, GenericCommand message)
         {
             Directory.CreateDirectory("Feedback");
 
@@ -204,7 +227,7 @@ namespace BotHATTwaffle2.Services.SRCDS
 
         public string GetFilePath() => _path;
 
-        private async void HandlePlaytestCommand(Server server, PlaytestMessage message)
+        private async void HandlePlaytestCommand(Server server, GenericCommand message)
         {
             //Make sure the user has access
             if (!_dataService.RSettings.Lists.SteamIDs.Any(x => x.Contains(message.Player.SteamId)))
@@ -217,7 +240,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 return;
             }
 
-            switch (message.Message.ToLower())
+            switch (message.Message.Trim().ToLower())
             {
                 case "prestart":
                 case "pre":

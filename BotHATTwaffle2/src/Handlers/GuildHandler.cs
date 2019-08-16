@@ -41,7 +41,7 @@ namespace BotHATTwaffle2.Handlers
 
             _schedule.AddRequiredJobs();
 
-            _logReceiverService.RestartLogAfterDisconnect();
+            await _logReceiverService.RestartLogAfterDisconnect();
         }
 
         /// <summary>

@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -165,6 +168,165 @@ namespace BotHATTwaffle2.Commands
                                   $"**Added:**\n{string.Join("\n", rolesAdded.Select(r => r.Name))}\n\n" +
                                   $"**Removed:**\n{string.Join("\n", rolesRemoved.Select(r => r.Name))}\n\n" +
                                   $"**Invalid:**\n{string.Join("\n", rolesInvalid)}");
+        }
+
+        [Command("Link")]
+        [Summary("TODO-SUMMARY")]
+        [Remarks("TODO-REMARKS")]
+        public async Task LinkAccountAsync(string command, [Optional] [Remainder] string id)
+        {
+            var guildUser = _dataService.GetSocketGuildUser(Context.User.Id);
+            switch (command.ToLower())
+            {
+                case "add":
+                    await AddUser();
+                    break;
+
+                case "delete":
+                    if(id == null)
+                        await DeleteContextUser();
+                    else if (guildUser.Roles.Any(x =>
+                                 x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id) &&
+                             id != null)
+                        await DeleteTargetUser();
+                    else
+                        await ReplyAsync("You don't have permission for that.");
+                    break;
+
+                case "get":
+                    if (id == null)
+                        await GetLinked();
+                    else if (guildUser.Roles.Any(x =>
+                                 x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id) &&
+                             id != null)
+                        await GetTargetLinked();
+                    else
+                        await ReplyAsync("You don't have the right permissions for that.");
+                    break;
+
+                default:
+                    await ReplyAsync("Unknown command provided.");
+                    break;
+            }
+
+            async Task DeleteTargetUser()
+            {
+                UserSteamID returnedUser = null;
+                var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
+
+                if (steamIdRegex.IsMatch(id))
+                {
+                    returnedUser = DatabaseUtil.GetUserSteamID(steamId: steamIdRegex.Match(id).Value);
+                }
+                else
+                {
+                    var targetUser = _dataService.GetSocketGuildUser(id);
+                    returnedUser = DatabaseUtil.GetUserSteamID(targetUser.Id);
+                }
+
+                if (returnedUser == null)
+                {
+                    await ReplyAsync("No linked SteamID found.");
+                    return;
+                }
+
+                var deleteResult = DatabaseUtil.DeleteUserSteamID(returnedUser);
+                if (deleteResult)
+                {
+                    await ReplyAsync($"{_dataService.GetSocketGuildUser(returnedUser.UserId)} is **no longer** linked to {returnedUser.SteamID}");
+                }
+                else
+                {
+                    await ReplyAsync("Failed to delete link");
+                }
+            }
+
+            async Task DeleteContextUser()
+            {
+                var returnedUser = DatabaseUtil.GetUserSteamID(Context.User.Id);
+                if (returnedUser == null)
+                {
+                    await ReplyAsync("No linked SteamID found.");
+                    return;
+                }
+
+                var deleteResult = DatabaseUtil.DeleteUserSteamID(returnedUser);
+                if (deleteResult)
+                {
+                    await ReplyAsync($"{Context.User} is **no longer** linked to {returnedUser.SteamID}");
+                }
+                else
+                {
+                    await ReplyAsync("Failed to delete link");
+                }
+            }
+
+            async Task AddUser()
+            {
+                if (id == null)
+                {
+                    await ReplyAsync("ID cannot be empty");
+                    return;
+                }
+
+                var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
+
+                if (!steamIdRegex.IsMatch(id))
+                {
+                    await ReplyAsync("Invalid Steam ID provided");
+                    return;
+                }
+
+                var parsedID = steamIdRegex.Match(id).Value;
+
+                var result = DatabaseUtil.AddUserSteamID(new UserSteamID
+                {
+                    UserId = Context.User.Id,
+                    SteamID = parsedID
+                });
+
+                if (result)
+                    await ReplyAsync($"{Context.User} is linked to {parsedID}");
+                else
+                    await ReplyAsync("A Unable to add record");
+            }
+
+            async Task GetLinked()
+            {
+                var userSteam = DatabaseUtil.GetUserSteamID(Context.User.Id);
+
+                if (userSteam == null)
+                {
+                    await ReplyAsync("No linked SteamID found.");
+                    return;
+                }
+
+                await ReplyAsync($"{Context.User} is linked to {userSteam.SteamID}");
+            }
+
+            async Task GetTargetLinked()
+            {
+                UserSteamID returnedUser = null;
+                var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
+
+                if (steamIdRegex.IsMatch(id))
+                {
+                    returnedUser = DatabaseUtil.GetUserSteamID(steamId: steamIdRegex.Match(id).Value);
+                }
+                else
+                {
+                    var targetUser = _dataService.GetSocketGuildUser(id);
+                    returnedUser = DatabaseUtil.GetUserSteamID(targetUser.Id);
+                }
+
+                if (returnedUser == null)
+                {
+                    await ReplyAsync("No linked SteamID found.");
+                    return;
+                }
+
+                await ReplyAsync($"{_dataService.GetSocketGuildUser(returnedUser.UserId)} is linked to {returnedUser.SteamID}");
+            }
         }
     }
 }

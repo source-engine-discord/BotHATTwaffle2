@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Pipes;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
@@ -20,6 +21,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_RESERVATIONS = "serverReservations";
         private const string COLLECTION_PTREQUESTS = "playtestRequests";
         private const string COLLECTION_COMP = "compPw";
+        private const string COLLECTION_USERS_STEAMID = "usersSteamID";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -943,6 +945,92 @@ namespace BotHATTwaffle2.Util
             }
 
             return true;
+        }
+
+        /// <summary>
+        ///     Adds a users SteamID to the database
+        /// </summary>
+        /// <param name="playtestRequest">PlaytestRequest to add</param>
+        /// <returns>True if added, false otherwise</returns>
+        public static bool AddUserSteamID(UserSteamID input)
+        {
+            if (GetUserSteamID(input.UserId) != null)
+                return false;
+
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<UserSteamID>(COLLECTION_USERS_STEAMID);
+                    collection.EnsureIndex(x => x.SteamID);
+
+                    collection.Insert(input);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened storing SteamID\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool DeleteUserSteamID(UserSteamID input)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<UserSteamID>(COLLECTION_USERS_STEAMID);
+
+                    collection.Delete(input.Id);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting all playtest requests\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static UserSteamID GetUserSteamID(ulong userId = 0, string steamId = null)
+        {
+            if (userId == 0 && steamId == null)
+                return null;
+            
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<UserSteamID>(COLLECTION_USERS_STEAMID);
+
+                    if(userId != 0)
+                    {
+                        return collection.FindOne(Query.EQ("UserId", (long) userId));
+                    }
+
+                    if (steamId != null)
+                    {
+                        return collection.FindOne(Query.EQ("SteamID", steamId));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting test server reservations\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return null;
+            }
+
+            return null;
         }
     }
 }
