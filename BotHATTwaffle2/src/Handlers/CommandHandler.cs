@@ -218,23 +218,6 @@ namespace BotHATTwaffle2.Handlers
                 return;
             }
 
-            var converted = UnitConverter.AutoConversion(message.Content);
-            if (converted.Count > 0)
-            {
-                string formatted = null;
-                int counter = 0;
-                foreach (var c in converted)
-                {
-                    formatted += $"`{c.Key.ToLower()}` = `{c.Value}` | ";
-                    counter++;
-
-                    if (counter > 5)
-                        break;
-                }
-                await message.Channel.SendMessageAsync(formatted.TrimEnd('|', ' '));
-            }
-
-
             // Methods for building the embeds that the if statements caught above
             async Task PlaytestRequest()
             {

@@ -263,6 +263,8 @@ namespace BotHATTwaffle2.Commands
                 if (muteLength.TotalMinutes == 69)
                     formatted = "69 minutes";
 
+                reason = _dataService.RemoveChannelMentionStrings(reason);
+
                 await ReplyAsync(embed: embed
                     .WithAuthor($"{user.Username} Muted")
                     .WithDescription(
@@ -356,7 +358,7 @@ namespace BotHATTwaffle2.Commands
                     var mod = _dataService.GetSocketUser(mute.ModeratorId);
                     var modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     embed.AddField(mute.Username,
-                        $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{mute.Reason}`\nMuting Mod: `{modString}`");
+                        $"ID: `{mute.UserId}`\nMute Time: `{mute.MuteTime}`\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`\nReason: `{_dataService.RemoveChannelMentionStrings(mute.Reason)}`\nMuting Mod: `{modString}`");
                 }
 
                 if (allMutes.ToArray().Length == 0)
@@ -402,7 +404,7 @@ namespace BotHATTwaffle2.Commands
 
                         fullListing += $"**{mutePage.MuteTime.ToString()}**" +
                                        $"\nDuration: `{TimeSpan.FromMinutes(mutePage.Duration).ToString()}`" +
-                                       $"\nReason: `{mutePage.Reason}`" +
+                                       $"\nReason: `{_dataService.RemoveChannelMentionStrings(mutePage.Reason)}`" +
                                        $"\nMuting Mod: `{modString}`\n\n";
 
                         counter++;
@@ -429,7 +431,7 @@ namespace BotHATTwaffle2.Commands
                     var modString = mod == null ? $"{mute.ModeratorId}" : mod.ToString();
                     fullListing += $"**{mute.MuteTime.ToString()}**" +
                                    $"\nDuration: `{TimeSpan.FromMinutes(mute.Duration).ToString()}`" +
-                                   $"\nReason: `{mute.Reason}`" +
+                                   $"\nReason: `{_dataService.RemoveChannelMentionStrings(mute.Reason)}`" +
                                    $"\nMuting Mod: `{modString}`\n\n";
                 }
 
@@ -598,15 +600,24 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task ActiveAsync([Summary("User to give role to.")] SocketGuildUser user)
         {
-            await _log.LogMessage($"{user} has been given {_dataService.ActiveRole.Mention} by {Context.User}");
-            await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor($"{user.Username} is now an active member!")
-                .WithDescription(
-                    $"The {_dataService.ActiveRole.Mention} is given to users who are active and helpful in our community. " +
-                    "Thanks for contributing!")
-                .WithColor(new Color(241, 196, 15))
-                .Build());
-            await user.AddRoleAsync(_dataService.ActiveRole);
+            if (user.Roles.Any(x => x.Id == _dataService.ActiveRole.Id))
+            {
+                await Context.Message.DeleteAsync();
+                await user.RemoveRoleAsync(_dataService.ActiveRole);
+                await _log.LogMessage($"{user} has {_dataService.ActiveRole} removed by {Context.User}");
+            }
+            else
+            {
+                await _log.LogMessage($"{user} has been given {_dataService.ActiveRole.Mention} by {Context.User}");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{user.Username} is now an active member!")
+                    .WithDescription(
+                        $"The {_dataService.ActiveRole.Mention} is given to users who are active and helpful in our community. " +
+                        "Thanks for contributing!")
+                    .WithColor(new Color(241, 196, 15))
+                    .Build());
+                await user.AddRoleAsync(_dataService.ActiveRole);
+            }
         }
 
         [Command("CompetitiveTester")]

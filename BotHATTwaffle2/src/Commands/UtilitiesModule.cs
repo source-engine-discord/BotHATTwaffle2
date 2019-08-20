@@ -55,8 +55,9 @@ namespace BotHATTwaffle2.Commands
                 foreach (var role in _dataService.RSettings.Lists.Roles)
                 {
                     string r = role;
-                    if(!Context.IsPrivate)
-                        r = _dataService.Guild.Roles.FirstOrDefault(x => x.Name.Equals(role, StringComparison.OrdinalIgnoreCase))?.Mention;
+                    if (!Context.IsPrivate)
+                        r = _dataService.Guild.Roles
+                            .FirstOrDefault(x => x.Name.Equals(role, StringComparison.OrdinalIgnoreCase))?.Mention;
 
                     if (tick)
                     {
@@ -71,12 +72,13 @@ namespace BotHATTwaffle2.Commands
                 }
 
                 await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor("Toggleable Roles")
-                .WithColor(new Color(255, 135, 57))
-                .WithDescription("*`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.*")
-                .AddField("\u200E",d1.Trim(), true)
-                .AddField("\u200E", d2.Trim(),true)
-                .Build());
+                    .WithAuthor("Toggleable Roles")
+                    .WithColor(new Color(255, 135, 57))
+                    .WithDescription(
+                        "*`Example: >roleme Level Designer Programmer` will give you both `Level Designer` and `Programmer` roles.*")
+                    .AddField("\u200E", d1.Trim(), true)
+                    .AddField("\u200E", d2.Trim(), true)
+                    .Build());
                 return;
             }
 
@@ -105,7 +107,8 @@ namespace BotHATTwaffle2.Commands
 
             // Finds all SocketRoles from roleNames.
             var rolesValid =
-                _dataService.Guild.Roles.Where(r => roleNames.Contains(r.Name, StringComparer.InvariantCultureIgnoreCase));
+                _dataService.Guild.Roles.Where(r =>
+                    roleNames.Contains(r.Name, StringComparer.InvariantCultureIgnoreCase));
 
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
             var rolesAdded = new List<SocketRole>();
@@ -113,7 +116,7 @@ namespace BotHATTwaffle2.Commands
 
             // Updates roles.
             foreach (var role in rolesValid)
-                if (user.Roles.Any(x=>x.Id == role.Id))
+                if (user.Roles.Any(x => x.Id == role.Id))
                 {
                     await user.RemoveRoleAsync(role);
                     rolesRemoved.Add(role);
@@ -129,14 +132,14 @@ namespace BotHATTwaffle2.Commands
 
             var embed = new EmbedBuilder();
             embed.WithTitle("`roleme` Results")
-            .WithDescription($"Results of toggled roles for {Context.User.Mention}:")
-            .WithColor(55,55,165);
+                .WithDescription($"Results of toggled roles for {Context.User.Mention}:")
+                .WithColor(55, 55, 165);
 
             if (rolesAdded.Any())
             {
                 var name = $"Added ({rolesAdded.Count})";
 
-                if(Context.IsPrivate)
+                if (Context.IsPrivate)
                     embed.AddField(name, string.Join("\n", rolesAdded.Select(r => r.Name)), true);
                 else
                     embed.AddField(name, string.Join("\n", rolesAdded.Select(r => r.Mention)), true);
@@ -190,7 +193,7 @@ namespace BotHATTwaffle2.Commands
                     break;
 
                 case "delete":
-                    if(id == null)
+                    if (id == null)
                         await DeleteContextUser();
                     else if (guildUser.Roles.Any(x =>
                                  x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id) &&
@@ -249,7 +252,8 @@ namespace BotHATTwaffle2.Commands
                 {
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor("Link deleted!")
-                        .WithDescription($"`{_dataService.GetSocketGuildUser(returnedUser.UserId)}` is **no longer** linked to `{returnedUser.SteamID}`")
+                        .WithDescription(
+                            $"`{_dataService.GetSocketGuildUser(returnedUser.UserId)}` is **no longer** linked to `{returnedUser.SteamID}`")
                         .WithColor(165, 55, 55).Build());
                     await ReplyAsync();
                 }
@@ -277,7 +281,6 @@ namespace BotHATTwaffle2.Commands
                         .WithAuthor("Link deleted!")
                         .WithDescription($"`{Context.User}` is **no longer** linked to `{returnedUser.SteamID}`")
                         .WithColor(165, 55, 55).Build());
-                    await ReplyAsync();
                 }
                 else
                 {
@@ -366,15 +369,38 @@ namespace BotHATTwaffle2.Commands
 
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Link found")
-                    .WithDescription($"`{_dataService.GetSocketGuildUser(returnedUser.UserId)}` is linked to `{returnedUser.SteamID}`")
+                    .WithDescription(
+                        $"`{_dataService.GetSocketGuildUser(returnedUser.UserId)}` is linked to `{returnedUser.SteamID}`")
                     .WithColor(55, 55, 165).Build());
             }
 
             async Task DisplayNoLinkFound()
             {
-                await ReplyAsync(embed:new EmbedBuilder()
+                await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"No link found for {Context.User}!")
-                    .WithColor(165,55,55).Build());
+                    .WithColor(165, 55, 55).Build());
+            }
+        }
+
+        [Command("Convert")]
+        [Summary("Converts different units. Example: `>convert 420cm`")]
+        [Alias("c")]
+        public async Task ConvertAsync([Remainder]string conversion)
+        {
+            var converted = UnitConverter.AutoConversion(conversion);
+            if (converted.Count > 0)
+            {
+                string formatted = null;
+                int counter = 0;
+                foreach (var c in converted)
+                {
+                    formatted += $"`{c.Key.ToLower()}` = `{c.Value}` | ";
+                    counter++;
+
+                    if (counter > 5)
+                        break;
+                }
+                await ReplyAsync(formatted.TrimEnd('|', ' '));
             }
         }
     }

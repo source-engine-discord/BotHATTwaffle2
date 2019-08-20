@@ -35,12 +35,13 @@ namespace BotHATTwaffle2.Commands
         private readonly PlaytestService _playtestService;
         private readonly RconService _rconService;
         private readonly ScheduleHandler _scheduleHandler;
+        private readonly LogReceiverService _logReceiverService;
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService, RconService rconService,
             InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService,
-            ScheduleHandler scheduleHandler)
+            ScheduleHandler scheduleHandler, LogReceiverService logReceiverService)
         {
             _playtestService = playtestService;
             _client = client;
@@ -51,6 +52,7 @@ namespace BotHATTwaffle2.Commands
             _calendar = calendar;
             _rconService = rconService;
             _scheduleHandler = scheduleHandler;
+            _logReceiverService = logReceiverService;
         }
 
         [Command("FeedbackQueue", RunMode = RunMode.Async)]
@@ -291,7 +293,8 @@ namespace BotHATTwaffle2.Commands
                     DatabaseUtil.GetAllPlaytestRequests());
                 await calendarBuilder.DiscordPlaytestCalender(Context);
                 await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled and Requested Tests**" +
-                "\nGreen are scheduled tests, blue are requested.\nType `>pts true` to get a list of test instead of an image.");
+                "\nGreen are scheduled tests, blue are requested.\nType `>pts true` to get a list of test instead of an image.\n" +
+                $"All times are CT Timezone. Current time CT: `{DateTime.Now:g}`");
             }
             else
             {
@@ -348,7 +351,9 @@ namespace BotHATTwaffle2.Commands
                     DatabaseUtil.GetAllPlaytestRequests());
                 await calendarBuilder.DiscordPlaytestCalender(Context);
                 await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled and Requested Tests**" +
-                                                                            "\nGreen are scheduled tests, blue are requested.");
+                                                                            "\nGreen are scheduled tests, blue are requested.\n" +
+                                                                            "https://www.tophattwaffle.com/playtesting" +
+                                                                            $"\nAll times are CT Timezone. Current time CT: `{DateTime.Now:g}`");
 
                 await requestBuilder.BuildPlaytestRequestWizard();
             }
@@ -454,6 +459,13 @@ namespace BotHATTwaffle2.Commands
             embed.AddField("Mention Community Testers", "`>PA` or\n`>PublicAnnounce`", true);
             embed.AddField("View Remaining Time", "`>SR` or\n`>ShowReservations`", true);
             embed.AddField("End Reservation Early", "`>RS` or\n`>ReleaseServer`", true);
+
+            //Attempt to start listener only if one isn't started
+            if (!_logReceiverService.EnableLog)
+            {
+                _logReceiverService.StartLogReceiver(server.ServerId);
+                embed.AddField("Ingame Chat Active","You may use `>pc` in-game to send commands to the server!");
+            }
 
             await ReplyAsync(embed: embed.Build());
 
@@ -800,6 +812,8 @@ namespace BotHATTwaffle2.Commands
             await ReplyAsync(embed: _reservationService.ReleaseServer(Context.User.Id,
                 $"{Context.User} has released the " +
                 "server reservation manually."));
+
+
 
             await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually", color: LOG_COLOR);
         }

@@ -153,6 +153,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                     $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0");
 
+                if (_calendar.GetTestEventNoUpdate().IsCasual)
+                    await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+                        $"sv_password {_dataService.RSettings.General.CasualPassword}");
+                else
+                    await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
+                        $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
+
                 //Display ingame notification for in game voice and make it stick for a while.
                 _ = Task.Run(async () =>
                 {
@@ -454,7 +461,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         }
 
                         info = info.Trim(',', ' ');
-                        info += $"\nRequested Time: `{testQueue[i].TestDate}`\n" +
+                        info += $"\nRequested Time: `{testQueue[i].TestDate:ddd, MMM d, HH:mm}`\n" +
                                 $"[Map Images]({testQueue[i].ImgurAlbum}) - " +
                                 $"[Workshop Link]({testQueue[i].WorkshopURL})\n";
 
@@ -486,7 +493,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         var description = strippedHtml.Trim().Split('\n').Select(line => line.Substring(line.IndexOf(':') + 1).Trim()).ToImmutableArray();
                         var mod = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
 
-                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime}`\nEnd Time: `{item.End.DateTime}`\nModerator: {mod.Mention}", true);
+                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime:ddd, MMM d, HH:mm}`\nEnd Time: `{item.End.DateTime:ddd, MMM d, HH:mm}`\nModerator: {mod.Mention}", true);
                     }
                 }
             }

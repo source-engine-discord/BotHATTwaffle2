@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
 using BotHATTwaffle2.Handlers;
@@ -357,6 +358,39 @@ namespace BotHATTwaffle2.Services
                 return null;
 
             return GetSocketGuildUser(foundUser.UserId);
+        }
+
+        /// <summary>
+        /// Takes a string that may contain channel mention strings, and replaces them with the channel name.
+        /// </summary>
+        /// <param name="input">String to modify</param>
+        /// <returns></returns>
+        public string RemoveChannelMentionStrings(string input)
+        {
+            var currentString = input;
+            
+            //Discord channel mention string pattern
+            var channelRegex = new Regex("<#\\d+>");
+
+            //All matches
+            var matches = channelRegex.Matches(currentString);
+
+            foreach (Match match in matches)
+            {
+                var idParse = ulong.TryParse(Regex.Match(match.Value, @"\d+").Value, out var channelId);
+
+                //Did we actually parse a valid ID?
+                if (idParse)
+                {
+                    var channel = Guild.GetChannel(channelId);
+
+                    //Channel exists, replace
+                    if(channel != null)
+                        currentString = currentString.Replace(match.Value, channel.Name);
+                }
+            }
+
+            return currentString;
         }
 
         /// <summary>

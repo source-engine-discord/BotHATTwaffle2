@@ -183,10 +183,46 @@ namespace BotHATTwaffle2.Services.SRCDS
                     HandleInGameQueue(server, genericCommand);
                     break;
 
+                case "pc":
+                    HandleInGamePublicCommand(server, genericCommand);
+                    break;
+
                 default:
                     await _rconService.RconCommand(server.Address, $"say Unknown Command from {genericCommand.Player.Name}");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Allows users to use public command in-game.
+        /// </summary>
+        /// <param name="server"></param>
+        /// <param name="genericCommand"></param>
+        public async void HandleInGamePublicCommand(Server server, GenericCommand genericCommand)
+        {
+            var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
+            if (user == null)
+            {
+                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                return;
+            }
+
+            var testServer = DatabaseUtil.GetTestServerFromReservationUserId(user.Id);
+
+            //No reservation found, or multiple commands in 1 string
+            if (testServer == null || genericCommand.Message.Contains(';'))
+                return;
+
+            //Invalid commands
+            if (!_dataService.RSettings.Lists.PublicCommands.Any(x =>
+                genericCommand.Message.Contains(x, StringComparison.OrdinalIgnoreCase)))
+            {
+                await _rconService.RconCommand(server.Address, $"say {genericCommand.Message} is not allowed");
+                return;
+            }
+
+            //Send command
+            await _rconService.RconCommand(server.Address, genericCommand.Message);
         }
 
         /// <summary>

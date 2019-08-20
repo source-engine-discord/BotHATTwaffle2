@@ -53,7 +53,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 thumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
 
                 //If more than 1 creator, randomly change between them for their index on the thumbnail
-                creatorProfile = testEvent.Creators[0].Mention;
+                creatorProfile = testEvent.Creators[0].ToString();
                 if (testEvent.Creators.Count > 1)
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
@@ -65,7 +65,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     for (var i = 1; i < testEvent.Creators.Count; i++)
                         creatorProfile +=
-                            $"\n{testEvent.Creators[i].Mention}";
+                            $"\n{testEvent.Creators[i].ToString()}";
 
                     thumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
                 }
@@ -145,7 +145,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             playtestEmbed.AddField("Test Starts In", countdownString, true);
             playtestEmbed.AddField(creatorSpelling, creatorProfile, true);
-            playtestEmbed.AddField("Moderator",testEvent.Moderator.Mention, true);
+            playtestEmbed.AddField("Moderator",testEvent.Moderator.ToString(), true);
 
             //Make sure player count isn't null. It may be null if RCON is failing for some reason.
             if (_dataService.IncludePlayerCount && _dataService.PlayerCount != null)

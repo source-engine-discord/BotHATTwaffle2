@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
+using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;
@@ -15,10 +16,13 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly DiscordSocketClient _client;
+        private readonly LogReceiverService _logReceiverService;
+
         public bool CanReserve { get; private set; }
 
-        public ReservationService(DataService data, LogHandler log, Random random, DiscordSocketClient client)
+        public ReservationService(DataService data, LogHandler log, Random random, DiscordSocketClient client, LogReceiverService logReceiverService)
         {
+            _logReceiverService = logReceiverService;
             _dataService = data;
             _log = log;
             _client = client;
@@ -117,6 +121,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Remove it if not null
             if (job != null)
                 JobManager.RemoveJob(job.Name);
+
+            //Is this the server with the log running?
+            if(_logReceiverService.EnableLog && _logReceiverService.ActiveServer.ServerId == reservation.ServerId)
+            {
+                _logReceiverService.StopLogReceiver();
+            }
 
             DatabaseUtil.RemoveServerReservation(userId);
             return embed;

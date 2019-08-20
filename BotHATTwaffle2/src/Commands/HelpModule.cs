@@ -163,28 +163,33 @@ namespace BotHATTwaffle2.Commands
                     "He crashed for many, stupid, reasons. I am stronger, I bench 3 plates and have 300+ confirmed kills."
             };
 
+            embed.AddField(
+                "Libraries",
+                "[Discord.net](https://github.com/RogueException/Discord.Net), " +
+                "[Newtonsoft Json.NET](https://www.newtonsoft.com/json), " +
+                "[LiteDB](https://www.litedb.org/), " +
+                "[Imgur.API](https://github.com/DamienDennehy/Imgur.API), " +
+                "[FluentScheduler](https://github.com/fluentscheduler/FluentScheduler), " +
+                "[CoreRCON](https://github.com/ScottKaye/CoreRCON), " +
+                "[FluentFTP](https://github.com/robinrodricks/FluentFTP), " +
+                "[HtmlAgilityPack](https://html-agility-pack.net/), " +
+                "[Google APIs](https://github.com/googleapis/google-api-dotnet-client), " +
+                "[SSHNet](https://github.com/JohnTheGr8/Renci.SshNet.Async), " +
+                "[SixLabors ImageSharp](https://github.com/SixLabors/ImageSharp)");
             embed.AddField("Author", "[TopHATTwaffle](https://github.com/tophattwaffle)", true);
             embed.AddField(
                 "Contributors",
                 "[Mark](https://github.com/MarkKoz)\n" +
                 "[JimWood](https://github.com/JamesT-W)\n" +
-                "[Squidski](https://github.com/18swenskiq)", true); //moron
+                "[Squidski](https://github.com/18swenskiq)", true);
             embed.AddField(
                 "Build Date",
                 $"{buildDate:yyyy-MM-ddTHH:mm:ssK}\n[Changelog](https://github.com/tophattwaffle/BotHATTwaffle2/commits/master)",
                 true);
-            embed.AddField(
-                "Libraries",
-                "[Discord.net](https://github.com/RogueException/Discord.Net)\n" +
-                "[Newtonsoft Json.NET](https://www.newtonsoft.com/json)\n" +
-                "[LiteDB](https://www.litedb.org/)\n" +
-                "[Imgur.API](https://github.com/DamienDennehy/Imgur.API)\n" +
-                "[FluentScheduler](https://github.com/fluentscheduler/FluentScheduler)\n" +
-                "[CoreRCON](https://github.com/ScottKaye/CoreRCON)\n" +
-                "[FluentFTP](https://github.com/robinrodricks/FluentFTP)\n" +
-                "[HtmlAgilityPack](https://html-agility-pack.net/)\n" +
-                "[Google APIs](https://github.com/googleapis/google-api-dotnet-client)\n" +
-                "[SSHNet](https://github.com/JohnTheGr8/Renci.SshNet.Async)", true);
+            //embed.AddField("Uptime", DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0'),true);
+            embed.AddField("Messages Read", _dataService.MessageCount.ToString(), true);
+            embed.AddField("Commands Executed", _dataService.CommandCount.ToString(), true);
+
 
             embed.WithFooter("Build date");
             embed.WithTimestamp(buildDate);
