@@ -12,7 +12,7 @@ namespace CoreRCON.Parsers.Standard
 
     public class GenericCommandParser : DefaultParser<GenericCommand>
     {
-        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(?<Command>.+?)\\s+?(?<Message>.+?)\"";
+        public override string Pattern { get; } = $"(?<Sender>{playerParser.Pattern}) (?<Channel>say_team|say) \">(?<Command>[^\\s]+)(\\s+?)?(?<Message>.+?)?\"";
         private static PlayerParser playerParser { get; } = new PlayerParser();
 
         public override GenericCommand Load(GroupCollection groups)

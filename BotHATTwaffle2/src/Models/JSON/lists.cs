@@ -9,6 +9,5 @@ namespace BotHATTwaffle2
         public List<string> Roles { get; set; }
         public List<string> Playing { get; set; }
         public List<string> PublicCommands { get; set; }
-        public List<string> SteamIDs { get; set; }
     }
 }

@@ -9,6 +9,8 @@ using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
 using CoreRCON;
 using CoreRCON.Parsers.Standard;
+using Discord.WebSocket;
+
 namespace BotHATTwaffle2.Services.SRCDS
 {
     public class LogReceiverService
@@ -147,8 +149,15 @@ namespace BotHATTwaffle2.Services.SRCDS
             _enableFeedback = false;
         }
 
+        /// <summary>
+        /// Handles ingame commands mapping to discord commands. Not all commands will work.
+        /// Since some commands require a context, we have some manual leg work to "build" the context when needed.
+        /// </summary>
+        /// <param name="server">Game server we are using</param>
+        /// <param name="genericCommand">Generic command containing what command to fire, with what options.</param>
         private async void HandleIngameCommand(Server server, GenericCommand genericCommand)
         {
+            Console.WriteLine("CMD: "+genericCommand.Command);
             switch (genericCommand.Command.Trim().ToLower())
             {
                 case "fb":
@@ -166,6 +175,14 @@ namespace BotHATTwaffle2.Services.SRCDS
                     HandleInGameRcon(server, genericCommand);
                     break;
 
+                case "done":
+                    HandleInGameDone(server, genericCommand);
+                    break;
+
+                case "q":
+                    HandleInGameQueue(server, genericCommand);
+                    break;
+
                 default:
                     await _rconService.RconCommand(server.Address, $"say Unknown Command from {genericCommand.Player.Name}");
                     break;
@@ -173,28 +190,95 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
+        /// Allows users to join the playtest Queue in-game.
+        /// </summary>
+        /// <param name="server"></param>
+        /// <param name="genericCommand"></param>
+        private async void HandleInGameQueue(Server server, GenericCommand genericCommand)
+        {
+            if (_playtestService.FeedbackSession == null)
+            {
+                await _rconService.RconCommand(server.Address, "say No feedback session currently exists!");
+                return;
+            }
+
+            var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
+
+            if (user == null)
+            {
+                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                return;
+            }
+
+            if (!await _playtestService.FeedbackSession.AddUserToQueue(user))
+                await _rconService.RconCommand(server.Address, $"say Failed to add {user} to queue");
+            else
+                await _rconService.RconCommand(server.Address, $"say Added {user} to queue");
+        }
+
+        /// <summary>
+        /// Allows users to remove themselves from the playtest queue in-game
+        /// </summary>
+        /// <param name="server"></param>
+        /// <param name="genericCommand"></param>
+        private async void HandleInGameDone(Server server, GenericCommand genericCommand)
+        {
+            if (_playtestService.FeedbackSession == null)
+            {
+                await _rconService.RconCommand(server.Address, "say No feedback session currently exists!");
+                return;
+            }
+
+            var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
+
+            if (user == null)
+            {
+                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}");
+                return;
+            }
+
+            if (!await _playtestService.FeedbackSession.RemoveUser(user.Id))
+                await _rconService.RconCommand(server.Address, $"say Failed to remove {user} from queue");
+
+        }
+
+        /// <summary>
         /// Checks if the user trying to use RCON is in the SteamID whitelist.
         /// </summary>
         /// <param name="server">Server to send RCON to</param>
-        /// <param name="rconMessage">Command to send</param>
+        /// <param name="genericCommand">Command to send</param>
         /// <returns></returns>
-        private async void HandleInGameRcon(Server server, GenericCommand rconMessage)
+        private async void HandleInGameRcon(Server server, GenericCommand genericCommand)
         {
-            //Make sure the user has access
-            if (!_dataService.RSettings.Lists.SteamIDs.Any(x => x.Contains(rconMessage.Player.SteamId)))
-                return;
+            var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
 
-            await _rconService.RconCommand(server.Address, rconMessage.Message);
+            if (user == null)
+            {
+                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                return;
+            }
+
+            //Make sure the user has access
+            if (!user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
+            {
+                await _rconService.RconCommand(server.Address, $"say {genericCommand.Player.Name} does not have permissions for rcon");
+                return;
+            }
+
+            await _rconService.RconCommand(server.Address, genericCommand.Message);
         }
 
         /// <summary>
         /// Adds ingame feedback to a text file which will be sent to the create at a later date.
         /// </summary>
         /// <param name="server">Server to send acks to</param>
-        /// <param name="message">Message to log</param>
+        /// <param name="genericCommand">Message to log</param>
         /// <returns></returns>
-        private async void HandleInGameFeedback(Server server, GenericCommand message)
+        private async void HandleInGameFeedback(Server server, GenericCommand genericCommand)
         {
+            if (!_enableFeedback)
+                return;
+
             Directory.CreateDirectory("Feedback");
 
             if (!File.Exists(_path))
@@ -202,7 +286,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 // Create a file to write to.
                 using (StreamWriter sw = File.CreateText(_path))
                 {
-                    sw.WriteLine($"{DateTime.Now} - {message.Player.Name} ({message.Player.Team}): {message.Message}");
+                    sw.WriteLine($"{DateTime.Now} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
                 }
             }
             else
@@ -210,10 +294,10 @@ namespace BotHATTwaffle2.Services.SRCDS
             // if it is not deleted.
             using (StreamWriter sw = File.AppendText(_path))
             {
-                sw.WriteLine($"{message.Player.Name} ({message.Player.Team}): {message.Message}");
+                sw.WriteLine($"{genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
             }
 
-            await _rconService.RconCommand(server.ServerId, $"say Feedback from {message.Player.Name} captured!",
+            await _rconService.RconCommand(server.ServerId, $"say Feedback from {genericCommand.Player.Name} captured!",
                 false);
         }
 
@@ -227,11 +311,22 @@ namespace BotHATTwaffle2.Services.SRCDS
 
         public string GetFilePath() => _path;
 
-        private async void HandlePlaytestCommand(Server server, GenericCommand message)
+        private async void HandlePlaytestCommand(Server server, GenericCommand genericCommand)
         {
-            //Make sure the user has access
-            if (!_dataService.RSettings.Lists.SteamIDs.Any(x => x.Contains(message.Player.SteamId)))
+            var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
+
+            if (user == null)
+            {
+                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
                 return;
+            }
+
+            //Make sure the user has access
+            if (!user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
+            {
+                await _rconService.RconCommand(server.Address, $"say {genericCommand.Player.Name} does not have permissions for playtest command");
+                return;
+            }
 
             //Not valid - abort
             if (!_playtestService.PlaytestCommandPreCheck())
@@ -240,7 +335,7 @@ namespace BotHATTwaffle2.Services.SRCDS
                 return;
             }
 
-            switch (message.Message.Trim().ToLower())
+            switch (genericCommand.Message.Trim().ToLower())
             {
                 case "prestart":
                 case "pre":

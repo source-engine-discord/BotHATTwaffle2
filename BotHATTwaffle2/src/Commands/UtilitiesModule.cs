@@ -171,8 +171,15 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Link")]
-        [Summary("TODO-SUMMARY")]
-        [Remarks("TODO-REMARKS")]
+        [Summary("Links your Steam ID to your Discord ID")]
+        [Remarks("To use certain commands ingame, you need to link your SteamID to your Discord account. This " +
+                 "allows us to know what Discord account to target when a command is fired ingame." +
+                 "\n\n Basic usage is:\n`>link [command] [id]`" +
+                 "\n`>link add STEAM_1:1:1101` Links that SteamID to your account." +
+                 "\n`>link get` shows you the current SteamID linked to your account." +
+                 "\n`>link delete` removes your current SteamID link." +
+                 "\n\nModerators may use\n`>link delete [User/SteamID]` to force remove a link." +
+                 "\n`>link get [User/SteamID]` to see a users current link.")]
         public async Task LinkAccountAsync(string command, [Optional] [Remainder] string id)
         {
             var guildUser = _dataService.GetSocketGuildUser(Context.User.Id);
@@ -190,7 +197,9 @@ namespace BotHATTwaffle2.Commands
                              id != null)
                         await DeleteTargetUser();
                     else
-                        await ReplyAsync("You don't have permission for that.");
+                        await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("You don't have the right permissions for that.")
+                            .WithColor(165, 55, 55).Build());
                     break;
 
                 case "get":
@@ -201,11 +210,16 @@ namespace BotHATTwaffle2.Commands
                              id != null)
                         await GetTargetLinked();
                     else
-                        await ReplyAsync("You don't have the right permissions for that.");
+                        await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("You don't have the right permissions for that.")
+                            .WithColor(165, 55, 55).Build());
                     break;
 
                 default:
-                    await ReplyAsync("Unknown command provided.");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Unknown command")
+                        .WithDescription("See `>help link`")
+                        .WithColor(165, 55, 55).Build());
                     break;
             }
 
@@ -226,18 +240,24 @@ namespace BotHATTwaffle2.Commands
 
                 if (returnedUser == null)
                 {
-                    await ReplyAsync("No linked SteamID found.");
+                    await DisplayNoLinkFound();
                     return;
                 }
 
                 var deleteResult = DatabaseUtil.DeleteUserSteamID(returnedUser);
                 if (deleteResult)
                 {
-                    await ReplyAsync($"{_dataService.GetSocketGuildUser(returnedUser.UserId)} is **no longer** linked to {returnedUser.SteamID}");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Link deleted!")
+                        .WithDescription($"`{_dataService.GetSocketGuildUser(returnedUser.UserId)}` is **no longer** linked to `{returnedUser.SteamID}`")
+                        .WithColor(165, 55, 55).Build());
+                    await ReplyAsync();
                 }
                 else
                 {
-                    await ReplyAsync("Failed to delete link");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Failed to delete link")
+                        .WithColor(165, 55, 55).Build());
                 }
             }
 
@@ -246,18 +266,24 @@ namespace BotHATTwaffle2.Commands
                 var returnedUser = DatabaseUtil.GetUserSteamID(Context.User.Id);
                 if (returnedUser == null)
                 {
-                    await ReplyAsync("No linked SteamID found.");
+                    await DisplayNoLinkFound();
                     return;
                 }
 
                 var deleteResult = DatabaseUtil.DeleteUserSteamID(returnedUser);
                 if (deleteResult)
                 {
-                    await ReplyAsync($"{Context.User} is **no longer** linked to {returnedUser.SteamID}");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Link deleted!")
+                        .WithDescription($"`{Context.User}` is **no longer** linked to `{returnedUser.SteamID}`")
+                        .WithColor(165, 55, 55).Build());
+                    await ReplyAsync();
                 }
                 else
                 {
-                    await ReplyAsync("Failed to delete link");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Failed to delete link")
+                        .WithColor(165, 55, 55).Build());
                 }
             }
 
@@ -265,7 +291,9 @@ namespace BotHATTwaffle2.Commands
             {
                 if (id == null)
                 {
-                    await ReplyAsync("ID cannot be empty");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("ID cannot be empty")
+                        .WithColor(165, 55, 55).Build());
                     return;
                 }
 
@@ -273,7 +301,10 @@ namespace BotHATTwaffle2.Commands
 
                 if (!steamIdRegex.IsMatch(id))
                 {
-                    await ReplyAsync("Invalid Steam ID provided");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Invalid SteamID format")
+                        .WithDescription("Example: `STEAM_1:1:11383969`")
+                        .WithColor(165, 55, 55).Build());
                     return;
                 }
 
@@ -286,9 +317,14 @@ namespace BotHATTwaffle2.Commands
                 });
 
                 if (result)
-                    await ReplyAsync($"{Context.User} is linked to {parsedID}");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Link added!")
+                        .WithDescription($"`{Context.User}` is linked to `{parsedID}`")
+                        .WithColor(55, 165, 55).Build());
                 else
-                    await ReplyAsync("A Unable to add record");
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Unable to add link")
+                        .WithColor(165, 55, 55).Build());
             }
 
             async Task GetLinked()
@@ -297,11 +333,14 @@ namespace BotHATTwaffle2.Commands
 
                 if (userSteam == null)
                 {
-                    await ReplyAsync("No linked SteamID found.");
+                    await DisplayNoLinkFound();
                     return;
                 }
 
-                await ReplyAsync($"{Context.User} is linked to {userSteam.SteamID}");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Link found")
+                    .WithDescription($"`{Context.User}` is linked to `{userSteam.SteamID}`")
+                    .WithColor(55, 55, 165).Build());
             }
 
             async Task GetTargetLinked()
@@ -321,11 +360,21 @@ namespace BotHATTwaffle2.Commands
 
                 if (returnedUser == null)
                 {
-                    await ReplyAsync("No linked SteamID found.");
+                    await DisplayNoLinkFound();
                     return;
                 }
 
-                await ReplyAsync($"{_dataService.GetSocketGuildUser(returnedUser.UserId)} is linked to {returnedUser.SteamID}");
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Link found")
+                    .WithDescription($"`{_dataService.GetSocketGuildUser(returnedUser.UserId)}` is linked to `{returnedUser.SteamID}`")
+                    .WithColor(55, 55, 165).Build());
+            }
+
+            async Task DisplayNoLinkFound()
+            {
+                await ReplyAsync(embed:new EmbedBuilder()
+                    .WithAuthor($"No link found for {Context.User}!")
+                    .WithColor(165,55,55).Build());
             }
         }
     }

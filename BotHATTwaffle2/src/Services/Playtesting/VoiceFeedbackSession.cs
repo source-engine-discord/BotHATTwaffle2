@@ -48,6 +48,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _ = ProcessMute(true, user);
             }
 
+            _ = _rconService.RconCommand(_playtestEvent.ServerLocation, "say Feedback Queue Started!;say Feedback Queue Started!;say Feedback Queue Started!");
+
             _ = _client.SetStatusAsync(UserStatus.AFK);
         }
 
@@ -232,7 +234,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             
             
             //Alert users
-            var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` in Discord when you're finished.");
+            var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` when you're finished.");
 
             _activeUser = user;
 
