@@ -230,7 +230,7 @@ namespace BotHATTwaffle2.Commands
             {
                 UserSteamID returnedUser = null;
                 var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
-
+                string target = id;
                 if (steamIdRegex.IsMatch(id))
                 {
                     returnedUser = DatabaseUtil.GetUserSteamID(steamId: steamIdRegex.Match(id).Value);
@@ -239,11 +239,12 @@ namespace BotHATTwaffle2.Commands
                 {
                     var targetUser = _dataService.GetSocketGuildUser(id);
                     returnedUser = DatabaseUtil.GetUserSteamID(targetUser.Id);
+                    target = targetUser.ToString();
                 }
 
                 if (returnedUser == null)
                 {
-                    await DisplayNoLinkFound();
+                    await DisplayNoLinkFound(target);
                     return;
                 }
 
@@ -270,7 +271,7 @@ namespace BotHATTwaffle2.Commands
                 var returnedUser = DatabaseUtil.GetUserSteamID(Context.User.Id);
                 if (returnedUser == null)
                 {
-                    await DisplayNoLinkFound();
+                    await DisplayNoLinkFound(Context.User.ToString());
                     return;
                 }
 
@@ -336,7 +337,7 @@ namespace BotHATTwaffle2.Commands
 
                 if (userSteam == null)
                 {
-                    await DisplayNoLinkFound();
+                    await DisplayNoLinkFound(Context.User.ToString());
                     return;
                 }
 
@@ -350,7 +351,7 @@ namespace BotHATTwaffle2.Commands
             {
                 UserSteamID returnedUser = null;
                 var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
-
+                string target = id;
                 if (steamIdRegex.IsMatch(id))
                 {
                     returnedUser = DatabaseUtil.GetUserSteamID(steamId: steamIdRegex.Match(id).Value);
@@ -359,11 +360,12 @@ namespace BotHATTwaffle2.Commands
                 {
                     var targetUser = _dataService.GetSocketGuildUser(id);
                     returnedUser = DatabaseUtil.GetUserSteamID(targetUser.Id);
+                    target = targetUser.ToString();
                 }
 
                 if (returnedUser == null)
                 {
-                    await DisplayNoLinkFound();
+                    await DisplayNoLinkFound(target);
                     return;
                 }
 
@@ -374,10 +376,10 @@ namespace BotHATTwaffle2.Commands
                     .WithColor(55, 55, 165).Build());
             }
 
-            async Task DisplayNoLinkFound()
+            async Task DisplayNoLinkFound(string target)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"No link found for {Context.User}!")
+                    .WithAuthor($"No link found for {target}!")
                     .WithColor(165, 55, 55).Build());
             }
         }
