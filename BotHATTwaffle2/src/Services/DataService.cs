@@ -432,7 +432,9 @@ namespace BotHATTwaffle2.Services
                 
                 if (input.StartsWith("<@") && input.EndsWith(">"))
                 {
-                    input = input.Replace("<@", "").Replace(">","");
+                    var numbersOnly = new Regex(@"[0-9]+");
+                    input = numbersOnly.Match(input).Value;
+
                     if (ulong.TryParse(input, out var id))
                         user = Guild.GetUser(id);
                 }
