@@ -330,7 +330,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             // if it is not deleted.
             using (StreamWriter sw = File.AppendText(_path))
             {
-                sw.WriteLine($"{genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
+                sw.WriteLine($"{DateTime.Now:t} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
             }
 
             await _rconService.RconCommand(server.ServerId, $"say Feedback from {genericCommand.Player.Name} captured!",
