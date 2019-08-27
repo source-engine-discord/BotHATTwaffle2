@@ -247,7 +247,17 @@ namespace CoreRCON
                     throw new AuthenticationException($"Authentication failed for {_tcp.RemoteEndPoint}.");
 
                 // Tell Connect that authentication succeeded
-                _authenticationTask.SetResult(true);
+
+                try
+                {
+                    _authenticationTask.SetResult(true);
+                }
+                catch
+                {
+                    Console.WriteLine("Failure setting authentication task - disposing");
+                    Dispose();
+                    return;
+                }
             }
 
             // Forward to handler
