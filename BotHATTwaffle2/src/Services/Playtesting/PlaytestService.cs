@@ -153,10 +153,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,
                     $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0");
 
-                if (_calendar.GetTestEventNoUpdate().IsCasual)
-                    await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
-                        $"sv_password {_dataService.RSettings.General.CasualPassword}");
-                else
+                if (!_calendar.GetTestEventNoUpdate().IsCasual)
                     await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
                         $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
 
@@ -355,14 +352,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = Task.Run(async () =>
             {
                 //Wait some, reset password
-                await Task.Delay(5000);
-
-                if(_calendar.GetTestEventNoUpdate().IsCasual)
+                await Task.Delay(10000);
+                if (!_calendar.GetTestEventNoUpdate().IsCasual)
                     await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
-                        $"sv_password {_dataService.RSettings.General.CasualPassword}");
-                else
-                    await _rconService.RconCommand(_calendar.GetTestEventNoUpdate().ServerLocation,
-                    $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
+                        $"sv_password {_calendar.GetTestEventNoUpdate().CompPassword}");
             });
 
             //Reset the flag as we are done running

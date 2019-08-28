@@ -247,9 +247,14 @@ namespace BotHATTwaffle2.Services.Playtesting
                 var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService,
                     $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
-                await _dataService.TestingChannel.SendMessageAsync(
+
+                if(wbEmbed != null)
+                    await _dataService.TestingChannel.SendMessageAsync(
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)",
                     embed: wbEmbed.Build());
+                else
+                    await _dataService.TestingChannel.SendMessageAsync(
+                        $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)");
 
                 //Remove the test from the DB.
                 DatabaseUtil.RemovePlaytestRequest(_testRequest);
