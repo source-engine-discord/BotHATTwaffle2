@@ -190,7 +190,7 @@ namespace BotHATTwaffle2.Commands
             embed.AddField("Messages Read", _dataService.MessageCount.ToString(), true);
             embed.AddField("Commands Executed", _dataService.CommandCount.ToString(), true);
             embed.AddField("Run Time",
-                $"{DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}");
+                $"{DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}", true);
 
 
             embed.WithFooter("Build date");
