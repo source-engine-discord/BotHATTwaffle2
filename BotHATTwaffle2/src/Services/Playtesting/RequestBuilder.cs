@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -150,7 +151,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 await Display(
                     "Type the ID of the field you want to edit or type `Schedule` to schedule the playtest.\n" +
-                    "Type `delete` to delete this request completely.");
+                    "Type `delete` to delete this request completely.\n" +
+                    "Type `save` to save the request and exit.");
 
                 //User's input
                 _userMessage = await _interactive.NextMessageAsync(_context);
@@ -168,8 +170,27 @@ namespace BotHATTwaffle2.Services.Playtesting
                         break;
                 }
 
+                if (_userMessage.Content.Equals("save", StringComparison.OrdinalIgnoreCase))
+                {
+                    var saveResult = DatabaseUtil.UpdatePlaytestRequests(_testRequest);
+                    var saveEmbed = RebuildEmbed();
+                    if (saveResult)
+                    {
+                        saveEmbed.WithColor(55, 55, 165);
+                        await _instructionsMessage.ModifyAsync(x => x.Content = "Request saved!");
+                        await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
+                    }
+                    else
+                    {
+                        saveEmbed.WithColor(165, 55, 55);
+                        await _instructionsMessage.ModifyAsync(x => x.Content = "There was an issue saving the request");
+                        await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
+                    }
+                    return;
+                }
+
                 //Exiting
-                if (_userMessage == null ||
+                    if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();

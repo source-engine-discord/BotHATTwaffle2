@@ -193,9 +193,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .WithDescription(
                         $"[Download Demo Here]({demoUrl}) | [Map Images]({_playtestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
 
-//                if (jasonFile != null)
-//                    embed.AddField("Analyzed Demo",
-//                        $"[View Processed Demo Here!]({demoSiteUrlBase}{jasonFile.Name.Replace(jasonFile.Extension, "")})");
+                if (jasonFile != null)
+                    embed.AddField("Analyzed Demo",
+                        $"[View Processed Demo Here!]({demoSiteUrlBase}{jasonFile.Name.Replace(jasonFile.Extension, "")})");
 
                 //Stop getting more feedback
                 _logReceiverService.DisableFeedback();
@@ -212,13 +212,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                             $"\\{_playtestCommandInfo.StartDateTime:MM} - {_playtestCommandInfo.StartDateTime:MMMM}" +
                             $"\\{_playtestCommandInfo.DemoName}\\{_playtestCommandInfo.DemoName}.txt"
                         ,true);
-                    await _dataService.TestingChannel.SendFileAsync(_logReceiverService.GetFilePath(),
+                    await _dataService.AnnouncementChannel.SendFileAsync(_logReceiverService.GetFilePath(),
                         _playtestCommandInfo.CreatorMentions,
                         embed: embed.Build());
                 }
                 else
                 {
-                    await _dataService.TestingChannel.SendMessageAsync(_playtestCommandInfo.CreatorMentions,
+                    await _dataService.AnnouncementChannel.SendMessageAsync(_playtestCommandInfo.CreatorMentions,
                         embed: embed.Build());
                 }
 
@@ -1013,7 +1013,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _dataService.PlayTesterRole.ModifyAsync(x => { x.Mentionable = true; });
 
             await _dataService.TestingChannel.SendMessageAsync(
-                $"Currently looking for {neededPlayers} players. {_dataService.PlayTesterRole.Mention}",
+                $"Currently looking for {neededPlayers} players. {_dataService.PlayTesterRole.Mention}\n" +
+                $"Type `>playtester` to stop getting these notifications.",
                 embed: _announcementMessage.CreatePlaytestEmbed(_calendar.GetTestEventNoUpdate().IsCasual,
                     true, PlaytestAnnouncementMessage.Id));
 

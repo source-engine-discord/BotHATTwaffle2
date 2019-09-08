@@ -1016,7 +1016,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("CallAllTesters")]
-        [Alias("ca")]
+        [Alias("cat")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         [Summary("Mentions the normal playtest role for a competitive test.")]
         public async Task CallAllTestersAsync(int neededPlayers)

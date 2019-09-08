@@ -879,8 +879,30 @@ namespace BotHATTwaffle2.Util
 
                     //Stamp the current time on the insert
                     playtestRequest.Timestamp = DateTime.Now;
-                    //Insert new entry with ID of 1, and our values.
+
                     collection.Insert(playtestRequest);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened storing playtest request\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool UpdatePlaytestRequests(PlaytestRequest playtestRequest)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var collection = db.GetCollection<PlaytestRequest>(COLLECTION_PTREQUESTS);
+
+                    collection.Update(playtestRequest);
                 }
             }
             catch (Exception e)
