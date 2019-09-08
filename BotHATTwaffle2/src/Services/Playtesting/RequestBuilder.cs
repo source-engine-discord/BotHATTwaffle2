@@ -251,9 +251,14 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var finalEmbed = RebuildEmbed();
 
+            var eventAdded = await _calendar.AddTestEvent(_testRequest, _context.User);
+
             //Try added to calendar, if true we can move forward with alerting user of the schedule.
-            if (await _calendar.AddTestEvent(_testRequest, _context.User))
+            if (eventAdded)
             {
+                //Remove the test from the DB.
+                DatabaseUtil.RemovePlaytestRequest(_testRequest);
+
                 //Update display
                 finalEmbed.WithColor(new Color(240, 240, 240));
                 await _instructionsMessage.ModifyAsync(x => x.Content = "Test Scheduled!");
@@ -263,6 +268,11 @@ namespace BotHATTwaffle2.Services.Playtesting
                 string mentions = null;
                 _testRequest.CreatorsDiscord.ForEach(x => mentions += $"{_dataService.GetSocketGuildUser(x).Mention} ");
 
+                await _dataService.TestingChannel.SendMessageAsync(
+                    $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)");
+
+                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
+
                 //Workshop embed.
                 var ws = new Workshop();
                 var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService,
@@ -270,18 +280,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
 
                 if(wbEmbed != null)
-                    await _dataService.TestingChannel.SendMessageAsync(
-                    $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)",
-                    embed: wbEmbed.Build());
-                else
-                    await _dataService.TestingChannel.SendMessageAsync(
-                        $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)");
-
-                //Remove the test from the DB.
-                DatabaseUtil.RemovePlaytestRequest(_testRequest);
-
-                await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
-
+                    await _dataService.TestingChannel.SendMessageAsync(embed: wbEmbed.Build());
+                  
                 return;
             }
 
