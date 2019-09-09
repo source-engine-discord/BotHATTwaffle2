@@ -631,6 +631,18 @@ namespace BotHATTwaffle2.Services.Playtesting
                 case "date":
                     if (DateTime.TryParse(data, out var dt))
                     {
+                        if (dt < DateTime.Now)
+                        {
+                            await Display($"Date cannot be in the past.\nYou provided `{data}`\n" + _wizardText[0]);
+                            return false;
+                        }
+
+                        if (dt > DateTime.Now.AddMonths(2))
+                        {
+                            await Display($"You cannot schedule more than 2 months in advance.\nYou provided `{data}`\n" + _wizardText[0]);
+                            return false;
+                        }
+
                         _testRequest.TestDate = dt;
                         _dateChecked = false;
                         return true;
