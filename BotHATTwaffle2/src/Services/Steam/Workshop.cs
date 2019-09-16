@@ -70,53 +70,103 @@ namespace BotHATTwaffle2.Services.Steam
                 });
 
                 string resultContentItem;
-                try
+                RootWorkshop workshopJsonItem;
+                int retryCount = 0;
+
+                while (true)
                 {
-                    // Send the actual post request
-                    clientItem.BaseAddress = new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
-                    var resultItem = await clientItem.PostAsync("", contentItem);
-                    resultContentItem = await resultItem.Content.ReadAsStringAsync();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    return null;
+                    try
+                    {
+                        // Send the actual post request
+                        clientItem.BaseAddress =
+                            new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
+                        var resultItem = await clientItem.PostAsync("", contentItem);
+                        resultContentItem = await resultItem.Content.ReadAsStringAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        //Don't know what can happen here. Unless we crash later on, just going to catch everything
+                        Console.WriteLine(e);
+                        return null;
+                    }
+
+                    //Check if response is empty
+                    if (resultContentItem == "{}") return null;
+
+                    // Build workshop item embed, and set up author and game data embeds here for scoping reasons
+                    try
+                    {
+                        workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultContentItem);
+
+                        if (retryCount <= 3)
+                        {
+                            Console.WriteLine("Retrying in 2 seconds...");
+                            await Task.Delay(2000);
+                            retryCount++;
+                            continue;
+                        }
+
+                        //Something happened getting the response from Steam. We got a response but it wasn't valid?
+                        Console.WriteLine(e);
+                        Console.WriteLine("Aborting workshop embed...");
+                        return null;
+                    }
+
+                    break;
                 }
 
-                //Check if response is empty
-                if (resultContentItem == "{}") return null;
-                RootWorkshop workshopJsonItem;
-                // Build workshop item embed, and set up author and game data embeds here for scoping reasons
-                try
-                {
-                    workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
-                }
-                catch (Exception e)
-                {
-                    //Something happened getting the response from Steam. We got a response but it wasn't valid?
-                    Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultContentItem);
-                    Console.WriteLine(e);
-                    return null;
-                }
                 RootWorkshop workshopJsonAuthor;
 
                 // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us
                 if (workshopJsonItem.response.publishedfiledetails[0].result == 9) return null;
                 if (workshopJsonItem.response.publishedfiledetails[0].filename.Contains("/screenshots/".ToLower())) return null;
 
-                // Send the GET request for the author information
-                using (var clientAuthor = new HttpClient())
+                while (true)
                 {
-                    clientAuthor.BaseAddress = new Uri("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/");
-                    HttpResponseMessage responseAuthor = clientAuthor.GetAsync($"?key={apiKey}&steamids={workshopJsonItem.response.publishedfiledetails[0].creator}").Result;
-                    responseAuthor.EnsureSuccessStatusCode();
-                    string resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
+                    // Send the GET request for the author information
+                    using (var clientAuthor = new HttpClient())
+                    {
+                        clientAuthor.BaseAddress =
+                            new Uri("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/");
+                        HttpResponseMessage responseAuthor = clientAuthor
+                            .GetAsync(
+                                $"?key={apiKey}&steamids={workshopJsonItem.response.publishedfiledetails[0].creator}")
+                            .Result;
+                        responseAuthor.EnsureSuccessStatusCode();
+                        string resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
 
-                    // Don't embed anything if getting the author fails for some reason
-                    if (resultAuthor == "{\"response\":{}}") return null;
+                        // Don't embed anything if getting the author fails for some reason
+                        if (resultAuthor == "{\"response\":{}}") return null;
 
-                    // If we get a good response though, we're gonna deserialize it
-                    workshopJsonAuthor = JsonConvert.DeserializeObject<RootWorkshop>(resultAuthor);
+                        // If we get a good response though, we're gonna deserialize it
+                        try
+                        {
+                            workshopJsonAuthor = JsonConvert.DeserializeObject<RootWorkshop>(resultAuthor);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultAuthor);
+
+                            if (retryCount <= 3)
+                            {
+                                Console.WriteLine("Retrying in 2 seconds...");
+                                await Task.Delay(2000);
+                                retryCount++;
+                                continue;
+                            }
+
+                            //Something happened getting the response from Steam. We got a response but it wasn't valid?
+                            Console.WriteLine(e);
+                            Console.WriteLine("Aborting workshop embed...");
+                            return null;
+                        }
+
+                        break;
+                    }
                 }
 
                 //Make sure a cache exists
@@ -173,6 +223,7 @@ namespace BotHATTwaffle2.Services.Steam
 
         public async Task SendWorkshopEmbed(SocketMessage message, DataService _dataService)
         {
+            await message.Channel.TriggerTypingAsync();
             //If the invoking message has an embed, do nothing.
             await Task.Delay(2000);
             var refreshedMessage = await _dataService.GetSocketMessage(message.Channel, message.Id);

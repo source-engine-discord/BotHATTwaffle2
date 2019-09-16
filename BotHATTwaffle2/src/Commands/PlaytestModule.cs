@@ -280,7 +280,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Schedule", RunMode = RunMode.Async)]
-        [Alias("pts")]
+        [Alias("pts","upcoming")]
         [Summary("Allows users to view testing queue and schedule.")]
         [Remarks("For members, displays test in the queue and scheduled on the calendar." +
                  "If you're moderation staff, allows for officially scheduling the playtest event after making any needed changes.")]

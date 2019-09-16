@@ -928,7 +928,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                                $"_{gameMode}");
 
             var embed = new EmbedBuilder()
-                .WithAuthor($"Settings up test server for {testEvent.Title}")
+                .WithAuthor($"Setting up test server for {testEvent.Title}")
                 .WithTitle("Workshop Link")
                 .WithUrl(testEvent.WorkshopLink.ToString())
                 .WithThumbnailUrl(testEvent.CanUseGallery

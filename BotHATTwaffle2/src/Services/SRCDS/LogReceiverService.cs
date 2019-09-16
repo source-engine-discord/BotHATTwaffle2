@@ -157,7 +157,6 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// <param name="genericCommand">Generic command containing what command to fire, with what options.</param>
         private async void HandleIngameCommand(Server server, GenericCommand genericCommand)
         {
-            Console.WriteLine("CMD: "+genericCommand.Command);
             switch (genericCommand.Command.Trim().ToLower())
             {
                 case "fb":
