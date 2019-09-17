@@ -333,13 +333,29 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(240, 240, 240).Build());
 
                 //Give them the quick request if they want to re-test.
-                await _context.Channel.SendMessageAsync(
-                    $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
-
+                try
+                {
+                    //Try DM
+                    await _context.User.SendMessageAsync(
+                        $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
+                }
+                catch
+                {
+                    //Just reply instead
+                    await _context.Channel.SendMessageAsync(
+                        $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
+                }
+                
                 var schedule = await _playtestService.GetUpcomingEvents(true, false);
 
+                string creators = "";
+                foreach (var c in _testRequest.CreatorsDiscord)
+                {
+                    creators += _dataService.GetSocketGuildUser(c).Mention + " ";
+                }
+
                 await _dataService.AdminChannel.SendMessageAsync(
-                    $"{_dataService.PlaytestAdmin.Mention} a new playtest request has been submitted!",
+                    $"{_dataService.PlaytestAdmin.Mention} a new playtest request for `{_testRequest.MapName}` has been submitted by {creators.Trim()}!",
                     embed: schedule.Build());
 
                 //Users to mention.
@@ -361,8 +377,20 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _instructionsMessage.ModifyAsync(x =>
                     x.Content = "An error occured creating the playtest request!");
                 await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
-                await _context.Channel.SendMessageAsync(
-                    $"Here is a quick request for your test to quickly submit again later.```>Request {_testRequest}```");
+
+                //Give them the quick request if they want to re-test.
+                try
+                {
+                    //Try DM
+                    await _context.User.SendMessageAsync(
+                        $"Here is a quick request for your test to quickly submit again later.```> Request { _testRequest}```");
+                }
+                catch
+                {
+                    //Just reply instead
+                    await _context.Channel.SendMessageAsync(
+                        $"Here is a quick request for your test to quickly submit again later.```> Request { _testRequest}```");
+                }
             }
         }
 
