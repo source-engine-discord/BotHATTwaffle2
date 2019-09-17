@@ -260,7 +260,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             var config = _calendar.GetTestEventNoUpdate().IsCasual
                 ? _dataService.RSettings.General.CasualConfig
                 : _dataService.RSettings.General.CompConfig;
-
+            await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"mp_teamname_1 Chicken; mp_teamname_2 Ido");
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress, $"exec {config}");
             await Task.Delay(3000);
             await _rconService.RconCommand(_playtestCommandInfo.ServerAddress,

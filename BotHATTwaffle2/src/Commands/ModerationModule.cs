@@ -1,22 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using BotHATTwaffle2.Handlers;
+﻿using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
-using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using BotHATTwaffle2.Models.JSON;
+using Newtonsoft.Json.Linq;
 
 namespace BotHATTwaffle2.Commands
 {
@@ -49,12 +52,90 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-//        [Command("Test")]
-//        [Summary("Used to debug. This should not go live")]
-//        public async Task TestAsync([Remainder]string path)
-//        {
-//
-//        }
+        //        [Command("Test")]
+        //        [Summary("Used to debug. This should not go live")]
+        //        public async Task TestAsync([Remainder]string path)
+        //        {
+        //
+        //        }
+
+        [Command("MatchMaking", RunMode = RunMode.Async)]
+        [Alias("mm")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Ido-MMR System")]
+        public async Task MatchMakingAsync([Optional]string server)
+        {
+            const string BASEURL = @"https://www.tophattwaffle.com/demos/playerBase/index.php?mode=idoMode&ids=";
+
+            if (server == null)
+                server = _calendar.GetTestEventNoUpdate().ServerLocation;
+
+            //Check again in-case there is no server on the calendar
+            if (server == null)
+            {
+                var embedError = new EmbedBuilder()
+                    .WithColor(165, 55, 55)
+                    .WithAuthor("Error getting server...");
+                await ReplyAsync(embed: embedError.Build());
+                return;
+            }
+
+            var status = await _rconService.RconCommand(server, "status", false);
+
+            List<Int64> playerIds64 = new List<Int64>();
+
+            var splitStatus = status.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+            //Get the IDs, skip 0 which means no ID found for that line.
+            foreach (var s in splitStatus)
+            {
+                var id = GeneralUtil.TranslateSteamID(s);
+
+                if(id != 0)
+                    playerIds64.Add(id);
+            }
+
+            //No users found
+            if(playerIds64.Count == 0)
+            {
+                var embedError = new EmbedBuilder()
+                    .WithColor(165, 55, 55)
+                    .WithAuthor("No users found...");
+                await ReplyAsync(embed:embedError.Build());
+                return;
+            }
+
+            //Build the full URL
+            string builtUrl = BASEURL + string.Join(",", playerIds64);
+
+            //Lets get the JSON from the site
+            var returnedJson = new WebClient().DownloadString(builtUrl).Trim();
+
+            //This is all because WhaleMan code won't give us an array...
+            List<RatedPlayer> ratedPlayers = new List<RatedPlayer>();
+            JObject jsonObject = JObject.Parse(returnedJson);
+            foreach (var id in playerIds64)
+            {
+                var result = jsonObject.Property(id.ToString()).First;
+                var player = result.ToObject<RatedPlayer>();
+                ratedPlayers.Add(player);
+            }
+
+            //Reverse so best players are first
+            var sortedPlayers = ratedPlayers.OrderBy(x => x.Rating).Reverse().ToList();
+
+            var embed = new EmbedBuilder()
+                .WithColor(55,55,165)
+                .WithAuthor("Player Ratings");
+
+            //Add fields to embed
+            foreach (var sortedPlayer in sortedPlayers)
+            {
+                embed.AddField(sortedPlayer.Name, sortedPlayer.Rating, true);
+            }
+
+            await ReplyAsync(embed: embed.Build());
+        }
 
         [Command("StartFeedback", RunMode = RunMode.Async)]
         [Alias("startfb")]

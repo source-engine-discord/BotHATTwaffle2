@@ -27,6 +27,29 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
+        /// Takes a original SteamID and finds the SteamID64 version
+        /// </summary>
+        /// <param name="steamID">STEAM_1:0:123456 string</param>
+        /// <returns>The SteamID64 version</returns>
+        public static Int64 TranslateSteamID(string steamID)
+        {
+            Int64 result = 0;
+
+            var template = new Regex(@"STEAM_(\d):([0-1]):(\d+)");
+            var matches = template.Matches(steamID);
+            if (matches.Count <= 0) return 0;
+            var parts = matches[0].Groups;
+            if (parts.Count != 4) return 0;
+
+            Int64 x = Int64.Parse(parts[1].Value) << 24;
+            Int64 y = Int64.Parse(parts[2].Value);
+            Int64 z = Int64.Parse(parts[3].Value) << 1;
+
+            result = ((1 + (1 << 20) + x) << 32) | (y + z);
+            return result;
+        }
+
+        /// <summary>
         ///     Validates a URI as good
         /// </summary>
         /// <param name="input">Input string</param>
