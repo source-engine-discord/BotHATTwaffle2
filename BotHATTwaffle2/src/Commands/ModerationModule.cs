@@ -89,6 +89,8 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            await Context.Channel.TriggerTypingAsync();
+
             var status = await _rconService.RconCommand(server, "status", false);
 
             List<Int64> playerIds64 = new List<Int64>();
@@ -135,7 +137,7 @@ namespace BotHATTwaffle2.Commands
 
             var embed = new EmbedBuilder()
                 .WithColor(55,55,165)
-                .WithAuthor("Player Ratings");
+                .WithAuthor("Player Ratings",url:builtUrl);
 
             //Add fields to embed
             foreach (var sortedPlayer in sortedPlayers)
