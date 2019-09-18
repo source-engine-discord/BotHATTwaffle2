@@ -448,7 +448,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         {
                             var user = _dataService.GetSocketGuildUser(creator);
                             if (user != null)
-                                info += $"`{user.Username}`, ";
+                                info += $"`{user}`, ";
                             else
                                 info += $"Could not get user `{creator}`, ";
                         }
