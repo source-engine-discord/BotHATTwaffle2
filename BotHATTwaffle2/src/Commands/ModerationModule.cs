@@ -65,6 +65,15 @@ namespace BotHATTwaffle2.Commands
         [Summary("Ido-MMR System")]
         public async Task MatchMakingAsync([Optional]string server)
         {
+            if (Context.Channel.Id != _dataService.AdminBotsChannel.Id)
+            {
+                var embedError = new EmbedBuilder()
+                    .WithColor(165, 55, 55)
+                    .WithAuthor("You cannot use this command in this channel...");
+                await ReplyAsync(embed: embedError.Build());
+                return;
+            }
+
             const string BASEURL = @"https://www.tophattwaffle.com/demos/playerBase/index.php?mode=idoMode&ids=";
 
             if (server == null)
