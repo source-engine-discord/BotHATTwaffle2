@@ -52,12 +52,16 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-        //        [Command("Test")]
-        //        [Summary("Used to debug. This should not go live")]
-        //        public async Task TestAsync([Remainder]string path)
-        //        {
-        //
-        //        }
+//        [Command("Test")]
+//        [Summary("Used to debug. This should not go live")]
+//        [RequireUserPermission(GuildPermission.KickMembers)]
+//        public async Task TestAsync()
+//        {
+//            const string playerbaseUrl = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
+//            var response = new WebClient().DownloadString(playerbaseUrl).Trim();
+//
+//            await _log.LogMessage($"Got the following response when updating playerbase: `{response}`", color: LOG_COLOR);
+//        }
 
         [Command("MatchMaking", RunMode = RunMode.Async)]
         [Alias("mm")]

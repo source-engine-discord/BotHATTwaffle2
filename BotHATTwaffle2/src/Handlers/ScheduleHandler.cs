@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Playtesting;
@@ -77,6 +78,10 @@ namespace BotHATTwaffle2.Handlers
                 .WithName("[PlaytestCountUpdate]").ToRunEvery(2).Hours());
             JobManager.AddJob(UpdatePlayTestCount, s => s
                 .WithName("[PlaytestCountUpdateNow]").ToRunNow());
+
+            //Update playerbase
+            JobManager.AddJob(async () => await UpdatePlayerbase(), s => s
+                .WithName("[PlayingUpdate]").ToRunEvery(1).Days().At(0, 00));
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
@@ -220,6 +225,14 @@ namespace BotHATTwaffle2.Handlers
                     break;
             }
             await _client.SetGameAsync(playing);
+        }
+
+        private async Task UpdatePlayerbase()
+        {
+            const string playerbaseUrl = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
+            var response = new WebClient().DownloadString(playerbaseUrl).Trim();
+
+            await _log.LogMessage($"Got the following response when updating playerbase: `{response}`", color: LOG_COLOR);
         }
 
         public void DisablePlayingUpdate() => _allowPlayingCycle = false;
