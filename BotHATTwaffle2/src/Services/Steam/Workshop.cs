@@ -92,7 +92,8 @@ namespace BotHATTwaffle2.Services.Steam
                     //Check if response is empty
                     if (resultContentItem == "{}") return null;
 
-                    Console.WriteLine(resultContentItem);
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        Console.WriteLine(resultContentItem);
 
                     // Build workshop item embed, and set up author and game data embeds here for scoping reasons
                     try
