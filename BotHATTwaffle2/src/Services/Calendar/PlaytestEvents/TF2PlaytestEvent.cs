@@ -35,7 +35,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Generic setup
             await base.PlaytestCommandPre(replyInContext, logReceiverService, rconService);
 
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {_dataService.RSettings.General.CSGOCasualConfig}");
+            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {_dataService.RSettings.General.TF2Config}");
             await Task.Delay(1000);
             await rconService.RconCommand(ServerLocation, $"changelevel workshop/{PlaytestCommandInfo.WorkshopId}");
 
@@ -49,7 +49,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             await base.PlaytestCommandStart(replyInContext, rconService);
 
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {_dataService.RSettings.General.CSGOCasualConfig}");
+            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {_dataService.RSettings.General.TF2Config}");
             await Task.Delay(3000);
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                 $"tv_record {PlaytestCommandInfo.DemoName}; say Recording {PlaytestCommandInfo.DemoName}");
