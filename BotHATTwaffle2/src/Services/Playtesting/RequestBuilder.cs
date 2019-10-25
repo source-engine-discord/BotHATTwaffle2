@@ -24,7 +24,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         //The values that are used by the wizard to build the test. Also used for editing the event.
         private readonly string[] _arrayValues =
         {
-            "Date", "Emails", "MapName", "Discord", "Imgur", "Workshop", "Type", "Description", "Spawns",
+            "Date", "Emails", "Game", "MapName", "Discord", "Imgur", "Workshop", "Type", "Description", "Spawns",
             "PreviousTest", "Server"
         };
 
@@ -43,6 +43,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             "Example: `2/17/2019 14:00`",
             "Enter email addresses of the creators in a comma separated format.\n" +
             "Example: `tophattwaffle@gmail.com, doug@tophattwaffle.com`",
+            "Please type `CSGO` or `TF2` to specify what game this test is for.",
             "Enter the map name.\n" +
             "Example: `Facade 2`",
             "To add yourself as the creator, mention yourself.\n" +
@@ -60,7 +61,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             "Example: `8`",
             "If you have one, please enter the previous date you playtested this level on. If you don't have one, type `none`. Required format: `MM/DD/YYYY HH:MM`\n" +
             "Example: `2/17/2019 14:00`",
-            "Please type the server ID that you'd like your server to be on. Type `none` for no preference.\n" +
+            "Please type the server ID that you'd like your server to be on. Type `none` for no preference. Type `list` to display valid servers.\n" +
             "Example: `can`"
         };
 
@@ -163,7 +164,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     //Server cannot be none when scheduling. Require it to be valid.
                     if (_testRequest.Preferredserver == "No preference")
                     {
-                        index = 10;
+                        index = 11;
                         isValid = true;
                     }
                     else
@@ -212,7 +213,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     isValid = int.TryParse(_userMessage.Content, out index);
                 
                 //Valid number, and between the valid indexes?
-                if (isValid && index >= 0 && index <= 10)
+                if (isValid && index >= 0 && index <= _arrayValues.Length)
                 {
                     //Validate based on the index.
                     await Display(_wizardText[index]);
@@ -268,7 +269,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 string mentions = null;
                 _testRequest.CreatorsDiscord.ForEach(x => mentions += $"{_dataService.GetSocketGuildUser(x).Mention} ");
 
-                await _dataService.TestingChannel.SendMessageAsync(
+                await _dataService.CSGOTestingChannel.SendMessageAsync(
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)");
 
                 await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
@@ -280,7 +281,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
 
                 if(wbEmbed != null)
-                    await _dataService.TestingChannel.SendMessageAsync(embed: wbEmbed.Build());
+                    await _dataService.CSGOTestingChannel.SendMessageAsync(embed: wbEmbed.Build());
                   
                 return;
             }
@@ -301,11 +302,21 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             while (true)
             {
+                bool isValid = false;
+                int index = -1;
                 await Display(
                     "Type the ID of the field you want to edit or type `Submit` to submit your playtest request.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 if (_userMessage.Content.Equals("submit", StringComparison.OrdinalIgnoreCase))
-                    break;
+                {
+                    if(_testRequest.Preferredserver != "No preference" && !_testRequest.Game.Equals(DatabaseUtil.GetTestServer(_testRequest.Preferredserver).Game, StringComparison.OrdinalIgnoreCase))
+                    {
+                        index = 11;
+                        isValid = true;
+                    }
+                    else
+                        break;
+                }
 
                 if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
@@ -314,11 +325,25 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return;
                 }
 
-                if (int.TryParse(_userMessage.Content, out var index) && index >= 0 && index <= 10)
+                if (!isValid)
+                    isValid = int.TryParse(_userMessage.Content, out index);
+
+                if (isValid && index >= 0 && index <= _arrayValues.Length)
                 {
+                    bool valid = false;
                     await Display(_wizardText[index]);
-                    _userMessage = await _interactive.NextMessageAsync(_context);
-                    await ParseTestInformation(_arrayValues[index], _userMessage.Content);
+                    while (!valid)
+                    {
+                        _userMessage = await _interactive.NextMessageAsync(_context);
+                        valid = await ParseTestInformation(_arrayValues[index], _userMessage.Content);
+
+                        if (_userMessage == null ||
+                            _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await CancelRequest();
+                            return;
+                        }
+                    }
                 }
             }
 
@@ -354,15 +379,30 @@ namespace BotHATTwaffle2.Services.Playtesting
                     creators += _dataService.GetSocketGuildUser(c).Mention + " ";
                 }
 
+                //Set as alert user just in case.
+                string testingAdminMention = _dataService.AlertUser.Mention;
+                SocketTextChannel mentionChannel = _dataService.AdminBotsChannel;
+
+                if (_testRequest.Game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
+                {
+                    testingAdminMention = _dataService.CSGOPlaytestAdmin.Mention;
+                    mentionChannel = _dataService.CSGOTestingChannel;
+                }
+                else if (_testRequest.Game.Equals("tf2",StringComparison.OrdinalIgnoreCase))
+                {
+                    testingAdminMention = _dataService.TF2PlaytestAdmin.Mention;
+                    mentionChannel = _dataService.TF2TestingChannel;
+                }
+
                 await _dataService.AdminChannel.SendMessageAsync(
-                    $"{_dataService.PlaytestAdmin.Mention} a new playtest request for `{_testRequest.MapName}` has been submitted by {creators.Trim()}!",
+                    $"{testingAdminMention} a new playtest request for `{_testRequest.MapName}` has been submitted by {creators.Trim()}!",
                     embed: schedule.Build());
 
                 //Users to mention.
                 string mentions = null;
                 _testRequest.CreatorsDiscord.ForEach(x => mentions += $"{_dataService.GetSocketGuildUser(x).Mention} ");
 
-                await _dataService.TestingChannel.SendMessageAsync($"{mentions} has submitted a playtest request!",
+                await mentionChannel.SendMessageAsync($"{mentions} has submitted a playtest request!",
                     embed:
                     (await _workshop.HandleWorkshopEmbeds(_context.Message, _dataService,
                         $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
@@ -383,13 +423,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     //Try DM
                     await _context.User.SendMessageAsync(
-                        $"Here is a quick request for your test to quickly submit again later.```> Request { _testRequest}```");
+                        $"Here is a quick request for your test to quickly submit again later.```>Request { _testRequest}```");
                 }
                 catch
                 {
                     //Just reply instead
                     await _context.Channel.SendMessageAsync(
-                        $"Here is a quick request for your test to quickly submit again later.```> Request { _testRequest}```");
+                        $"Here is a quick request for your test to quickly submit again later.```>Request { _testRequest}```");
                 }
             }
         }
@@ -541,40 +581,44 @@ namespace BotHATTwaffle2.Services.Playtesting
                 embed.AddField("[1] Emails", string.Join("\n", _testRequest.Emails), true)
                     .WithColor(new Color(0x9a4237));
 
+            if (!string.IsNullOrWhiteSpace(_testRequest.Game))
+                embed.AddField("[2] Game", _testRequest.Game, true)
+                    .WithColor(new Color(0x8f4d37));
+
             if (!string.IsNullOrWhiteSpace(_testRequest.MapName))
-                embed.AddField("[2] Map Name", _testRequest.MapName, true)
+                embed.AddField("[3] Map Name", _testRequest.MapName, true)
                     .WithColor(new Color(0x8f4d37));
 
             if (_testRequest.CreatorsDiscord.Count > 0)
-                embed.AddField("[3] Creators", string.Join("\n", _testRequest.CreatorsDiscord), true)
+                embed.AddField("[4] Creators", string.Join("\n", _testRequest.CreatorsDiscord), true)
                     .WithColor(new Color(0x845837));
 
             if (!string.IsNullOrWhiteSpace(_testRequest.ImgurAlbum))
-                embed.AddField("[4] Imgur Album", _testRequest.ImgurAlbum)
+                embed.AddField("[5] Imgur Album", _testRequest.ImgurAlbum)
                     .WithColor(new Color(0x796337));
 
             if (!string.IsNullOrWhiteSpace(_testRequest.WorkshopURL))
-                embed.AddField("[5] Workshop URL", _testRequest.WorkshopURL)
+                embed.AddField("[6] Workshop URL", _testRequest.WorkshopURL)
                     .WithColor(new Color(0x6e6e37));
 
             if (!string.IsNullOrWhiteSpace(_testRequest.TestType))
-                embed.AddField("[6] Type", _testRequest.TestType, true)
+                embed.AddField("[7] Type", _testRequest.TestType, true)
                     .WithColor(new Color(0x637937));
 
             if (!string.IsNullOrWhiteSpace(_testRequest.TestGoals))
-                embed.AddField("[7] Description", _testRequest.TestGoals)
+                embed.AddField("[8] Description", _testRequest.TestGoals)
                     .WithColor(new Color(0x588437));
 
             if (_testRequest.Spawns > 0)
-                embed.AddField("[8] Spawns", _testRequest.Spawns, true)
+                embed.AddField("[9] Spawns", _testRequest.Spawns, true)
                     .WithColor(new Color(0x4d8f37));
 
             if (_testRequest.PreviousTestDate != new DateTime())
-                embed.AddField("[9] Previous Test:", _testRequest.PreviousTestDate, true)
+                embed.AddField("[10] Previous Test:", _testRequest.PreviousTestDate, true)
                     .WithColor(new Color(0x429a37));
 
             if (!string.IsNullOrWhiteSpace(_testRequest.Preferredserver))
-                embed.AddField("[10] Server:", _testRequest.Preferredserver, true)
+                embed.AddField("[11] Server:", _testRequest.Preferredserver, true)
                     .WithColor(new Color(0x37a537));
 
             //Only get new playtest conflict information if we get a new date. But always include it
@@ -700,6 +744,24 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     return true;
 
+                case "game":
+                    if (data.Contains("csgo", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _testRequest.Game = "CSGO";
+                        return true;
+                    }
+
+                    if (data.Contains("tf2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _testRequest.Game = "TF2";
+                        return true;
+                    }
+
+                    await Display($"Invalid game.\nYou provided `{data}`\n" +
+                                  _wizardText[2]);
+                    return false;
+                    
+
                 case "mapname":
                     _testRequest.MapName = data;
                     return true;
@@ -721,7 +783,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         else
                         {
                             await Display("Unable to parse creators!\n" +
-                                          $"You provided `{data}`\n" + _wizardText[3]);
+                                          $"You provided `{data}`\n" + _wizardText[4]);
                             return false;
                         }
                     }
@@ -732,7 +794,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     if (GeneralUtil.GetImgurAlbum(data) == null)
                     {
                         await Display("Invalid Imgur Album!\n" +
-                                      $"You provided `{data}`\n" + _wizardText[4]);
+                                      $"You provided `{data}`\n" + _wizardText[5]);
                         return false;
                     }
 
@@ -747,7 +809,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     }
 
                     await Display("Invalid Steam Workshop URL!\n" +
-                                  $"You provided `{data}`\n" + _wizardText[5]);
+                                  $"You provided `{data}`\n" + _wizardText[6]);
                     return false;
 
                 case "type":
@@ -770,7 +832,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     }
 
                     await Display("Unable to parse number of spawns\n" +
-                                  $"You provided `{data}`\n" + _wizardText[8]);
+                                  $"You provided `{data}`\n" + _wizardText[9]);
                     return false;
 
                 case "previoustest":
@@ -779,16 +841,23 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return true;
 
                 case "server":
-                    var server = DatabaseUtil.GetTestServer(data);
-                    if (server != null || data.Equals("none", StringComparison.OrdinalIgnoreCase) ||
+                    if (data.Equals("none", StringComparison.OrdinalIgnoreCase) ||
                         data.Equals("no preference", StringComparison.OrdinalIgnoreCase))
                     {
-                        _testRequest.Preferredserver = server != null ? server.Address : "No preference";
-
+                        _testRequest.Preferredserver = "No preference";
                         return true;
                     }
 
-                    var servers = DatabaseUtil.GetAllTestServers();
+                    //Make sure the server requested supports the game.
+                    var server = DatabaseUtil.GetTestServer(data);
+                    if (server != null && server.Game.Equals(_testRequest.Game, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _testRequest.Preferredserver = server.Address;
+                        return true;
+                    }
+
+                    var servers = DatabaseUtil.GetAllTestServers(_testRequest.Game);
+
                     await Display("Unable to to find a valid server\n" +
                                   $"You provided `{data}`\n" +
                                   "Please provide a valid server id. Type `None` for no preference. Possible servers are:\n" +

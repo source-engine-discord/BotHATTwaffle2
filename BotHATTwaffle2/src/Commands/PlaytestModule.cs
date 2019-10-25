@@ -75,7 +75,7 @@ namespace BotHATTwaffle2.Commands
             {
                 if(_playtestService.CreateVoiceFeedbackSession())
                 {
-                    await _dataService.TestingChannel.SendMessageAsync(embed: new EmbedBuilder()
+                    await _dataService.CSGOTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
                         .WithAuthor("New Feedback Queue Session Started!")
                         .WithDescription(
                             "In order to keep things moving and civil, a Feedback Queue has been started!" +
@@ -92,7 +92,10 @@ namespace BotHATTwaffle2.Commands
                 }
                 else
                     await ReplyAsync(
-                        "Unable to create new feedback session. Either no playtest exists, or a session already exists.");
+                        "Unable to create new feedback session. Possible reasons:" +
+                        "\n• A session already exists" +
+                        "\n• The active test is not valid" +
+                        "\n• The active test is not CSGO");
                 return;
             }
 
@@ -336,7 +339,7 @@ namespace BotHATTwaffle2.Commands
                 //If we are here from a full dump, split it to handle
                 string[] split = playtestInformation.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
-                if (split.Length != 11)
+                if (split.Length != 12)
                 {
                     await ReplyAsync("Invalid bulk playtest quest submission. Consult the help documents.");
                     return;
@@ -433,7 +436,7 @@ namespace BotHATTwaffle2.Commands
             server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
 
             //Add the job to release the server
-            JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{Context.User.Mention}",
+            JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{Context.User.Mention}",
             embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
                 s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
 
@@ -521,7 +524,7 @@ namespace BotHATTwaffle2.Commands
 
                 if(embed != null)
                 {
-                    await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                    await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
                                                                        $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
                                                                        $"\nType `>roleme Community Tester` to get this role.",
                         embed: embed.Build());
@@ -538,7 +541,7 @@ namespace BotHATTwaffle2.Commands
             else
             {
                 //No embed
-                await _dataService.TestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
                                                                    $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
             }
 
@@ -616,7 +619,7 @@ namespace BotHATTwaffle2.Commands
                         .WithDescription(
                             $"[Download Demo Here]({demoUrl}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
 
-                    await _dataService.TestingChannel.SendMessageAsync(Context.User.Mention, embed: embed.Build());
+                    await _dataService.CSGOTestingChannel.SendMessageAsync(Context.User.Mention, embed: embed.Build());
                     break;
 
                 default:
@@ -824,31 +827,94 @@ namespace BotHATTwaffle2.Commands
         {
             var foundServers = DatabaseUtil.GetAllTestServers();
             var embed = new EmbedBuilder()
-                .WithAuthor("Source Engine Discord CS:GO Test Servers")
+                .WithAuthor("Source Engine Discord Test Servers")
                 .WithFooter($"Total of {foundServers.Count()} servers.")
                 .WithThumbnailUrl(_dataService.Guild.IconUrl)
                 .WithColor(new Color(255, 135, 57));
 
-            foreach (var server in foundServers) embed.AddField(server.Address, server.Description, true);
+            foreach (var server in foundServers) embed.AddField(server.Address, $"Server Type: `{server.Game.ToUpper()}`\n{server.Description}", true);
 
             await ReplyAsync(embed: embed.Build());
         }
 
         [Command("Playtester")]
-        [Summary("Join or leave playtest notifications.")]
-        [Remarks("Toggles your subscription to playtest notifications.")]
-        public async Task PlaytesterAsync()
+        [Alias("pt")]
+        [Summary("Changes what playtest notifications your get.")]
+        [Remarks("Type `>playtester` to remove all subscriptions." +
+                 "\nType `>playtester [subscribe/both]` to add all subscriptions." +
+                 "\nType `>playtester [unsubscribe/remove]` to remove all subscriptions." +
+                 "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription.")]
+        public async Task PlaytesterAsync([Optional]string game)
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
-            if (user.Roles.Any(x=>x.Id == _dataService.PlayTesterRole.Id))
+            var embed = new EmbedBuilder()
+                .WithAuthor($"Playtest Subscriptions - {user}", Context.User.GetAvatarUrl())
+                .WithColor(55,55,165);
+            string description = "";
+
+            var csgoStatus = user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id);
+            var tf2Status = user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id);
+
+            if (string.IsNullOrWhiteSpace(game))
+                game = "remove";
+            
+            switch (game.ToLower())
             {
-                await ReplyAsync($"Sorry to see you go from playtest notifications {Context.User.Mention}!");
-                await user.RemoveRoleAsync(_dataService.PlayTesterRole);
+                case "remove":
+                case "unsubscribe":
+                    description += "**All subscriptions removed!**\n";
+                    await user.RemoveRoleAsync(_dataService.CSGOPlayTesterRole);
+                    await user.RemoveRoleAsync(_dataService.TF2PlayTesterRole);
+                    await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
+                    csgoStatus = false;
+                    tf2Status = false;
+                    break;
+
+                case "both":
+                case "subscribe":
+                    description += "**All subscriptions added!**\n";
+                    await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
+                    await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
+                    csgoStatus = true;
+                    tf2Status = true;
+                    break;
+
+                case "tf2":
+                    description += "**Toggled TF2 Subscription!**\n";
+                    await ToggleRoles(false, true);
+                    tf2Status = !tf2Status;
+                    break;
+
+                case "csgo":
+                    description += "**Toggled CSGO Subscription!**\n";
+                    await ToggleRoles(true, false);
+                    csgoStatus = !csgoStatus;
+                    break;
+
+                default:
+                    description += "**Unknown command.**\n" +
+                                  "Please type `>help playtester`";
+                    break;
             }
-            else
+
+            description += $"CSGO Playtesting: `{(csgoStatus ? "Subscribed" : "Unsubscribed")}`\n" +
+                           $"TF2 Playtesting: `{(tf2Status ? "Subscribed" : "Unsubscribed")}`";
+            embed.WithFooter("Type >help playtester for more information");
+            embed.WithDescription(description);
+
+            await ReplyAsync(embed: embed.Build());
+
+            async Task ToggleRoles(bool csgo, bool tf2)
             {
-                await ReplyAsync($"Thanks for subscribing to playtest notifications {Context.User.Mention}!");
-                await user.AddRoleAsync(_dataService.PlayTesterRole);
+                if (csgo && user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id))
+                    await user.RemoveRoleAsync(_dataService.CSGOPlayTesterRole);
+                else
+                    await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
+
+                if (tf2 && user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id))
+                    await user.RemoveRoleAsync(_dataService.TF2PlayTesterRole);
+                else
+                    await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
             }
         }
     }

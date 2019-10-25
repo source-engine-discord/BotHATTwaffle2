@@ -18,6 +18,7 @@ namespace BotHATTwaffle2.Models.LiteDB
         public string ImageAlbum { get; set; }
         public string CreatorMentions { get; set; }
         public DateTime StartDateTime { get; set; }
+        public string Game { get; set; }
 
         public override string ToString()
         {
@@ -29,6 +30,7 @@ namespace BotHATTwaffle2.Models.LiteDB
                    $"\nTitle: {Title}" +
                    $"\nThumbNailImage: {ThumbNailImage}" +
                    $"\nImageAlbum {ImageAlbum}" +
+                   $"\nGame {Game}" +
                    $"\nCreatorMentions {CreatorMentions}";
         }
     }

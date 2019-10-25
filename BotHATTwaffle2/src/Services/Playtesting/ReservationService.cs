@@ -59,7 +59,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     userName = user.ToString();
                 }
 
-                await _dataService.TestingChannel.SendMessageAsync(mention, embed: BuildServerReleaseEmbed(userName, reservation,
+                await _dataService.CSGOTestingChannel.SendMessageAsync(mention, embed: BuildServerReleaseEmbed(userName, reservation,
                     "All server reservations have been cleared. This happens when a scheduled playtest starts soon."));
             }
 

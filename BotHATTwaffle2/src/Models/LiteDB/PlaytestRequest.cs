@@ -18,6 +18,7 @@ namespace BotHATTwaffle2.Models.LiteDB
         public int Spawns { get; set; }
         public DateTime PreviousTestDate { get; set; }
         public string Preferredserver { get; set; }
+        public string Game { get; set; }
 
         public PlaytestRequest()
         {
@@ -29,6 +30,7 @@ namespace BotHATTwaffle2.Models.LiteDB
         {
             return $"Date:{TestDate}" +
                    $"\nEmails:{string.Join(", ", Emails)}" +
+                   $"\nGame: {Game}" +
                    $"\nMapName:{MapName}" +
                    $"\nDiscord:{string.Join(", ", CreatorsDiscord)}" +
                    $"\nImgur:{ImgurAlbum}" +

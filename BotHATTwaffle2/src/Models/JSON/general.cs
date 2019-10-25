@@ -9,14 +9,17 @@ namespace BotHATTwaffle2
         public string WelcomeMessage { get; set; }
         public string GeneralChannel { get; set; }
         public string WelcomeChannel { get; set; }
-        public string AnnouncementChannel { get; set; }
-        public string TestingChannel { get; set; }
+        public string CSGOAnnouncementChannel { get; set; }
+        public string TF2AnnouncementChannel { get; set; }
+        public string CSGOTestingChannel { get; set; }
+        public string TF2TestingChannel { get; set; }
         public string CompetitiveTestingChannel { get; set; }
         public string FallbackTestImageUrl { get; set; }
         public string CasualPassword { get; set; }
         public string[] CompPasswords { get; set; }
-        public string CasualConfig { get; set; }
-        public string CompConfig { get; set; }
+        public string CSGOCasualConfig { get; set; }
+        public string CSGOCompConfig { get; set; }
+        public string TF2Config { get; set; }
         public string PostgameConfig { get; set; }
         public string WebhookChannel { get; set; }
         public string AdminChannel { get; set; }

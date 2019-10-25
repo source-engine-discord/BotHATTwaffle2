@@ -10,7 +10,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,6 +18,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Models.JSON;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using Newtonsoft.Json.Linq;
 
 namespace BotHATTwaffle2.Commands
@@ -81,14 +81,15 @@ namespace BotHATTwaffle2.Commands
             const string BASEURL = @"https://www.tophattwaffle.com/demos/playerBase/index.php?mode=idoMode&ids=";
 
             if (server == null)
-                server = _calendar.GetTestEventNoUpdate().ServerLocation;
+                server = _calendar.GetNextPlaytestEvent(PlaytestEvent.Games.CSGO).ServerLocation;
 
             //Check again in-case there is no server on the calendar
             if (server == null)
             {
                 var embedError = new EmbedBuilder()
                     .WithColor(165, 55, 55)
-                    .WithAuthor("Error getting server...");
+                    .WithAuthor("Error getting server...")
+                    .WithDescription("The command will only ask CSGO servers for the players.");
                 await ReplyAsync(embed: embedError.Build());
                 return;
             }
@@ -141,7 +142,7 @@ namespace BotHATTwaffle2.Commands
 
             var embed = new EmbedBuilder()
                 .WithColor(55,55,165)
-                .WithAuthor("Player Ratings",url:builtUrl);
+                .WithAuthor($"Player Ratings - {sortedPlayers.Count} Players Found",url:builtUrl);
 
             //Add fields to embed
             foreach (var sortedPlayer in sortedPlayers)
@@ -159,12 +160,14 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task StartServerFeedbackAsync()
         {
+            var testEvent = _calendar.GetNextPlaytestEvent();
+
             if (!_logReceiverService.EnableLog)
             {
-                _logReceiverService.StartLogReceiver(_playtestService.GetPlaytestCommandInfo().ServerAddress);
+                _logReceiverService.StartLogReceiver(testEvent.PlaytestCommandInfo.ServerAddress);
             }
 
-            var result = _logReceiverService.EnableFeedback(_playtestService.GetPlaytestCommandInfo().DemoName);
+            var result = _logReceiverService.EnableFeedback(testEvent.PlaytestCommandInfo.DemoName);
 
             if(result)
             {
@@ -574,7 +577,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             //Not valid - abort
-            if (!_playtestService.PlaytestCommandPreCheck())
+            if (!_calendar.GetNextPlaytestEvent().PlaytestCommandPreCheck())
             {
                 await ReplyAsync(embed:new EmbedBuilder()
                     .WithDescription("There is already a playtest command running. Only 1 may be running at a time." +
@@ -672,7 +675,7 @@ namespace BotHATTwaffle2.Commands
 
                 case "kick":
                 case "k":
-                    playtestCommandInfo = _playtestService.GetPlaytestCommandInfo();
+                    playtestCommandInfo = _calendar.GetNextPlaytestEvent().PlaytestCommandInfo;
                     var kick = new KickUserRcon(Context, _interactive, _rconService, _log);
                     await kick.KickPlaytestUser(playtestCommandInfo.ServerAddress);
                     _playtestService.ResetCommandRunningFlag();
@@ -752,22 +755,25 @@ namespace BotHATTwaffle2.Commands
         {
             await Context.Message.DeleteAsync();
 
+            //Get the next CSGO test
+            var nextTest = _calendar.GetNextPlaytestEvent(PlaytestEvent.Games.CSGO) as CsgoPlaytestEvent;
+
             //Do nothing if a test is not valid.
-            if (!_calendar.GetTestEventNoUpdate().IsValid || _calendar.GetTestEventNoUpdate().IsCasual)
+            if (!nextTest.IsValid || nextTest.IsCasual)
             {
                 await ReplyAsync("There is no valid test that I can invite that user to.");
                 return;
             }
 
             await _log.LogMessage(
-                $"`{user}` has been invited to the competitive test of `{_calendar.GetTestEventNoUpdate().Title}` by `{Context.User}`");
+                $"`{user}` has been invited to the competitive test of `{nextTest.Title}` by `{Context.User}`");
 
             try
             {
                 await user.SendMessageAsync(
-                    $"You've been invited to join __**{_calendar.GetTestEventNoUpdate().Title}**__!\n" +
+                    $"You've been invited to join __**{nextTest.Title}**__!\n" +
                     "Open Counter-Strike Global Offensive and paste the following into console to join:" +
-                    $"```connect {_calendar.GetTestEventNoUpdate().ServerLocation}; password {_calendar.GetTestEventNoUpdate().CompPassword}```");
+                    $"```connect {nextTest.ServerLocation}; password {nextTest.CompPassword}```");
             }
             catch
             {
@@ -790,6 +796,7 @@ namespace BotHATTwaffle2.Commands
         public async Task RconAsync([Summary("Rcon command to send")] [Remainder] [Optional]
             string command)
         {
+            var testEvent = _calendar.GetNextPlaytestEvent();
             string targetServer = null;
             if (command == null)
             {
@@ -800,10 +807,10 @@ namespace BotHATTwaffle2.Commands
                 else
                 {
                     targetServer = "No playtest server found";
-                    if (_calendar.GetTestEventNoUpdate().IsValid)
+                    if (testEvent.IsValid)
                     {
                         //There is a playtest event, get the server ID from the test event
-                        var serverAddress = _calendar.GetTestEventNoUpdate().ServerLocation;
+                        var serverAddress = testEvent.ServerLocation;
                         targetServer = serverAddress.Substring(0, serverAddress.IndexOf('.'));
                     }
 
@@ -862,10 +869,10 @@ namespace BotHATTwaffle2.Commands
             //In auto mode
             if (!ServerDictionary.ContainsKey(Context.User.Id))
             {
-                if (_calendar.GetTestEventNoUpdate().IsValid)
+                if (testEvent.IsValid)
                 {
                     //There is a playtest event, get the server ID from the test event
-                    var serverAddress = _calendar.GetTestEventNoUpdate().ServerLocation;
+                    var serverAddress = testEvent.ServerLocation;
                     targetServer = serverAddress.Substring(0, serverAddress.IndexOf('.'));
                 }
                 else
@@ -983,7 +990,8 @@ namespace BotHATTwaffle2.Commands
                  "[FtpUser]\n" +
                  "[FtpPassword]\n" +
                  "[FtpPath]\n" +
-                 "[FtpType]`\n\n" +
+                 "[FtpType]\n" +
+                 "[GameType]`\n\n" +
                  "Getting a single test server will reply with the required information to re-add the server into the database. " +
                  "This is useful when editing servers.")]
         public async Task TestServerAsync(string action, [Remainder] string values = null)
@@ -1001,9 +1009,9 @@ namespace BotHATTwaffle2.Commands
                 var serverValues = values.Split("\n");
 
                 //Make sure all the data is present, as all values are required
-                if (serverValues.Length != 8)
+                if (serverValues.Length != 9)
                 {
-                    await ReplyAsync("Adding a server requires all 8 server values.");
+                    await ReplyAsync("Adding a server requires all 9 server values.");
                     await Context.Message.DeleteAsync();
                     return;
                 }
@@ -1033,7 +1041,8 @@ namespace BotHATTwaffle2.Commands
                     FtpUser = serverValues[4],
                     FtpPassword = serverValues[5],
                     FtpPath = serverValues[6],
-                    FtpType = serverValues[7].ToLower()
+                    FtpType = serverValues[7].ToLower(),
+                    Game = serverValues[8]
                 }))
                 {
                     await ReplyAsync("Server added!\nI deleted your message since it had passwords in it.");
@@ -1066,6 +1075,7 @@ namespace BotHATTwaffle2.Commands
                                 $"\n{testServer.FtpPassword}" +
                                 $"\n{testServer.FtpPath}" +
                                 $"\n{testServer.FtpType}" +
+                                $"\n{testServer.Game}" +
                                 "```";
 
                     await _dataService.AlertUser.SendMessageAsync(reply);
@@ -1108,7 +1118,7 @@ namespace BotHATTwaffle2.Commands
         [Summary("Allows manual announcing of a playtest. This command mentions the playtester role.")]
         public async Task ForceAnnounceAsync()
         {
-            await _playtestService.PlaytestStartingInTask();
+            await _playtestService.PlaytestStartingInTask(_calendar.GetNextPlaytestEvent());
         }
 
         [Command("CallAllTesters")]

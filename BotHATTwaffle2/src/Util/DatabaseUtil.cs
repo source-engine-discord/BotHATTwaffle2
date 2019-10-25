@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO.Pipes;
+using System.Linq;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
+using BotHATTwaffle2.src.Services.Calendar;
 using Discord;
 using LiteDB;
 
@@ -86,14 +89,14 @@ namespace BotHATTwaffle2.Util
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
-                                            $"\n{playtestEvent.CompPassword} at for event ID {playtestEvent.EventEditTime.Value}", false, color: LOG_COLOR);
+                                            $"\n{(playtestEvent as CsgoPlaytestEvent)?.CompPassword} at for event {playtestEvent.Title}", false, color: LOG_COLOR);
 
                     //Insert new entry with ID of 1, and our values.
                     col.Insert(new CompPw
                     {
                         Id = 1,
-                        EventEditTime = playtestEvent.EventEditTime.Value,
-                        CompPassword = playtestEvent.CompPassword
+                        Title = playtestEvent.Title,
+                        CompPassword = (playtestEvent as CsgoPlaytestEvent)?.CompPassword
                     });
                 }
             }
@@ -114,7 +117,7 @@ namespace BotHATTwaffle2.Util
         /// <param name="message">Message to store</param>
         /// <param name="eventEditTime">The last time the event was edited</param>
         /// <returns>True if successful, false otherwise</returns>
-        public static bool StoreAnnouncement(IUserMessage message, DateTime eventEditTime)
+        public static bool StoreAnnouncement(IUserMessage message, string title, string game)
         {
             try
             {
@@ -123,27 +126,18 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var announcement = db.GetCollection<AnnounceMessage>(COLLECTION_ANNOUNCEMENT);
 
-                    var foundMessage = announcement.FindOne(Query.EQ("_id", 1));
-
-                    //If not null, we need to remove the old record first.
-                    if (foundMessage != null)
-                    {
-                        if (_dataService.RSettings.ProgramSettings.Debug)
-                            _ = _log.LogMessage("Old announcement record found, deleting", false, color: LOG_COLOR);
-
-                        announcement.Delete(1);
-                    }
+                    //remove all old announcements for this game.
+                    announcement.Delete(Query.EQ("Game", game.ToString()));
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
-                                            $"\n{message.Id} at {eventEditTime}", false, color: LOG_COLOR);
+                                            $"\n{message.Id} for {title} for game {game}", false, color: LOG_COLOR);
 
-                    //Insert new entry with ID of 1, and our values.
                     announcement.Insert(new AnnounceMessage
                     {
-                        Id = 1,
-                        AnnouncementDateTime = eventEditTime,
-                        AnnouncementId = message.Id
+                        Title = title,
+                        AnnouncementId = message.Id,
+                        Game = game
                     });
                 }
             }
@@ -161,7 +155,7 @@ namespace BotHATTwaffle2.Util
         ///     Gets the stored announcement message from the DB.
         /// </summary>
         /// <returns>Found announcement message or null</returns>
-        public static AnnounceMessage GetAnnouncementMessage()
+        public static AnnounceMessage GetAnnouncementMessage(PlaytestEvent.Games game)
         {
             AnnounceMessage foundMessage = null;
             try
@@ -171,7 +165,7 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var announcement = db.GetCollection<AnnounceMessage>(COLLECTION_ANNOUNCEMENT);
 
-                    foundMessage = announcement.FindOne(Query.EQ("_id", 1));
+                    foundMessage = announcement.FindOne(Query.EQ("Game", game.ToString()));
                 }
             }
             catch (Exception e)
@@ -346,6 +340,33 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
+        ///     Returns a IEnumerable of server objects containing all test servers with the specified game in the database.
+        /// </summary>
+        /// <returns>IEnumerable of servers</returns>
+        public static IEnumerable<Server> GetAllTestServers(string game)
+        {
+            IEnumerable<Server> foundServers = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var serverCol = db.GetCollection<Server>(COLLECTION_SERVERS);
+
+                    foundServers = serverCol.Find(x => x.Game.Contains(game.ToLower()));
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting all test servers\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundServers;
+            }
+
+            return foundServers;
+        }
+
+        /// <summary>
         ///     Adds a server object to the database.
         /// </summary>
         /// <param name="server">Server to add to the database</param>
@@ -367,6 +388,8 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var servers = db.GetCollection<Server>(COLLECTION_SERVERS);
                     servers.EnsureIndex(x => x.ServerId);
+
+                    servers.Insert(server);
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Inserting new server into DB", false, color: LOG_COLOR);

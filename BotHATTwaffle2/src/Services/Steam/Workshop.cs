@@ -93,6 +93,8 @@ namespace BotHATTwaffle2.Services.Steam
                     //Check if response is empty
                     if (resultContentItem == "{}") return null;
 
+                    Console.WriteLine(resultContentItem);
+                    
                     // Build workshop item embed, and set up author and game data embeds here for scoping reasons
                     try
                     {
@@ -130,21 +132,23 @@ namespace BotHATTwaffle2.Services.Steam
                     // Send the GET request for the author information
                     using (var clientAuthor = new HttpClient())
                     {
-                        clientAuthor.BaseAddress =
+                        string resultAuthor = null;
+                        try
+                        {
+                            clientAuthor.BaseAddress =
                             new Uri("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/");
                         HttpResponseMessage responseAuthor = clientAuthor
                             .GetAsync(
                                 $"?key={apiKey}&steamids={workshopJsonItem.response.publishedfiledetails[0].creator}")
                             .Result;
                         responseAuthor.EnsureSuccessStatusCode();
-                        string resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
+                        resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
 
                         // Don't embed anything if getting the author fails for some reason
                         if (resultAuthor == "{\"response\":{}}") return null;
 
                         // If we get a good response though, we're gonna deserialize it
-                        try
-                        {
+                        
                             workshopJsonAuthor = JsonConvert.DeserializeObject<RootWorkshop>(resultAuthor);
                         }
                         catch (Exception e)

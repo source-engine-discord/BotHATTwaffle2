@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
 using Discord;
@@ -21,11 +23,12 @@ namespace BotHATTwaffle2.Handlers
         private readonly UserHandler _userHandler;
         private readonly Random _random;
         private readonly ReservationService _reservationService;
+        private readonly GoogleCalendar _calendar;
         private int _playtestCount = 0;
         private bool _allowPlayingCycle = true;
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService
-        , UserHandler userHandler, Random random, ReservationService reservationService)
+        , UserHandler userHandler, Random random, ReservationService reservationService, GoogleCalendar calendar)
         {
             Console.WriteLine("Setting up ScheduleHandler...");
             _playtestService = playtestService;
@@ -35,6 +38,7 @@ namespace BotHATTwaffle2.Handlers
             _userHandler = userHandler;
             _random = random;
             _reservationService = reservationService;
+            _calendar = calendar;
 
             //Fluent Scheduler init and events
             JobManager.Initialize(new Registry());
@@ -57,17 +61,40 @@ namespace BotHATTwaffle2.Handlers
         {
             _ = _log.LogMessage("Adding required scheduled jobs...", false, color: LOG_COLOR);
 
-            //Add schedule for playtest information
-            JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement(), s => s
-                .WithName("[PostOrUpdateAnnouncement]").ToRunEvery(60).Seconds());
+            //Ask Google API for new tests every 60 seconds.
+            JobManager.AddJob(async () => await _calendar.UpdateTestEventCache(), s => s
+                .WithName("[UpdatePlaytestEventCacheNow]").ToRunNow());
+
+            JobManager.AddJob(async () => await _calendar.UpdateTestEventCache(), s => s
+                .WithName("[UpdatePlaytestEventCache]").ToRunEvery(60).Seconds());
+
+            //Delay the announcement updates so the calendar refreshes first.
+            Task.Run(() =>
+            {
+                Thread.Sleep(10000);
+                //Add schedule for playtest information
+                JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement("csgo"), s => s
+                    .WithName("[PostOrUpdateAnnouncement_CSGO]").ToRunEvery(60).Seconds());
+
+
+                JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement("tf2"), s => s
+                    .WithName("[PostOrUpdateAnnouncement_TF2]").ToRunEvery(60).Seconds());
+            });
+
+            //Early refresh on playtest announcements.
+            JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement("csgo"), s => s
+                .WithName("[PostOrUpdateAnnouncementNow_CSGO]").ToRunOnceIn(15).Seconds());
+
+            JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement("tf2"), s => s
+                .WithName("[PostOrUpdateAnnouncementNow_TF2]").ToRunOnceIn(15).Seconds());
 
             //Reattach to the old announcement message quickly
             JobManager.AddJob(async () => await _playtestService.TryAttachPreviousAnnounceMessage(), s => s
-                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(3).Seconds());
+                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(5).Seconds());
 
             //On start up schedule of playtest announcements
-            JobManager.AddJob(() => _playtestService.SchedulePlaytestAnnouncements(), s => s
-                .WithName("[SchedulePlaytestAnnouncementsBoot]").ToRunOnceIn(6).Seconds());
+            JobManager.AddJob(() => _playtestService.ScheduleAllPlaytestAnnouncements(), s => s
+                .WithName("[SchedulePlaytestAnnouncementsBoot]").ToRunOnceIn(10).Seconds());
 
             //Add schedule for playing information
             JobManager.AddJob(async () => await UpdatePlaying(), s => s
@@ -154,18 +181,19 @@ namespace BotHATTwaffle2.Handlers
                 if (DateTime.Now > reservation.StartTime.AddHours(2))
                 {
                     //Timer expired, schedule now
-                    JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{mention}",
+                    JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention}",
                             embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
                         s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceIn(15).Seconds());
                 }
                 else
                 {
                     //Not passed, scheduled ahead
-                    JobManager.AddJob(async () => await _dataService.TestingChannel.SendMessageAsync($"{mention}",
+                    JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention}",
                             embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
                         s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceAt(reservation.StartTime.AddHours(2)));
                 }
             }
+
             DisplayScheduledJobs();
         }
 

@@ -111,8 +111,6 @@ namespace BotHATTwaffle2.Util
             fullServerAddress = fullServerAddress.ToLower();
             if (fullServerAddress.Contains('.'))
                 return fullServerAddress.Substring(0, fullServerAddress.IndexOf(".", StringComparison.Ordinal));
-            if (fullServerAddress.Length > 3)
-                return fullServerAddress.Substring(0,3);
 
             return fullServerAddress;
         }
@@ -188,6 +186,10 @@ namespace BotHATTwaffle2.Util
         /// <returns>Populated IPHostEntry object, null if not found</returns>
         public static IPHostEntry GetIPHost(string address)
         {
+            if (address.Contains(':'))
+            {
+                address = address.Substring(0, address.IndexOf(":", StringComparison.Ordinal));
+            }
             IPHostEntry iPHostEntry = null;
             try
             {

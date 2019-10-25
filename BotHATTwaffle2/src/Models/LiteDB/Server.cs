@@ -11,6 +11,7 @@
         public string FtpPassword { get; set; }
         public string FtpPath { get; set; }
         public string FtpType { get; set; }
+        public string Game { get; set; }
 
         public override string ToString()
         {
@@ -22,7 +23,8 @@
                    $"\nFtpUser: {FtpUser}" +
                    $"\nFtpPassword: {FtpPassword}" +
                    $"\nFtpPath: {FtpPath}" +
-                   $"\nFtpType: {FtpType}";
+                   $"\nFtpType: {FtpType}" +
+                   $"\nGame: {Game}";
         }
     }
 }

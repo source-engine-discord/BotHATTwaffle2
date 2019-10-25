@@ -17,7 +17,7 @@ namespace BotHATTwaffle2.Handlers
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static LogHandler _log;
         private static DataService _dataService;
-
+        
         public static void SetHandlers(LogHandler log, DataService data)
         {
             _dataService = data;
@@ -41,6 +41,23 @@ namespace BotHATTwaffle2.Handlers
 
             string localPath = $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{playtestCommandInfo.StartDateTime:yyyy}" +
                                $"\\{playtestCommandInfo.StartDateTime:MM} - {playtestCommandInfo.StartDateTime:MMMM}\\{dateInsert}{playtestCommandInfo.DemoName}";
+
+            string remoteBspPath = null;
+
+            if (playtestCommandInfo.Game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
+            {
+                //TF2 is ass and stores workshop maps in a totally different folder
+                remoteBspPath = $"/steamapps/workshop/content/440/{playtestCommandInfo.WorkshopId}";
+            }
+            else if (playtestCommandInfo.Game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
+            {
+                remoteBspPath = $"{server.FtpPath}/maps/workshop/{playtestCommandInfo.WorkshopId}";
+            }
+            else
+            {
+                await _log.LogMessage($"Game for playtest is invalid. This should never happen.",true,true,true);
+                return null;
+            }
 
             switch (server.FtpType.ToLower())
             {
@@ -72,8 +89,7 @@ namespace BotHATTwaffle2.Handlers
                                 GetFile(client, server.FtpPath, playtestCommandInfo.DemoName));
 
                             //Download BSP
-                            string bspFile = GetFile(client,
-                                $"{server.FtpPath}/maps/workshop/{playtestCommandInfo.WorkshopId}", ".bsp");
+                            string bspFile = GetFile(client, remoteBspPath, ".bsp");
                             client.DownloadFile($"{localPath}\\{Path.GetFileName(bspFile)}",bspFile);
                         }
                         catch (Exception e)
@@ -110,7 +126,7 @@ namespace BotHATTwaffle2.Handlers
                                 client.DownloadFile(remoteDemoFile.FullName, stream);
                             }
 
-                            var remoteBspFile = GetFile(client, $"{server.FtpPath}/maps/workshop/{playtestCommandInfo.WorkshopId}", ".bsp");
+                            var remoteBspFile = GetFile(client, remoteBspPath, ".bsp");
                             using (Stream stream = File.OpenWrite($"{localPath}\\{remoteBspFile.Name}"))
                             {
                                 client.DownloadFile(remoteBspFile.FullName, stream);

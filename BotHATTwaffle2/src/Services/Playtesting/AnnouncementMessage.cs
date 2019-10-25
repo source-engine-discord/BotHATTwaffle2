@@ -1,6 +1,7 @@
 ﻿using System;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using Discord;
 
 namespace BotHATTwaffle2.Services.Playtesting
@@ -27,15 +28,14 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// This expects the calendar to have the latest even cached.
         /// </summary>
         /// <param name="isCasual">If true, shows password. Otherwise password will be hidden</param>
+        /// <param name="testEvent"></param>
         /// <param name="smallEmbed">Should the message be formatted in small style</param>
         /// <param name="fullMessage">ID of full message, used in small embeds</param>
         /// <returns>Prebuilt embed</returns>
-        public Embed CreatePlaytestEmbed(bool isCasual = true, bool smallEmbed = false, ulong fullMessage = 0)
+        public Embed CreatePlaytestEmbed(PlaytestEvent testEvent, bool smallEmbed = false, ulong fullMessage = 0)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Creating Playtest Embed", false, color: LOG_COLOR);
-
-            var testEvent = _calendar.GetTestEventNoUpdate();
 
             //What type of test
             var testType = "Casual";
@@ -123,7 +123,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             string displayedConnectionInfo;
             string footer;
 
-            if (isCasual)
+            if (testEvent.IsCasual)
             {
                 displayedConnectionInfo = $"`connect {testEvent.ServerLocation}; password {_dataService.RSettings.General.CasualPassword}`";
                 footer = "All players welcome to join";
@@ -163,7 +163,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 playtestEmbed.ThumbnailUrl = embedImageUrl;
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
                               $"[Testing Information](https://www.tophattwaffle.com/playtesting) | " +
-                              $"[More Information](https://discordapp.com/channels/{_dataService.Guild.Id}/{_dataService.AnnouncementChannel.Id}/{fullMessage})";
+                              $"[More Information](https://discordapp.com/channels/{_dataService.Guild.Id}/{_dataService.CSGOAnnouncementChannel.Id}/{fullMessage})";
             }
             else
             {

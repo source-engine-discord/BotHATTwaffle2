@@ -108,8 +108,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 // Getting the current time (start of calendar) and setting up our fonts
 
                 var fontDates = SystemFonts.CreateFont(playtestDateFontName, 20, FontStyle.Bold);
-                var fontPTName = SystemFonts.CreateFont(playtestMapFontName, 23, FontStyle.Regular);
-                var fontPT = SystemFonts.CreateFont(playtestTimeFontName, 25, FontStyle.Regular);
+                var fontPTName = SystemFonts.CreateFont(playtestMapFontName, 21, FontStyle.Regular);
+                var fontPT = SystemFonts.CreateFont(playtestTimeFontName, 20, FontStyle.Regular);
                 var currentDateTime = DateTime.Now;
                 var lastSunday = currentDateTime;
 
@@ -178,6 +178,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                         playtestTitleColor = playtestRequestTitleColor;
                     }
 
+                    //Strip spaces at the game identifier to make it shorter
+                    shortenedEventSummary = shortenedEventSummary.Replace(" | ", "|");
+                    if (shortenedEventSummary.Length > 17)
+                    {
+                        shortenedEventSummary = shortenedEventSummary.Substring(0, 15) + "...";
+                    }
                     // These are the sizes of the info from the calendar. They are required to center the text properly
                     SizeF titleSize = TextMeasurer.Measure(shortenedEventSummary, new RendererOptions(fontPTName));
                     SizeF timeSize = TextMeasurer.Measure($"{playtestSDT.Hour}:{playtestSDT.Minute.ToString("D2")} - {playtestSDT.Hour + 2}:{playtestSDT.Minute.ToString("D2")}", new RendererOptions(fontPT));

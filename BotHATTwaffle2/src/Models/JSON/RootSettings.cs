@@ -7,6 +7,5 @@
         public Lists Lists { get; set; }
         public AutoReplies AutoReplies { get; set; }
         public UserRoles UserRoles { get; set; }
-        public DebugValues DebugValues { get; set; }
     }
 }

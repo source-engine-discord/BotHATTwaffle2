@@ -229,7 +229,7 @@ namespace BotHATTwaffle2.Handlers
                 var creator = _dataService.GetSocketUser(input[1]);
                 string creatorMention = creator != null ? creator.Mention : input[1];
                 Workshop workshop = new Workshop();
-                await _dataService.TestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
+                await _dataService.CSGOTestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
                     (await workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
                     .Build());
             }

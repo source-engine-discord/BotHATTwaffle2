@@ -42,9 +42,22 @@ namespace BotHATTwaffle2.Services.SRCDS
                 if (server == null)
                     throw new NullReferenceException(nameof(serverId));
 
-                var iPHostEntry = GeneralUtil.GetIPHost(server.Address);
+                ushort serverPort = 27015;
+                string targetDns = server.Address;
 
-                var rconClient = new RCON(iPHostEntry.AddressList.FirstOrDefault(),27015, server.RconPassword);
+                //Does the address contain a port? If so we need to split it and our queries
+                if (server.Address.Contains(':'))
+                {
+                    var splitServer = server.Address.Split(':');
+                    targetDns = splitServer[0];
+
+                    if(!ushort.TryParse(splitServer[1], out serverPort))
+                        throw new NullReferenceException("Malformed server port in address. Verify that it is stored as: subDomain.Domain.TLD:port");
+                }
+
+                var iPHostEntry = GeneralUtil.GetIPHost(targetDns);
+
+                var rconClient = new RCON(iPHostEntry.AddressList.FirstOrDefault(), serverPort, server.RconPassword);
 
                 _rconClients.Add(serverId, rconClient);
 

@@ -1,30 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using BotHATTwaffle2.Handlers;
+﻿using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
-using BotHATTwaffle2.Util;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using Discord.WebSocket;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection.Metadata.Ecma335;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BotHATTwaffle2.Services.Calendar
 {
     public class GoogleCalendar
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Gray;
-        private static PlaytestEvent _testEvent;
         private readonly CalendarService _calendar;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
+
+        private static List<PlaytestEvent> _playtestEvents;
+
+        private static CsgoPlaytestEvent _activeCsgoPlaytestEvent;
+        private static Tf2PlaytestEvent _activeTf2PlaytestEvent;
+        private static PlaytestEvent _previousPlaytestEvent;
 
         public GoogleCalendar(DataService dataService, LogHandler log)
         {
@@ -37,7 +41,6 @@ namespace BotHATTwaffle2.Services.Calendar
                 ApplicationName = "BotHATTwaffle 2"
             });
             Console.WriteLine("Done!");
-            _testEvent = new PlaytestEvent(_dataService, _log);
         }
 
         /// <summary>
@@ -65,111 +68,98 @@ namespace BotHATTwaffle2.Services.Calendar
             }
         }
 
-        private void GetNextTestEvent()
+        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent) => _previousPlaytestEvent = playtestEvent;
+
+        public async Task UpdateTestEventCache()
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Getting test event", false, color: LOG_COLOR);
+                _ = _log.LogMessage("Getting test events", false, color: LOG_COLOR);
 
             // Defines request and parameters.
             var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
 
-            //Set the playtest search based on debug flag
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                request.Q = " DEBUG ";
-            else
-                request.Q = " by "; // This will limit all search requests to ONLY get playtest events.
+            request.Q = " by "; // This will limit all search requests to ONLY get playtest events.
 
-            request.TimeMin = DateTime.Now;
             request.ShowDeleted = false;
             request.SingleEvents = true;
-            request.MaxResults = 1;
+            request.TimeMin = DateTime.Now;
+            request.TimeMax = DateTime.Now.AddMonths(2);
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
-
+            
             // Executes the request for events and retrieves the first event in the resulting items.
-            Event eventItem = null;
-            eventItem = request.Execute().Items?.FirstOrDefault();
+            var requestResult = await request.ExecuteAsync();
+            var eventItems = requestResult.Items;
+            
+            List<PlaytestEvent> tempPlaytestEvents = new List<PlaytestEvent>();
 
-            //If there is no event
-            if (eventItem == null)
+            //Prase into correct object types
+            foreach (var eventItem in eventItems)
             {
+                if (eventItem.Summary.StartsWith("csgo", StringComparison.OrdinalIgnoreCase))
+                    tempPlaytestEvents.Add(new CsgoPlaytestEvent(_dataService, _log, eventItem));
+
+                if (eventItem.Summary.StartsWith("tf2", StringComparison.OrdinalIgnoreCase))
+                    tempPlaytestEvents.Add(new Tf2PlaytestEvent(_dataService, _log, eventItem));
+            }
+
+            if (tempPlaytestEvents.Count == 0)
+            {
+                _playtestEvents = null;
+
                 if (_dataService.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("No event found", false, color: LOG_COLOR);
-                //Scrap null out the event item so it can be ready for the next use.
-                _testEvent.LastEditTime = null;
-                _testEvent.VoidEvent();
+                    _ = _log.LogMessage("No events found.", false, color: LOG_COLOR);
 
                 return;
             }
 
+            //Prevent the previous playtest event from counting as another playtest.
+            foreach (var tempPlaytestEvent in tempPlaytestEvents)
+                if (tempPlaytestEvent.Equals(_previousPlaytestEvent))
+                    tempPlaytestEvents.Remove(tempPlaytestEvent);
+
+            _playtestEvents = tempPlaytestEvents;
+
             if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage("Test event found", false, color: LOG_COLOR);
+                _ = _log.LogMessage($"{_playtestEvents.Count} test events found!", false, color: LOG_COLOR);
 
-            //Update the last time the event was changed
-            _testEvent.LastEditTime = eventItem.Updated;
+            //Get next active tests
+            var tempNextTf2Test = _playtestEvents.FirstOrDefault(x => x.Game == PlaytestEvent.Games.TF2) as Tf2PlaytestEvent;
 
-            //An event exists and has not changed - do nothing.
-            if (_testEvent.EventEditTime == _testEvent.LastEditTime && _testEvent.EventEditTime != null)
+            var tempNextCsgoTest = _playtestEvents.FirstOrDefault(x => x.Game == PlaytestEvent.Games.CSGO) as CsgoPlaytestEvent;
+
+            if (tempNextCsgoTest == null)
             {
-                if (_dataService.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage("Event was not changed, not rebuilding", false, color: LOG_COLOR);
-                return;
+                //Make the active test null
+                _activeCsgoPlaytestEvent = null;
+            }
+            else if (!tempNextCsgoTest.Equals(_activeCsgoPlaytestEvent))
+            {
+                _activeCsgoPlaytestEvent = tempNextCsgoTest;
+                if (_activeCsgoPlaytestEvent.TestValid())
+                {
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        await _log.LogMessage($"{_activeCsgoPlaytestEvent.Title} is valid and switched to active event.", false, color: LOG_COLOR);
+                }
+                else
+                    await _log.LogMessage($"Test not valid!\n{_activeCsgoPlaytestEvent}", alert: true, color: LOG_COLOR);
             }
 
-            _testEvent.VoidEvent(); //Something changed - rebuild
-
-            string strippedHtml = null;
-
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage($"Event description BEFORE stripping:\n{eventItem.Description}\n", false,
-                    color: LOG_COLOR);
-
-            // Handles the event.
-            //Replace <br>s with \n for new line, replace &nbsp as well
-            strippedHtml = eventItem.Description.Replace("<br>", "\n").Replace("&nbsp;", "");
-
-            //Strip out HTML tags
-            strippedHtml = Regex.Replace(strippedHtml, "<.*?>", string.Empty);
-
-            if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage($"Event description AFTER stripping:\n{strippedHtml}\n", false, color: LOG_COLOR);
-
-            // Splits description into lines and keeps only the part after the colon, if one exists.
-            var description = strippedHtml.Trim().Split('\n')
-                .Select(line => line.Substring(line.IndexOf(':') + 1).Trim())
-                .ToImmutableArray();
-
-            _testEvent.StartDateTime = eventItem.Start.DateTime;
-            _testEvent.EventEditTime = eventItem.Updated;
-            _testEvent.Title = eventItem.Summary;
-            _testEvent.ServerLocation = eventItem.Location;
-            _testEvent.EndDateTime = eventItem.End.DateTime;
-
-            //Creators
-            _testEvent.Creators = _dataService.GetSocketUsers(description.ElementAtOrDefault(0), ',');
-
-            //Imgur Album
-            _testEvent.ImageGallery = GeneralUtil.ValidateUri(description.ElementAtOrDefault(1));
-
-            //Workshop URL
-            _testEvent.WorkshopLink = GeneralUtil.ValidateUri(description.ElementAtOrDefault(2));
-
-            //Game mode
-            _testEvent.SetGameMode(description.ElementAtOrDefault(3));
-
-            //Moderator
-            _testEvent.Moderator = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
-
-            //Description
-            _testEvent.Description = description.ElementAtOrDefault(5);
-
-            //Gallery Images
-            _testEvent.GalleryImages = GeneralUtil.GetImgurAlbum(_testEvent.ImageGallery.ToString());
-
-            //Test the even to see if the information is valid.
-            if (!_testEvent.TestValid())
-                _ = _log.LogMessage("Error in playtest event! Please check the description and try again.\n" +
-                                    $"{_testEvent}\n",
-                    color: LOG_COLOR);
+            if (tempNextTf2Test == null)
+            {
+                //Make the active test null
+                _activeTf2PlaytestEvent = null;
+            }
+            else if (!tempNextTf2Test.Equals(_activeTf2PlaytestEvent))
+            {
+                _activeTf2PlaytestEvent = tempNextTf2Test;
+                if (_activeTf2PlaytestEvent.TestValid())
+                {
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        await _log.LogMessage($"{_activeTf2PlaytestEvent.Title} is valid and switched to active event.", false, color: LOG_COLOR);
+                }
+                else
+                    await _log.LogMessage($"Test not valid!\n{_activeTf2PlaytestEvent}", alert: true, color: LOG_COLOR);
+            }
         }
 
         /// <summary>
@@ -181,7 +171,7 @@ namespace BotHATTwaffle2.Services.Calendar
         {
             var request = _calendar.Events.List(_dataService.RSettings.ProgramSettings.TestCalendarId);
 
-            request.Q = " by ";
+            request.Q = "by";
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
             request.ShowDeleted = false;
             request.SingleEvents = true;
@@ -254,7 +244,7 @@ namespace BotHATTwaffle2.Services.Calendar
 
             Event newEvent = new Event()
             {
-                Summary = $"{playtestRequest.MapName} by {creators.TrimEnd(',',' ')}",
+                Summary = $"{playtestRequest.Game.ToUpper()} | {playtestRequest.MapName} by {creators.TrimEnd(',',' ')}",
                 Location = playtestRequest.Preferredserver,
                 Description = description,
                 Start = new EventDateTime()
@@ -283,24 +273,89 @@ namespace BotHATTwaffle2.Services.Calendar
             
             return true;
         }
-        
+
         /// <summary>
-        /// Gets the latest test event from Google
+        /// Returns the next valid playtest event.
         /// </summary>
-        /// <returns>Latest test event Google</returns>
-        public PlaytestEvent GetTestEvent()
+        /// <returns>Valid playtest event. Null if no tests found. Null if test is invalid.</returns>
+        public PlaytestEvent GetNextPlaytestEvent()
         {
-            GetNextTestEvent();
-            return _testEvent;
+            var playtest = _playtestEvents.FirstOrDefault();
+
+            if (playtest.Equals(_activeCsgoPlaytestEvent))
+                return _activeCsgoPlaytestEvent;
+
+            if (playtest.Equals(_activeTf2PlaytestEvent))
+                return _activeTf2PlaytestEvent;
+
+            return null;
         }
 
         /// <summary>
-        /// Gets the latest cached test event
+        /// Returns the next valid playtest event for the specific game.
         /// </summary>
-        /// <returns>Latest cached test event</returns>
-        public PlaytestEvent GetTestEventNoUpdate()
+        /// <returns>Valid playtest event. Null if no tests found. Null if test is invalid.</returns>
+        public PlaytestEvent GetNextPlaytestEvent(string game)
         {
-            return _testEvent;
+            PlaytestEvent.Games testGame;
+
+            if (game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
+            {
+                testGame = PlaytestEvent.Games.CSGO;
+            }
+            else if (game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
+            {
+                testGame = PlaytestEvent.Games.TF2;
+            }
+            else
+            {
+                _ = _log.LogMessage($"Invalid game requested when looking for playtest event! {game}");
+                return null;
+            }
+
+            return GetNextPlaytestEvent(testGame);
+        }
+
+        /// <summary>
+        /// Returns the next valid playtest event for the specific game enum
+        /// </summary>
+        /// <param name="game"></param>
+        /// <returns></returns>
+        public PlaytestEvent GetNextPlaytestEvent(PlaytestEvent.Games game)
+        {
+            var playtest = _playtestEvents?.FirstOrDefault(x => x.Game == game);
+
+            if (playtest == null)
+                return null;
+
+            if (playtest.Equals(_activeCsgoPlaytestEvent))
+                return _activeCsgoPlaytestEvent;
+
+            if (playtest.Equals(_activeTf2PlaytestEvent))
+                return _activeTf2PlaytestEvent;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns a valid "Stacked" playtest event. A playtest is "stacked" when it has a start time that would have
+        /// setup events happen while another test event is active. Meaning a test ending at 2pm, with one starting at 2:30.
+        /// The 2:30 test is "stacked" since it has a setup task taking place at 1:30, before the 2pm end of the other test.
+        /// </summary>
+        /// <returns>Returns stacked playtest</returns>
+        public PlaytestEvent GetStackedPlaytestEvent()
+        {
+            //If empty, or only 1 test found, return null
+            if (_playtestEvents.Count < 2)
+                return null;
+
+            var activeTest = GetNextPlaytestEvent();
+            if (activeTest == null)
+                return null;
+
+            return _playtestEvents.SingleOrDefault
+            (x => activeTest.EndDateTime.GetValueOrDefault() > x.StartDateTime.GetValueOrDefault().AddHours(-1) &&
+                  activeTest.EndDateTime.GetValueOrDefault() <= x.StartDateTime.GetValueOrDefault());
         }
     }
 }

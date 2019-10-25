@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using BotHATTwaffle2.Services.SRCDS;
 using Discord;
 using Discord.WebSocket;
@@ -234,7 +234,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             
             
             //Alert users
-            var msg = await _dataService.TestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` when you're finished.");
+            var msg = await _dataService.CSGOTestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` when you're finished.");
 
             _activeUser = user;
 
@@ -399,12 +399,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .WithFooter("Type >q to enter the queue");
                 if (_display == null)
                 {
-                    _display = await _dataService.TestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
+                    _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
                 }
                 else
                 {
                     await _display.DeleteAsync();
-                    _display = await _dataService.TestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
+                    _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
                 }
                 return;
             }
@@ -429,12 +429,12 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (_display == null)
             {
-                _display = await _dataService.TestingChannel.SendMessageAsync(embed: embed.Build());
+                _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: embed.Build());
             }
             else
             {
                 await _display.DeleteAsync();
-                _display = await _dataService.TestingChannel.SendMessageAsync(embed: embed.Build());
+                _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: embed.Build());
             }
         }
 

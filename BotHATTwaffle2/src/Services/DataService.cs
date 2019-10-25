@@ -35,8 +35,10 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel GeneralChannel { get; private set; }
         public SocketTextChannel LogChannel { get; private set; }
         public SocketTextChannel WelcomeChannel { get; private set; }
-        public SocketTextChannel AnnouncementChannel { get; private set; }
-        public SocketTextChannel TestingChannel { get; private set; }
+        public SocketTextChannel CSGOAnnouncementChannel { get; private set; }
+        public SocketTextChannel TF2AnnouncementChannel { get; private set; }
+        public SocketTextChannel TF2TestingChannel { get; private set; }
+        public SocketTextChannel CSGOTestingChannel { get; private set; }
         public SocketTextChannel CompetitiveTestingChannel { get; private set; }
         public SocketTextChannel WebhookChannel { get; private set; }
         public SocketTextChannel AdminChannel { get; private set; }
@@ -44,9 +46,11 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel BotChannel { get; private set; }
         public SocketVoiceChannel LevelTestVoiceChannel { get; private set; }
         public SocketTextChannel AdminBotsChannel { get; private set; }
+        
 
         // Roles
-        public SocketRole PlayTesterRole { get; private set; }
+        public SocketRole CSGOPlayTesterRole { get; private set; }
+        public SocketRole TF2PlayTesterRole { get; private set; }
         public SocketRole MuteRole { get; private set; }
         public SocketRole ModeratorRole { get; private set; }
         public SocketRole ActiveRole { get; private set; }
@@ -56,7 +60,8 @@ namespace BotHATTwaffle2.Services
         public SocketRole AdminRole { get; private set; }
         public SocketRole CompetitiveTesterRole { get; private set; }
         public SocketUser AlertUser { get; private set; }
-        public SocketRole PlaytestAdmin { get; private set; }
+        public SocketRole CSGOPlaytestAdmin { get; private set; }
+        public SocketRole TF2PlaytestAdmin { get; private set; }
 
         public DateTime StartTime;
         public int CommandCount = 0;
@@ -82,7 +87,7 @@ namespace BotHATTwaffle2.Services
             catch
             {
                 Console.WriteLine($"Unable to find a user with ID {RSettings.ProgramSettings.AlertUser}.\n" +
-                                  "I need this user to function properly. Please set the connect user in settings.json " +
+                                  "I need this user to function properly. Please set the alert user in settings.json " +
                                   "and restart.");
                 Console.ReadLine();
                 Environment.Exit(0);
@@ -156,52 +161,32 @@ namespace BotHATTwaffle2.Services
             AdminBotsChannel = await ParseChannel(RSettings.General.AdminBotsChannel);
             Console.WriteLine($"AdminBotChannel ID:{AdminBotsChannel.Id} Discovered Name:{AdminBotsChannel.Name}");
 
-            if (RSettings.ProgramSettings.Debug)
-            {
-                Console.WriteLine("Setting channels based on debug values!!!");
+            GeneralChannel = await ParseChannel(RSettings.General.GeneralChannel);
+            Console.WriteLine($"GeneralChannel ID:{GeneralChannel.Id} Discovered Name:{GeneralChannel.Name}");
 
-                GeneralChannel = await ParseChannel(RSettings.DebugValues.GeneralChannel);
-                Console.WriteLine($"GeneralChannel ID:{GeneralChannel.Id} Discovered Name:{GeneralChannel.Name}");
+            WelcomeChannel = await ParseChannel(RSettings.General.WelcomeChannel);
+            Console.WriteLine($"WelcomeChannel ID:{WelcomeChannel.Id} Discovered Name:{WelcomeChannel.Name}");
 
-                WelcomeChannel = await ParseChannel(RSettings.DebugValues.WelcomeChannel);
-                Console.WriteLine($"WelcomeChannel ID:{WelcomeChannel.Id} Discovered Name:{WelcomeChannel.Name}");
+            CSGOAnnouncementChannel = await ParseChannel(RSettings.General.CSGOAnnouncementChannel);
+            Console.WriteLine(
+                $"CSGO AnnouncementChannel ID:{CSGOAnnouncementChannel.Id} Discovered Name:{CSGOAnnouncementChannel.Name}");
 
-                AnnouncementChannel = await ParseChannel(RSettings.DebugValues.AnnouncementChannel);
-                Console.WriteLine(
-                    $"AnnouncementChannel ID:{AnnouncementChannel.Id} Discovered Name:{AnnouncementChannel.Name}");
+            TF2AnnouncementChannel = await ParseChannel(RSettings.General.TF2AnnouncementChannel);
+            Console.WriteLine(
+                $"TF2 AnnouncementChannel ID:{TF2AnnouncementChannel.Id} Discovered Name:{TF2AnnouncementChannel.Name}");
 
-                WebhookChannel = await ParseChannel(RSettings.DebugValues.WebhookChannel);
-                Console.WriteLine($"WebhookChannel ID:{WebhookChannel.Id} Discovered Name:{WebhookChannel.Name}");
+            CSGOTestingChannel = await ParseChannel(RSettings.General.CSGOTestingChannel);
+            Console.WriteLine($"CSGO TestingChannel ID:{CSGOTestingChannel.Id} Discovered Name:{CSGOTestingChannel.Name}");
 
-                TestingChannel = await ParseChannel(RSettings.DebugValues.TestingChannel);
-                Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
+            TF2TestingChannel = await ParseChannel(RSettings.General.TF2TestingChannel);
+            Console.WriteLine($"TF2 TestingChannel ID:{TF2TestingChannel.Id} Discovered Name:{TF2TestingChannel.Name}");
 
-                CompetitiveTestingChannel = await ParseChannel(RSettings.DebugValues.CompetitiveTestingChannel);
-                Console.WriteLine(
-                    $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
-            }
-            else
-            {
-                GeneralChannel = await ParseChannel(RSettings.General.GeneralChannel);
-                Console.WriteLine($"GeneralChannel ID:{GeneralChannel.Id} Discovered Name:{GeneralChannel.Name}");
+            WebhookChannel = await ParseChannel(RSettings.General.WebhookChannel);
+            Console.WriteLine($"WebhookChannel ID:{WebhookChannel.Id} Discovered Name:{WebhookChannel.Name}");
 
-                WelcomeChannel = await ParseChannel(RSettings.General.WelcomeChannel);
-                Console.WriteLine($"WelcomeChannel ID:{WelcomeChannel.Id} Discovered Name:{WelcomeChannel.Name}");
-
-                AnnouncementChannel = await ParseChannel(RSettings.General.AnnouncementChannel);
-                Console.WriteLine(
-                    $"AnnouncementChannel ID:{AnnouncementChannel.Id} Discovered Name:{AnnouncementChannel.Name}");
-
-                TestingChannel = await ParseChannel(RSettings.General.TestingChannel);
-                Console.WriteLine($"TestingChannel ID:{TestingChannel.Id} Discovered Name:{TestingChannel.Name}");
-
-                WebhookChannel = await ParseChannel(RSettings.General.WebhookChannel);
-                Console.WriteLine($"WebhookChannel ID:{WebhookChannel.Id} Discovered Name:{WebhookChannel.Name}");
-
-                CompetitiveTestingChannel = await ParseChannel(RSettings.General.CompetitiveTestingChannel);
-                Console.WriteLine(
-                    $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
-            }
+            CompetitiveTestingChannel = await ParseChannel(RSettings.General.CompetitiveTestingChannel);
+            Console.WriteLine(
+                $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
 
             Console.ResetColor();
 
@@ -228,73 +213,43 @@ namespace BotHATTwaffle2.Services
         {
             Console.ForegroundColor = LOG_COLOR;
 
-            if (RSettings.ProgramSettings.Debug)
-            {
-                Console.WriteLine("\nSetting roles based on debug values!!!");
+            CSGOPlayTesterRole = Guild.GetRole(RSettings.UserRoles.CSGOPlaytester);
+            Console.WriteLine($"CSGO Playtester ID:{CSGOPlayTesterRole.Id} Discovered Name:{CSGOPlayTesterRole.Name}");
 
-                ModeratorRole = Guild.GetRole(RSettings.DebugValues.Moderator);
-                Console.WriteLine($"Moderator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
+            TF2PlayTesterRole = Guild.GetRole(RSettings.UserRoles.TF2Playtester);
+            Console.WriteLine($"TF2 Playtester ID:{CSGOPlayTesterRole.Id} Discovered Name:{TF2PlayTesterRole.Name}");
 
-                PlayTesterRole = Guild.GetRole(RSettings.DebugValues.Playtester);
-                Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
+            ModeratorRole = Guild.GetRole(RSettings.UserRoles.Moderator);
+            Console.WriteLine($"\nModerator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
 
-                MuteRole = Guild.GetRole(RSettings.DebugValues.Muted);
-                Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
+            MuteRole = Guild.GetRole(RSettings.UserRoles.Muted);
+            Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
 
-                ActiveRole = Guild.GetRole(RSettings.DebugValues.Active);
-                Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
+            ActiveRole = Guild.GetRole(RSettings.UserRoles.Active);
+            Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
 
-                PatreonsRole = Guild.GetRole(RSettings.DebugValues.Patreons);
-                Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
+            PatreonsRole = Guild.GetRole(RSettings.UserRoles.Patreons);
+            Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
 
-                CommunityTesterRole = Guild.GetRole(RSettings.DebugValues.CommunityTester);
-                Console.WriteLine(
-                    $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
+            CommunityTesterRole = Guild.GetRole(RSettings.UserRoles.CommunityTester);
+            Console.WriteLine(
+                $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
 
-                BotsRole = Guild.GetRole(RSettings.DebugValues.Bots);
-                Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
+            BotsRole = Guild.GetRole(RSettings.UserRoles.Bots);
+            Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
 
-                AdminRole = Guild.GetRole(RSettings.DebugValues.Admin);
-                Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
+            AdminRole = Guild.GetRole(RSettings.UserRoles.Admin);
+            Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
 
-                CompetitiveTesterRole = Guild.GetRole(RSettings.DebugValues.CompetitiveTester);
-                Console.WriteLine(
-                    $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
-            }
-            else
-            {
-                ModeratorRole = Guild.GetRole(RSettings.UserRoles.Moderator);
-                Console.WriteLine($"\nModerator ID:{ModeratorRole.Id} Discovered Name:{ModeratorRole.Name}");
+            CompetitiveTesterRole = Guild.GetRole(RSettings.UserRoles.CompetitiveTester);
+            Console.WriteLine(
+                $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
 
-                PlayTesterRole = Guild.GetRole(RSettings.UserRoles.Playtester);
-                Console.WriteLine($"Playtester ID:{PlayTesterRole.Id} Discovered Name:{PlayTesterRole.Name}");
+            CSGOPlaytestAdmin = Guild.GetRole(RSettings.UserRoles.CSGOPlaytestAdmin);
+            Console.WriteLine($"CSGOPlaytestAdmin ID:{CSGOPlaytestAdmin.Id} Discovered Name:{CSGOPlaytestAdmin.Name}");
 
-                MuteRole = Guild.GetRole(RSettings.UserRoles.Muted);
-                Console.WriteLine($"Muted ID:{MuteRole.Id} Discovered Name:{MuteRole.Name}");
-
-                ActiveRole = Guild.GetRole(RSettings.UserRoles.Active);
-                Console.WriteLine($"Active ID:{ActiveRole.Id} Discovered Name:{ActiveRole.Name}");
-
-                PatreonsRole = Guild.GetRole(RSettings.UserRoles.Patreons);
-                Console.WriteLine($"Patreons ID:{PatreonsRole.Id} Discovered Name:{PatreonsRole.Name}");
-
-                CommunityTesterRole = Guild.GetRole(RSettings.UserRoles.CommunityTester);
-                Console.WriteLine(
-                    $"CommunityTesterRole ID:{CommunityTesterRole.Id} Discovered Name:{CommunityTesterRole.Name}");
-
-                BotsRole = Guild.GetRole(RSettings.UserRoles.Bots);
-                Console.WriteLine($"BotsRole ID:{BotsRole.Id} Discovered Name:{BotsRole.Name}");
-
-                AdminRole = Guild.GetRole(RSettings.UserRoles.Admin);
-                Console.WriteLine($"AdminRole ID:{AdminRole.Id} Discovered Name:{AdminRole.Name}");
-
-                CompetitiveTesterRole = Guild.GetRole(RSettings.UserRoles.CompetitiveTester);
-                Console.WriteLine(
-                    $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
-            }
-
-            PlaytestAdmin = Guild.GetRole(RSettings.UserRoles.PlaytestAdmin);
-            Console.WriteLine($"Moderator ID:{PlaytestAdmin.Id} Discovered Name:{PlaytestAdmin.Name}");
+            TF2PlaytestAdmin = Guild.GetRole(RSettings.UserRoles.TF2PlaytestAdmin);
+            Console.WriteLine($"TF2PlaytestAdmin ID:{TF2PlaytestAdmin.Id} Discovered Name:{TF2PlaytestAdmin.Name}");
 
             Console.ResetColor();
         }
