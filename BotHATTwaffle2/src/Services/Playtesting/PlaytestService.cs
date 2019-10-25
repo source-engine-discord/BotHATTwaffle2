@@ -361,7 +361,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                 testEvent.SetAnnouncementMessage(playtestAnnouncementMessage);
 
                 //Store the titles along with the game key so we can check against them later.
-                if (_knownTests.ContainsKey(testEvent.Game)) _knownTests.Remove(testEvent.Game);
+                if (_knownTests.ContainsKey(testEvent.Game))
+                    _knownTests.Remove(testEvent.Game);
+
                 _knownTests.Add(testEvent.Game, testEvent.EventEditTime.Value);
             }
             catch
@@ -439,6 +441,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                     }
 
                     //Store the titles along with the game key so we can check against them later.
+                    if (_knownTests.ContainsKey(testEvent.Game))
+                        _knownTests.Remove(testEvent.Game);
+
                     _knownTests.Add(testEvent.Game, testEvent.EventEditTime.Value);
                 }
                 else
