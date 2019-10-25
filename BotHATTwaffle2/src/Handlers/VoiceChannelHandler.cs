@@ -6,10 +6,10 @@ using Discord.WebSocket;
 
 namespace BotHATTwaffle2.Handlers
 {
-    class VoiceChannelHandler
+    internal class VoiceChannelHandler
     {
-        private readonly DataService _dataService;
         private readonly DiscordSocketClient _client;
+        private readonly DataService _dataService;
         private readonly PlaytestService _playtestService;
 
         public VoiceChannelHandler(DataService dataService, DiscordSocketClient client, PlaytestService playtestService)

@@ -1,7 +1,16 @@
-﻿using BotHATTwaffle2.Handlers;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
+using BotHATTwaffle2.Models.JSON;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
@@ -10,15 +19,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using BotHATTwaffle2.Models.JSON;
-using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using Newtonsoft.Json.Linq;
 
 namespace BotHATTwaffle2.Commands
@@ -36,7 +36,7 @@ namespace BotHATTwaffle2.Commands
         private readonly Random _random;
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
-        
+
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
             Random random, RconService rconService, LogReceiverService logReceiverService)
@@ -67,7 +67,7 @@ namespace BotHATTwaffle2.Commands
         [Alias("mm")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         [Summary("Ido-MMR System")]
-        public async Task MatchMakingAsync([Optional]string server)
+        public async Task MatchMakingAsync([Optional] string server)
         {
             if (Context.Channel.Id != _dataService.AdminBotsChannel.Id)
             {
@@ -98,38 +98,38 @@ namespace BotHATTwaffle2.Commands
 
             var status = await _rconService.RconCommand(server, "status", false);
 
-            List<Int64> playerIds64 = new List<Int64>();
+            var playerIds64 = new List<long>();
 
-            var splitStatus = status.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var splitStatus = status.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
 
             //Get the IDs, skip 0 which means no ID found for that line.
             foreach (var s in splitStatus)
             {
                 var id = GeneralUtil.TranslateSteamID(s);
 
-                if(id != 0)
+                if (id != 0)
                     playerIds64.Add(id);
             }
 
             //No users found
-            if(playerIds64.Count == 0)
+            if (playerIds64.Count == 0)
             {
                 var embedError = new EmbedBuilder()
                     .WithColor(165, 55, 55)
                     .WithAuthor("No users found...");
-                await ReplyAsync(embed:embedError.Build());
+                await ReplyAsync(embed: embedError.Build());
                 return;
             }
 
             //Build the full URL
-            string builtUrl = BASEURL + string.Join(",", playerIds64);
+            var builtUrl = BASEURL + string.Join(",", playerIds64);
 
             //Lets get the JSON from the site
             var returnedJson = new WebClient().DownloadString(builtUrl).Trim();
 
             //This is all because WhaleMan code won't give us an array...
-            List<RatedPlayer> ratedPlayers = new List<RatedPlayer>();
-            JObject jsonObject = JObject.Parse(returnedJson);
+            var ratedPlayers = new List<RatedPlayer>();
+            var jsonObject = JObject.Parse(returnedJson);
             foreach (var id in playerIds64)
             {
                 var result = jsonObject.Property(id.ToString()).First;
@@ -141,14 +141,11 @@ namespace BotHATTwaffle2.Commands
             var sortedPlayers = ratedPlayers.OrderBy(x => x.Rating).Reverse().ToList();
 
             var embed = new EmbedBuilder()
-                .WithColor(55,55,165)
-                .WithAuthor($"Player Ratings - {sortedPlayers.Count} Players Found",url:builtUrl);
+                .WithColor(55, 55, 165)
+                .WithAuthor($"Player Ratings - {sortedPlayers.Count} Players Found", url: builtUrl);
 
             //Add fields to embed
-            foreach (var sortedPlayer in sortedPlayers)
-            {
-                embed.AddField(sortedPlayer.Name, sortedPlayer.Rating, true);
-            }
+            foreach (var sortedPlayer in sortedPlayers) embed.AddField(sortedPlayer.Name, sortedPlayer.Rating, true);
 
             await ReplyAsync(embed: embed.Build());
         }
@@ -163,27 +160,21 @@ namespace BotHATTwaffle2.Commands
             var testEvent = _calendar.GetNextPlaytestEvent();
 
             if (!_logReceiverService.EnableLog)
-            {
                 _logReceiverService.StartLogReceiver(testEvent.PlaytestCommandInfo.ServerAddress);
-            }
 
             var result = _logReceiverService.EnableFeedback(testEvent.PlaytestCommandInfo.DemoName);
 
-            if(result)
-            {
+            if (result)
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Started new feedback listener")
                     .WithDescription(
                         $"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback in game.")
                     .WithColor(new Color(55, 165, 55)).Build());
-            }
             else
-            {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Unable to start feedback listening")
                     .WithDescription("The server is already listening for feedback.")
                     .WithColor(new Color(165, 55, 55)).Build());
-            }
         }
 
         [Command("StartListen", RunMode = RunMode.Async)]
@@ -236,7 +227,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Mute")]
-        [Alias("Banish","Yeet")]
+        [Alias("Banish", "Yeet")]
         [Summary("Mutes a user.")]
         [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
                  "you may leave off any unit of time. For example `>Mute [user] 1D5H [reason]` will mute for 1 day 5 hours. " +
@@ -579,12 +570,12 @@ namespace BotHATTwaffle2.Commands
             //Not valid - abort
             if (!_calendar.GetNextPlaytestEvent().PlaytestCommandPreCheck())
             {
-                await ReplyAsync(embed:new EmbedBuilder()
+                await ReplyAsync(embed: new EmbedBuilder()
                     .WithDescription("There is already a playtest command running. Only 1 may be running at a time." +
                                      " To force a reset of the running flag, use `>p reset`. This only needs to be done if there" +
                                      "was some issue with the Discord API.\n\n" +
                                      "Or no valid test is found.")
-                    .WithColor(165,55,55)
+                    .WithColor(165, 55, 55)
                     .Build());
                 return;
             }

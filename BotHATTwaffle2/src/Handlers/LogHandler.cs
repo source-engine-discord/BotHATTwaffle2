@@ -32,7 +32,7 @@ namespace BotHATTwaffle2.Handlers
             ConsoleColor color = ConsoleColor.White)
         {
             string alertUser = null;
-            string date = DateTime.Now.ToString("HH:mm:ss.fff - dddd, MMMM dd yyyy");
+            var date = DateTime.Now.ToString("HH:mm:ss.fff - dddd, MMMM dd yyyy");
             if (alert)
                 alertUser = _dataService.AlertUser.Mention;
 

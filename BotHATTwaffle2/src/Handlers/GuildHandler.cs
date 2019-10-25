@@ -10,12 +10,12 @@ namespace BotHATTwaffle2.Handlers
     internal class GuildHandler
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkMagenta;
+        private static bool attemptingReconnect;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
-        private readonly ScheduleHandler _schedule;
         private readonly LogReceiverService _logReceiverService;
-        private static bool attemptingReconnect = false;
+        private readonly ScheduleHandler _schedule;
 
         public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule,
             LogReceiverService logReceiverService)
@@ -45,9 +45,9 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// Run when the client has disconnected from Discord.
-        /// When here, we will wait around for a while and see if we are re-connected.
-        /// If not, after a while we will just give up on connecting and close.
+        ///     Run when the client has disconnected from Discord.
+        ///     When here, we will wait around for a while and see if we are re-connected.
+        ///     If not, after a while we will just give up on connecting and close.
         /// </summary>
         /// <param name="ex"></param>
         /// <returns></returns>
@@ -59,23 +59,23 @@ namespace BotHATTwaffle2.Handlers
                 return;
 
             //Start a non-blocking background task with a basic countdown timer
-            _ = Task.Run(async() =>
+            _ = Task.Run(async () =>
             {
                 //Let the program know we are already running
                 attemptingReconnect = true;
-                int attempt = 0;
+                var attempt = 0;
 
                 while (attempt < 240 && _client.ConnectionState != ConnectionState.Connected)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Client is disconnected!\n" +
-                                      $"We will wait around for {1200 - (attempt * 5)} seconds before giving up.");
+                    Console.WriteLine("Client is disconnected!\n" +
+                                      $"We will wait around for {1200 - attempt * 5} seconds before giving up.");
                     attempt++;
                     await Task.Delay(5000);
                 }
 
                 //Consider the connection dead, close the program. Let the watchdog program handle it.
-                if(_client.ConnectionState != ConnectionState.Connected)
+                if (_client.ConnectionState != ConnectionState.Connected)
                     Environment.Exit(0);
 
                 //If we got here, that means connected again. We can be setup for the next run.

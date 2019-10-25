@@ -7,7 +7,6 @@ using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
-using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
 
@@ -16,19 +15,20 @@ namespace BotHATTwaffle2.Handlers
     public class ScheduleHandler
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
+        private readonly GoogleCalendar _calendar;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly PlaytestService _playtestService;
-        private readonly UserHandler _userHandler;
         private readonly Random _random;
         private readonly ReservationService _reservationService;
-        private readonly GoogleCalendar _calendar;
-        private int _playtestCount = 0;
+        private readonly UserHandler _userHandler;
         private bool _allowPlayingCycle = true;
+        private int _playtestCount;
 
-        public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log, PlaytestService playtestService
-        , UserHandler userHandler, Random random, ReservationService reservationService, GoogleCalendar calendar)
+        public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log,
+            PlaytestService playtestService
+            , UserHandler userHandler, Random random, ReservationService reservationService, GoogleCalendar calendar)
         {
             Console.WriteLine("Setting up ScheduleHandler...");
             _playtestService = playtestService;
@@ -55,7 +55,7 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// Adds required jobs on startup
+        ///     Adds required jobs on startup
         /// </summary>
         public void AddRequiredJobs()
         {
@@ -113,7 +113,6 @@ namespace BotHATTwaffle2.Handlers
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
             foreach (var user in DatabaseUtil.GetAllUserJoins())
-            {
                 try
                 {
                     //Test getting user in a try catch, if we can't they left the server.
@@ -121,47 +120,35 @@ namespace BotHATTwaffle2.Handlers
 
                     //Send welcome message right away, or wait?
                     if (DateTime.Now > user.JoinTime.AddMinutes(10))
-                    {
                         //Timer expired, schedule now
                         JobManager.AddJob(async () => await _userHandler.UserWelcomeMessage(validUser), s => s
                             .WithName($"[UserJoin_{validUser.Id}]").ToRunOnceIn(10).Seconds());
-                    }
                     else
-                    {
                         //Not passed, scheduled ahead
                         JobManager.AddJob(async () => await _userHandler.UserWelcomeMessage(validUser), s => s
                             .WithName($"[UserJoin_{validUser.Id}]").ToRunOnceAt(user.JoinTime.AddMinutes(10)));
-                    }
                 }
                 catch
                 {
                     //If we cannot get a user, that means that user left the server. So remove them.
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Cannot re-add user join for ID {user.UserId}" +
-                                            $"because they left the server.", false, color: LOG_COLOR);
+                                            "because they left the server.", false, color: LOG_COLOR);
 
                     DatabaseUtil.RemoveJoinedUser(user.UserId);
                 }
-            }
 
             //Re-add user mutes
             foreach (var user in DatabaseUtil.GetAllActiveUserMutes())
-            {
-
                 //Send welcome message right away, or wait?
                 if (DateTime.Now > user.MuteTime.AddMinutes(user.Duration))
-                {
                     //Timer expired, schedule now
                     JobManager.AddJob(async () => await _dataService.UnmuteUser(user.UserId), s => s
                         .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceIn(20).Seconds());
-                }
                 else
-                {
                     //Not passed, scheduled ahead
                     JobManager.AddJob(async () => await _dataService.UnmuteUser(user.UserId), s => s
                         .WithName($"[UnmuteUser_{user.UserId}]").ToRunOnceAt(user.MuteTime.AddMinutes(user.Duration)));
-                }
-            }
 
             //Re-add server reservations.
             foreach (var reservation in DatabaseUtil.GetAllServerReservation())
@@ -179,19 +166,21 @@ namespace BotHATTwaffle2.Handlers
 
                 //Send welcome message right away, or wait?
                 if (DateTime.Now > reservation.StartTime.AddHours(2))
-                {
                     //Timer expired, schedule now
                     JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention}",
-                            embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
-                        s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceIn(15).Seconds());
-                }
+                            embed: _reservationService.ReleaseServer(reservation.UserId,
+                                "The reservation has expired.")),
+                        s => s.WithName(
+                                $"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]")
+                            .ToRunOnceIn(15).Seconds());
                 else
-                {
                     //Not passed, scheduled ahead
                     JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention}",
-                            embed: _reservationService.ReleaseServer(reservation.UserId, "The reservation has expired.")),
-                        s => s.WithName($"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]").ToRunOnceAt(reservation.StartTime.AddHours(2)));
-                }
+                            embed: _reservationService.ReleaseServer(reservation.UserId,
+                                "The reservation has expired.")),
+                        s => s.WithName(
+                                $"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]")
+                            .ToRunOnceAt(reservation.StartTime.AddHours(2)));
             }
 
             DisplayScheduledJobs();
@@ -201,10 +190,8 @@ namespace BotHATTwaffle2.Handlers
         {
             //Display what jobs we have scheduled
             foreach (var allSchedule in JobManager.AllSchedules)
-            {
                 _ = _log.LogMessage($"{allSchedule.Name} runs at: {allSchedule.NextRun}",
                     false, color: LOG_COLOR);
-            }
         }
 
         private void FluentJobStart(JobStartInfo info)
@@ -226,7 +213,7 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// Updated the playing line on the bot
+        ///     Updated the playing line on the bot
         /// </summary>
         /// <returns></returns>
         private async Task UpdatePlaying()
@@ -235,7 +222,8 @@ namespace BotHATTwaffle2.Handlers
             if (!_allowPlayingCycle)
                 return;
 
-            string playing = _dataService.RSettings.Lists.Playing[_random.Next(_dataService.RSettings.Lists.Playing.Count)];
+            var playing =
+                _dataService.RSettings.Lists.Playing[_random.Next(_dataService.RSettings.Lists.Playing.Count)];
 
             switch (playing)
             {
@@ -246,12 +234,14 @@ namespace BotHATTwaffle2.Handlers
                     playing = $"{_dataService.CommandCount} Commands Run";
                     break;
                 case "[RunTime]":
-                    playing = $"Up For: {DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}";
+                    playing =
+                        $"Up For: {DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}";
                     break;
                 case "[MessageCount]":
                     playing = $"{_dataService.MessageCount} Messages Read";
                     break;
             }
+
             await _client.SetGameAsync(playing);
         }
 
@@ -260,24 +250,33 @@ namespace BotHATTwaffle2.Handlers
             const string playerbaseUrl = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
             var response = new WebClient().DownloadString(playerbaseUrl).Trim();
 
-            await _log.LogMessage($"Got the following response when updating playerbase: `{response}`", color: LOG_COLOR);
+            await _log.LogMessage($"Got the following response when updating playerbase: `{response}`",
+                color: LOG_COLOR);
         }
 
-        public void DisablePlayingUpdate() => _allowPlayingCycle = false;
-        public void EnablePlayingUpdate() => _allowPlayingCycle = true;
+        public void DisablePlayingUpdate()
+        {
+            _allowPlayingCycle = false;
+        }
+
+        public void EnablePlayingUpdate()
+        {
+            _allowPlayingCycle = true;
+        }
 
         /// <summary>
-        /// Updates the number of playtest files found on the local machine.
+        ///     Updates the number of playtest files found on the local machine.
         /// </summary>
         private void UpdatePlayTestCount()
         {
             try
             {
-                _playtestCount = Directory.GetFiles(_dataService.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem", SearchOption.AllDirectories).Length;
+                _playtestCount = Directory.GetFiles(_dataService.RSettings.ProgramSettings.PlaytestDemoPath, "*.dem",
+                    SearchOption.AllDirectories).Length;
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage($"Cannot access path for getting playtest count\n{e.Message}",channel:false);
+                _ = _log.LogMessage($"Cannot access path for getting playtest count\n{e.Message}", false);
                 throw;
             }
 

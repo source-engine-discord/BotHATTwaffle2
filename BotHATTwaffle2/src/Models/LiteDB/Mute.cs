@@ -2,7 +2,7 @@
 
 namespace BotHATTwaffle2.Models.LiteDB
 {
-    class Mute
+    internal class Mute
     {
         public int Id { get; set; }
         public ulong UserId { get; set; }

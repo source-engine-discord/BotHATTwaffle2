@@ -5,6 +5,12 @@ namespace BotHATTwaffle2.Models.LiteDB
 {
     public class PlaytestRequest
     {
+        public PlaytestRequest()
+        {
+            Emails = new List<string>();
+            CreatorsDiscord = new List<string>();
+        }
+
         public int Id { get; set; }
         public DateTime Timestamp { get; set; }
         public DateTime TestDate { get; set; }
@@ -19,12 +25,6 @@ namespace BotHATTwaffle2.Models.LiteDB
         public DateTime PreviousTestDate { get; set; }
         public string Preferredserver { get; set; }
         public string Game { get; set; }
-
-        public PlaytestRequest()
-        {
-            Emails = new List<string>();
-            CreatorsDiscord = new List<string>();
-        }
 
         public override string ToString()
         {

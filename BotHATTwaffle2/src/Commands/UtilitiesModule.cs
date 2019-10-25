@@ -51,10 +51,10 @@ namespace BotHATTwaffle2.Commands
             {
                 string d1 = null;
                 string d2 = null;
-                bool tick = true;
+                var tick = true;
                 foreach (var role in _dataService.RSettings.Lists.Roles)
                 {
-                    string r = role;
+                    var r = role;
                     if (!Context.IsPrivate)
                         r = _dataService.Guild.Roles
                             .FirstOrDefault(x => x.Name.Equals(role, StringComparison.OrdinalIgnoreCase))?.Mention;
@@ -230,7 +230,7 @@ namespace BotHATTwaffle2.Commands
             {
                 UserSteamID returnedUser = null;
                 var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
-                string target = id;
+                var target = id;
                 if (steamIdRegex.IsMatch(id))
                 {
                     returnedUser = DatabaseUtil.GetUserSteamID(steamId: steamIdRegex.Match(id).Value);
@@ -277,18 +277,14 @@ namespace BotHATTwaffle2.Commands
 
                 var deleteResult = DatabaseUtil.DeleteUserSteamID(returnedUser);
                 if (deleteResult)
-                {
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor("Link deleted!")
                         .WithDescription($"`{Context.User}` is **no longer** linked to `{returnedUser.SteamID}`")
                         .WithColor(165, 55, 55).Build());
-                }
                 else
-                {
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor("Failed to delete link")
                         .WithColor(165, 55, 55).Build());
-                }
             }
 
             async Task AddUser()
@@ -351,7 +347,7 @@ namespace BotHATTwaffle2.Commands
             {
                 UserSteamID returnedUser = null;
                 var steamIdRegex = new Regex(@"(STEAM_[\d]:[\d]:\d+)");
-                string target = id;
+                var target = id;
                 if (steamIdRegex.IsMatch(id))
                 {
                     returnedUser = DatabaseUtil.GetUserSteamID(steamId: steamIdRegex.Match(id).Value);
@@ -387,13 +383,13 @@ namespace BotHATTwaffle2.Commands
         [Command("Convert")]
         [Summary("Converts different units. Example: `>convert 420cm`")]
         [Alias("c")]
-        public async Task ConvertAsync([Remainder]string conversion)
+        public async Task ConvertAsync([Remainder] string conversion)
         {
             var converted = UnitConverter.AutoConversion(conversion);
             if (converted.Count > 0)
             {
                 string formatted = null;
-                int counter = 0;
+                var counter = 0;
                 foreach (var c in converted)
                 {
                     formatted += $"`{c.Key.ToLower()}` = `{c.Value}` | ";
@@ -402,6 +398,7 @@ namespace BotHATTwaffle2.Commands
                     if (counter > 5)
                         break;
                 }
+
                 await ReplyAsync(formatted.TrimEnd('|', ' '));
             }
         }

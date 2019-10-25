@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO.Pipes;
-using System.Linq;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
-using BotHATTwaffle2.src.Services.Calendar;
 using Discord;
 using LiteDB;
 
@@ -63,7 +59,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Stores a competitive playtest password
+        ///     Stores a competitive playtest password
         /// </summary>
         /// <param name="playtestEvent">Playtest event to store info</param>
         /// <returns>True if successful, false otherwise</returns>
@@ -89,7 +85,8 @@ namespace BotHATTwaffle2.Util
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
-                                            $"\n{(playtestEvent as CsgoPlaytestEvent)?.CompPassword} at for event {playtestEvent.Title}", false, color: LOG_COLOR);
+                                            $"\n{(playtestEvent as CsgoPlaytestEvent)?.CompPassword} at for event {playtestEvent.Title}",
+                            false, color: LOG_COLOR);
 
                     //Insert new entry with ID of 1, and our values.
                     col.Insert(new CompPw
@@ -127,7 +124,7 @@ namespace BotHATTwaffle2.Util
                     var announcement = db.GetCollection<AnnounceMessage>(COLLECTION_ANNOUNCEMENT);
 
                     //remove all old announcements for this game.
-                    announcement.Delete(Query.EQ("Game", game.ToString()));
+                    announcement.Delete(Query.EQ("Game", game));
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage("Adding new record..." +
@@ -1049,7 +1046,7 @@ namespace BotHATTwaffle2.Util
         {
             if (userId == 0 && steamId == null)
                 return null;
-            
+
             try
             {
                 using (var db = new LiteDatabase(DBPATH))
@@ -1057,15 +1054,9 @@ namespace BotHATTwaffle2.Util
                     //Grab our collection
                     var collection = db.GetCollection<UserSteamID>(COLLECTION_USERS_STEAMID);
 
-                    if(userId != 0)
-                    {
-                        return collection.FindOne(Query.EQ("UserId", (long) userId));
-                    }
+                    if (userId != 0) return collection.FindOne(Query.EQ("UserId", (long) userId));
 
-                    if (steamId != null)
-                    {
-                        return collection.FindOne(Query.EQ("SteamID", steamId));
-                    }
+                    if (steamId != null) return collection.FindOne(Query.EQ("SteamID", steamId));
                 }
             }
             catch (Exception e)

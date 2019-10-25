@@ -54,19 +54,21 @@ namespace BotHATTwaffle2.Util
 
         private static readonly Regex RegExNumbersonly = new Regex(@"[+-]?(\d*\.)?\d+", RegexOptions.Compiled);
 
-        private static readonly Regex RegExLb = new Regex(PatternPounds, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex RegExLb =
+            new Regex(PatternPounds, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        private static readonly Regex RegExKg = new Regex(PatternKilograms, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex RegExKg =
+            new Regex(PatternKilograms, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public static Dictionary<string, string> AutoConversion(string input)
         {
-            var dictionary = new Dictionary<string,string>();
+            var dictionary = new Dictionary<string, string>();
             var matches = RegExC.Matches(input);
             if (matches.Count > 0)
                 foreach (Match match in matches)
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
-                    if(!dictionary.ContainsKey(match.Value.Trim()))
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
                         dictionary.Add(match.Value.Trim(), $"{CelsiusToFahrenheit(value)}f");
                 }
 

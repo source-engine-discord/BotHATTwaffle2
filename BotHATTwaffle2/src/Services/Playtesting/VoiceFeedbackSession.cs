@@ -12,23 +12,23 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class VoiceFeedbackSession : IDisposable
     {
-        private readonly DataService _dataService;
         private readonly DiscordSocketClient _client;
-        private readonly List<ulong> _userQueue = new List<ulong>();
-        private readonly RconService _rconService;
+        private readonly DataService _dataService;
         private readonly PlaytestEvent _playtestEvent;
-        private IUserMessage _display;
-        private bool _running = false;
-        private bool _timerRunning = false;
-        private string _status = "Idle 🛑";
-        private bool _disposed = false;
-        private TimeSpan _duration;
-        private TimeSpan _timeLeft = new TimeSpan();
-        private bool _tick = true;
+        private readonly RconService _rconService;
+        private readonly List<ulong> _userQueue = new List<ulong>();
+        private bool _abortTimer;
         private SocketGuildUser _activeUser;
+        private IUserMessage _display;
+        private bool _disposed;
+        private TimeSpan _duration;
         private SocketGuildUser _onDeckUser;
-        private bool _abortTimer = false;
-        private bool _paused = false;
+        private bool _paused;
+        private bool _running;
+        private string _status = "Idle 🛑";
+        private bool _tick = true;
+        private TimeSpan _timeLeft;
+        private bool _timerRunning;
 
         public VoiceFeedbackSession(DataService dataService, DiscordSocketClient client, PlaytestEvent playtestEvent,
             RconService rconService)
@@ -43,29 +43,52 @@ namespace BotHATTwaffle2.Services.Playtesting
             _duration = TimeSpan.FromMinutes(_dataService.RSettings.General.FeedbackDuration);
 
             //Mute everyone on start
-            foreach (var user in _dataService.LevelTestVoiceChannel.Users)
-            {
-                _ = ProcessMute(true, user);
-            }
+            foreach (var user in _dataService.LevelTestVoiceChannel.Users) _ = ProcessMute(true, user);
 
-            _ = _rconService.RconCommand(_playtestEvent.ServerLocation, "say Feedback Queue Started!;say Feedback Queue Started!;say Feedback Queue Started!");
+            _ = _rconService.RconCommand(_playtestEvent.ServerLocation,
+                "say Feedback Queue Started!;say Feedback Queue Started!;say Feedback Queue Started!");
 
             _ = _client.SetStatusAsync(UserStatus.AFK);
         }
 
+        public async void Dispose()
+        {
+            _ = _client.SetStatusAsync(UserStatus.Online);
+            _running = false;
+
+            foreach (var user in _dataService.LevelTestVoiceChannel.Users)
+            {
+                //Skip mods
+                if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
+                    continue;
+
+                try
+                {
+                    await user.ModifyAsync(x => x.Mute = false);
+                }
+                catch
+                {
+                    //Do nothing, somehow we failed to unmute.
+                }
+            }
+
+            _disposed = true;
+            _client.UserVoiceStateUpdated -= UserVoiceStateUpdated;
+        }
+
         /// <summary>
-        /// Sets the duration for feedback
+        ///     Sets the duration for feedback
         /// </summary>
         /// <param name="duration"></param>
         public void SetDuration(int duration)
         {
-            int rawDuration = duration > 0 ? duration : _dataService.RSettings.General.FeedbackDuration;
+            var rawDuration = duration > 0 ? duration : _dataService.RSettings.General.FeedbackDuration;
             _duration = TimeSpan.FromMinutes(duration);
             _ = UpdateCurrentQueueMessage();
         }
 
         /// <summary>
-        /// Modifies a user's server voice mute state. Ignores mod staff and the map creators.
+        ///     Modifies a user's server voice mute state. Ignores mod staff and the map creators.
         /// </summary>
         /// <param name="mute">Set mute to True or False</param>
         /// <param name="user">User to modify</param>
@@ -92,7 +115,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// The event that handles users when the join after a playtest session has started
+        ///     The event that handles users when the join after a playtest session has started
         /// </summary>
         /// <param name="user">User who joined voice</param>
         /// <param name="lefState">Information on what channel they left</param>
@@ -107,21 +130,20 @@ namespace BotHATTwaffle2.Services.Playtesting
             var guildUser = _dataService.GetSocketGuildUser(user.Id);
 
             //User joined
-            if (joinedState.VoiceChannel != null && joinedState.VoiceChannel.Id == _dataService.LevelTestVoiceChannel.Id)
+            if (joinedState.VoiceChannel != null &&
+                joinedState.VoiceChannel.Id == _dataService.LevelTestVoiceChannel.Id)
             {
                 //Don't re-mute a muted user
                 if (guildUser.IsMuted)
                     return Task.CompletedTask;
-                
+
                 _ = ProcessMute(true, guildUser);
                 return Task.CompletedTask;
             }
 
             //If a user leaves the channel, remove from the queue.
             if (lefState.VoiceChannel != null && lefState.VoiceChannel.Id == _dataService.LevelTestVoiceChannel.Id)
-            {
                 _ = RemoveUser(user.Id);
-            }
 
             return Task.CompletedTask;
         }
@@ -143,30 +165,25 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Pauses the currently active feedback session
+        ///     Pauses the currently active feedback session
         /// </summary>
         public void PauseFeedback()
         {
             _status = "Paused ⏸";
             _paused = true;
 
-            if (_userQueue.Count > 0)
-            {
-                RemoveUserJobs(_userQueue[0]);
-            }
+            if (_userQueue.Count > 0) RemoveUserJobs(_userQueue[0]);
             _ = _client.SetStatusAsync(UserStatus.AFK);
             _ = UpdateCurrentQueueMessage();
         }
+
         /// <summary>
-        /// Starts user feedback
+        ///     Starts user feedback
         /// </summary>
         /// <returns>True if started, false otherwise</returns>
         public async Task<bool> StartFeedback()
         {
-            if (_running && !_paused)
-            {
-                return false;
-            }
+            if (_running && !_paused) return false;
 
             _status = "Running 🏁";
             _running = true;
@@ -184,6 +201,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     AddUserJobs(user);
                     await UpdateTimer();
                 }
+
                 return true;
             }
 
@@ -192,7 +210,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Processes the next user in the queue for feedback.
+        ///     Processes the next user in the queue for feedback.
         /// </summary>
         /// <returns></returns>
         private async Task StartNextUserFeedback()
@@ -200,14 +218,14 @@ namespace BotHATTwaffle2.Services.Playtesting
             //No longer running, don't continue
             if (!_running)
                 return;
-           
+
             //If the list is empty, there are no users
             if (_userQueue.Count == 0)
             {
                 PauseFeedback();
                 return;
             }
-            
+
             var user = _dataService.GetSocketGuildUser(_userQueue[0]);
 
             //Make sure user is in voice channel
@@ -225,16 +243,18 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Countdown before next user
-            for (int i = 5; i > 0; i--)
+            for (var i = 5; i > 0; i--)
             {
                 _ = _rconService.RconCommand(_playtestEvent.ServerLocation,
-                    $"script ScriptPrintMessageCenterAll(\"{user.Username}'s turn starts in: {i}\\n<font color=\\\"#FFA163\\\">Start with your in-game name.</font>\");", false);
+                    $"script ScriptPrintMessageCenterAll(\"{user.Username}'s turn starts in: {i}\\n<font color=\\\"#FFA163\\\">Start with your in-game name.</font>\");",
+                    false);
                 await Task.Delay(1000);
             }
-            
-            
+
+
             //Alert users
-            var msg = await _dataService.CSGOTestingChannel.SendMessageAsync($"{user.Mention} may begin their voice feedback.\nType `>done` when you're finished.");
+            var msg = await _dataService.CSGOTestingChannel.SendMessageAsync(
+                $"{user.Mention} may begin their voice feedback.\nType `>done` when you're finished.");
 
             _activeUser = user;
 
@@ -242,11 +262,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             AddUserJobs(user);
 
-            if (_userQueue.Count > 1)
-            {
-                _onDeckUser = _dataService.GetSocketGuildUser(_userQueue[1]);
-            }
-            
+            if (_userQueue.Count > 1) _onDeckUser = _dataService.GetSocketGuildUser(_userQueue[1]);
+
             if (!_timerRunning)
             {
                 _abortTimer = false;
@@ -270,14 +287,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (!_running)
             {
                 _timerRunning = false;
-                _ = _client.SetGameAsync($"Waiting...");
+                _ = _client.SetGameAsync("Waiting...");
                 return;
             }
 
-            if (_paused)
-            {
-                return;
-            }
+            if (_paused) return;
 
             _timerRunning = true;
 
@@ -287,9 +301,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             _tick = !_tick;
 
-            string message = $"script ScriptPrintMessageCenterAll(\"{_activeUser.Username}'s " +
-                             $"Time Left: <font color=\\\"#B5F2A2\\\">{_timeLeft:mm\\:ss} ⏰</font>" +
-                             $"\\nType <font color=\\\"#B5F2A2\\\">>done</font> in Discord when finished\\nOr you may disconnect from voice.";
+            var message = $"script ScriptPrintMessageCenterAll(\"{_activeUser.Username}'s " +
+                          $"Time Left: <font color=\\\"#B5F2A2\\\">{_timeLeft:mm\\:ss} ⏰</font>" +
+                          "\\nType <font color=\\\"#B5F2A2\\\">>done</font> in Discord when finished\\nOr you may disconnect from voice.";
 
             if (_userQueue.Count > 1)
             {
@@ -306,12 +320,12 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             await Task.Delay(2000);
             _timeLeft = _timeLeft.Subtract(TimeSpan.FromSeconds(2));
-            
+
             _ = UpdateTimer();
         }
 
         /// <summary>
-        /// Removes a user from the feedback queue
+        ///     Removes a user from the feedback queue
         /// </summary>
         /// <param name="userId">ID of user to remove</param>
         /// <returns>True if removed, false otherwise</returns>
@@ -324,7 +338,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             //check if the user we are removing is the current active user.
             //If so, we want to start the next user in the queue right away.
-            bool processNext = _userQueue.IndexOf(userId) == 0;
+            var processNext = _userQueue.IndexOf(userId) == 0;
 
             _userQueue.Remove(userId);
 
@@ -332,7 +346,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             await ProcessMute(true, user);
 
-            if(processNext)
+            if (processNext)
             {
                 //Prevent timer from running on old user.
                 _abortTimer = true;
@@ -344,18 +358,18 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Adds a user to the bottom of the feedback queue
+        ///     Adds a user to the bottom of the feedback queue
         /// </summary>
         /// <param name="user">User to add</param>
         /// <returns></returns>
         public async Task<bool> AddUserToQueue(SocketUser user)
         {
-            if (_userQueue.Contains(user.Id) || _dataService.LevelTestVoiceChannel.Users.All(x=>x.Id != user.Id))
+            if (_userQueue.Contains(user.Id) || _dataService.LevelTestVoiceChannel.Users.All(x => x.Id != user.Id))
                 return false;
 
             _userQueue.Add(user.Id);
 
-            if(_userQueue.Count > 1)
+            if (_userQueue.Count > 1)
                 _onDeckUser = _dataService.GetSocketGuildUser(_userQueue[1]);
 
             await UpdateCurrentQueueMessage();
@@ -363,7 +377,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Pushes a user to the top of the queue
+        ///     Pushes a user to the top of the queue
         /// </summary>
         /// <param name="user">User to put at the top of the queue</param>
         /// <returns></returns>
@@ -373,8 +387,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_userQueue.Contains(user.Id))
                 _userQueue.Remove(user.Id);
 
-            if(_userQueue.Count > 0)
-                _userQueue.Insert(1,user.Id);
+            if (_userQueue.Count > 0)
+                _userQueue.Insert(1, user.Id);
             else
                 _userQueue.Add(user.Id);
 
@@ -382,7 +396,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Updates the display of users who are giving feedback
+        ///     Updates the display of users who are giving feedback
         /// </summary>
         /// <returns></returns>
         private async Task UpdateCurrentQueueMessage()
@@ -395,7 +409,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 var emptyEmbed = new EmbedBuilder()
                     .WithAuthor("No users in queue...")
-                    .WithColor(165,55,55)
+                    .WithColor(165, 55, 55)
                     .WithFooter("Type >q to enter the queue");
                 if (_display == null)
                 {
@@ -406,26 +420,25 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await _display.DeleteAsync();
                     _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
                 }
+
                 return;
             }
-            
+
             var embed = new EmbedBuilder()
                 .WithAuthor($"Feedback Queue - {_duration:mm\\:ss}min - {_status}")
                 .WithColor(_running ? new Color(55, 165, 55) : new Color(222, 130, 50))
                 .AddField("On Deck", _dataService.GetSocketUser(_userQueue[0]).Mention)
                 .WithFooter("Type >q to enter the queue");
 
-            string message = "";
-            for (int i = 1; i < _userQueue.Count; i++)
+            var message = "";
+            for (var i = 1; i < _userQueue.Count; i++)
             {
                 var user = _dataService.GetSocketUser(_userQueue[i]);
                 message += $"**{i}** - {user.Mention}\n";
             }
+
             message = message.Trim();
-            if (_userQueue.Count > 1)
-            {
-                embed.AddField("Next Up",message);
-            }
+            if (_userQueue.Count > 1) embed.AddField("Next Up", message);
 
             if (_display == null)
             {
@@ -436,30 +449,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _display.DeleteAsync();
                 _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: embed.Build());
             }
-        }
-
-        public async void Dispose()
-        {
-            _ = _client.SetStatusAsync(UserStatus.Online);
-            _running = false;
-            
-            foreach (var user in _dataService.LevelTestVoiceChannel.Users)
-            {
-                //Skip mods
-                if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
-                    continue;
-
-                try
-                {
-                    await user.ModifyAsync(x => x.Mute = false);
-                }
-                catch
-                {
-                    //Do nothing, somehow we failed to unmute.
-                }
-            }
-            _disposed = true;
-            _client.UserVoiceStateUpdated -= UserVoiceStateUpdated;
         }
     }
 }

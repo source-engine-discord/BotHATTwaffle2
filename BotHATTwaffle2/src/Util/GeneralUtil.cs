@@ -6,19 +6,20 @@ using System.Net;
 using System.Text.RegularExpressions;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using Discord;
 using HtmlAgilityPack;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
-using Color = Discord.Color;
 
 namespace BotHATTwaffle2.Util
 {
     public static class GeneralUtil
     {
+        private const ConsoleColor LOG_COLOR = ConsoleColor.White;
         private static LogHandler _log;
         private static DataService _dataService;
         private static Random _random;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.White;
+
         public static void SetHandlers(LogHandler log, DataService data, Random random)
         {
             _log = log;
@@ -27,13 +28,13 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Takes a original SteamID and finds the SteamID64 version
+        ///     Takes a original SteamID and finds the SteamID64 version
         /// </summary>
         /// <param name="steamID">STEAM_1:0:123456 string</param>
         /// <returns>The SteamID64 version</returns>
-        public static Int64 TranslateSteamID(string steamID)
+        public static long TranslateSteamID(string steamID)
         {
-            Int64 result = 0;
+            long result = 0;
 
             var template = new Regex(@"STEAM_(\d):([0-1]):(\d+)");
             var matches = template.Matches(steamID);
@@ -41,9 +42,9 @@ namespace BotHATTwaffle2.Util
             var parts = matches[0].Groups;
             if (parts.Count != 4) return 0;
 
-            Int64 x = Int64.Parse(parts[1].Value) << 24;
-            Int64 y = Int64.Parse(parts[2].Value);
-            Int64 z = Int64.Parse(parts[3].Value) << 1;
+            var x = long.Parse(parts[1].Value) << 24;
+            var y = long.Parse(parts[2].Value);
+            var z = long.Parse(parts[3].Value) << 1;
 
             result = ((1 + (1 << 20) + x) << 32) | (y + z);
             return result;
@@ -65,7 +66,7 @@ namespace BotHATTwaffle2.Util
             }
             catch (UriFormatException e)
             {
-                _ = _log.LogMessage(e.ToString(), alert: true, color: LOG_COLOR);
+                _ = _log.LogMessage(e.ToString(), alert: true);
             }
 
             return null;
@@ -91,7 +92,7 @@ namespace BotHATTwaffle2.Util
                                     $"\nAlbum URL: {albumUrl}" +
                                     $"\nAlbum ID: {albumId}" +
                                     $"\nClient Credits Remaining: {client.RateLimit.ClientRemaining} of {client.RateLimit.ClientLimit}" +
-                                    $"\nImages Found:\n{string.Join("\n", images)}", false, color: LOG_COLOR);
+                                    $"\nImages Found:\n{string.Join("\n", images)}", false);
 
                 return images;
             }
@@ -102,7 +103,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Takes a full / partial server address to find the server code.
+        ///     Takes a full / partial server address to find the server code.
         /// </summary>
         /// <param name="fullServerAddress">Full address of server</param>
         /// <returns>Server code</returns>
@@ -126,7 +127,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Validates if a string is a SteamWorkshop URL
+        ///     Validates if a string is a SteamWorkshop URL
         /// </summary>
         /// <param name="workshopUrl">String to validate</param>
         /// <returns>True if valid, false otherwise</returns>
@@ -136,13 +137,15 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Converts a ConsoleColor into a Discord.Color
+        ///     Converts a ConsoleColor into a Discord.Color
         /// </summary>
         /// <param name="c">Input color</param>
         /// <returns>DiscordColor</returns>
         public static Color ColorFromConsoleColor(ConsoleColor c)
         {
-            uint[] cColors = {   0x000000, //Black = 0
+            uint[] cColors =
+            {
+                0x000000, //Black = 0
                 0x000080, //DarkBlue = 1
                 0x008000, //DarkGreen = 2
                 0x008080, //DarkCyan = 3
@@ -157,39 +160,36 @@ namespace BotHATTwaffle2.Util
                 0xFF0000, //Red = 12
                 0xFF00FF, //Magenta = 13
                 0xFFFF00, //Yellow = 14
-                0xFFFFFF  //White = 15
+                0xFFFFFF //White = 15
             };
 
-            return new Color(cColors[(int)c]);
+            return new Color(cColors[(int) c]);
         }
 
         public static void Shuffle<T>(T[] array)
         {
             var random = new Random(DateTime.Now.Millisecond);
-            int n = array.Length;
-            for (int i = 0; i < n; i++)
+            var n = array.Length;
+            for (var i = 0; i < n; i++)
             {
                 // Use Next on random instance with an argument.
                 // ... The argument is an exclusive bound.
                 //     So we will not go past the end of the array.
-                int r = i + random.Next(n - i);
-                T t = array[r];
+                var r = i + random.Next(n - i);
+                var t = array[r];
                 array[r] = array[i];
                 array[i] = t;
             }
         }
 
         /// <summary>
-        /// Gets a IPHostEntry from a FQDN or an IP address.
+        ///     Gets a IPHostEntry from a FQDN or an IP address.
         /// </summary>
         /// <param name="address">FQDN or address</param>
         /// <returns>Populated IPHostEntry object, null if not found</returns>
         public static IPHostEntry GetIPHost(string address)
         {
-            if (address.Contains(':'))
-            {
-                address = address.Substring(0, address.IndexOf(":", StringComparison.Ordinal));
-            }
+            if (address.Contains(':')) address = address.Substring(0, address.IndexOf(":", StringComparison.Ordinal));
             IPHostEntry iPHostEntry = null;
             try
             {
@@ -197,7 +197,7 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage($"Failed to get iPHostEntry for `{address}`", alert:true, color:LOG_COLOR);
+                _ = _log.LogMessage($"Failed to get iPHostEntry for `{address}`", alert: true);
                 Console.WriteLine(e);
                 throw;
             }
@@ -206,25 +206,26 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Provided a URL, will scan the page for all files that end in a file
-        /// It then picks one at random and returns that
-        /// Example Page: https://content.tophattwaffle.com/BotHATTwaffle/catfacts/
+        ///     Provided a URL, will scan the page for all files that end in a file
+        ///     It then picks one at random and returns that
+        ///     Example Page: https://content.tophattwaffle.com/BotHATTwaffle/catfacts/
         /// </summary>
         /// <param name="inUrl">URL to look at</param>
         /// <returns>inUrl + ImageName.ext</returns>
         public static string GetRandomImgFromUrl(string inUrl)
         {
             //New web client
-            HtmlWeb htmlWeb = new HtmlWeb();
+            var htmlWeb = new HtmlWeb();
 
             //Load page
-            HtmlDocument htmlDocument = htmlWeb.Load(inUrl);
+            var htmlDocument = htmlWeb.Load(inUrl);
 
             //Add each image to a list
-            List<string> validImg = htmlDocument.DocumentNode.SelectNodes("//a[@href]").Select(link =>
-                link.GetAttributeValue("href", string.Empty).Replace(@"\", "").Replace("\"", "")).Where(Path.HasExtension).ToList();
+            var validImg = htmlDocument.DocumentNode.SelectNodes("//a[@href]").Select(link =>
+                    link.GetAttributeValue("href", string.Empty).Replace(@"\", "").Replace("\"", ""))
+                .Where(Path.HasExtension).ToList();
 
-            return inUrl + validImg[(_random.Next(0, validImg.Count))];
+            return inUrl + validImg[_random.Next(0, validImg.Count)];
         }
     }
 }

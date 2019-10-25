@@ -37,11 +37,11 @@ namespace BotHATTwaffle2.Handlers
             await _dataService.GeneralChannel.SendMessageAsync(message);
 
             await _log.LogMessage($"USER JOINED {user}\nI will apply a roles at {DateTime.Now.AddMinutes(10)}." +
-                                                         $" They will then have playtester and can talk." +
-                                                           $"\nCreated At: {user.CreatedAt}" +
-                                                           $"\nJoined At: {user.JoinedAt}" +
-                                                           $"\nUser ID: {user.Id}");
-            
+                                  " They will then have playtester and can talk." +
+                                  $"\nCreated At: {user.CreatedAt}" +
+                                  $"\nJoined At: {user.JoinedAt}" +
+                                  $"\nUser ID: {user.Id}");
+
             DatabaseUtil.AddJoinedUser(user.Id);
 
             JobManager.AddJob(async () => await UserWelcomeMessage(user), s => s
@@ -59,21 +59,24 @@ namespace BotHATTwaffle2.Handlers
 
             if (_dataService.GetSocketGuildUser(user.Id) == null)
             {
-                await _log.LogMessage($"Attempted to send welcome message to `{user.Username}` `{user.Id}` but they left the guild.");
+                await _log.LogMessage(
+                    $"Attempted to send welcome message to `{user.Username}` `{user.Id}` but they left the guild.");
                 return;
             }
 
             try
             {
-                await _log.LogMessage($"Welcomed `{user.Username}` `{user.Id}` at `{DateTime.Now}`, and assigning them the Playtester role!");
+                await _log.LogMessage(
+                    $"Welcomed `{user.Username}` `{user.Id}` at `{DateTime.Now}`, and assigning them the Playtester role!");
                 await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
                 await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
-                await user.SendMessageAsync(embed:WelcomeEmbed(user));
+                await user.SendMessageAsync(embed: WelcomeEmbed(user));
             }
             catch
             {
-                await _log.LogMessage($"Attempted to send welcome message to `{user.Username}` `{user.Id}`, but failed. " +
-                                      $"They might have DMs of - I'll try in the BotChannel.");
+                await _log.LogMessage(
+                    $"Attempted to send welcome message to `{user.Username}` `{user.Id}`, but failed. " +
+                    "They might have DMs of - I'll try in the BotChannel.");
 
                 await _dataService.BotChannel.SendMessageAsync(user.Mention, embed: WelcomeEmbed(user));
             }
@@ -81,14 +84,15 @@ namespace BotHATTwaffle2.Handlers
 
         private Embed WelcomeEmbed(SocketGuildUser user)
         {
-            string description = $"Now that the verification time has ended, there are a few things I wanted to tell you! Feel free to ask a question in " +
-                                 $"any of the relevant channels you see. Just try to keep things on topic. Please spend a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
-                                 $"\n\nAdditionally, you've been given a role called `CSGO Playtester` and `TF2 Playtester`. These roles are used to notify you when we have a playtest starting. You can remove yourself from the " +
-                                 $"notifications by typing: `>playtester` in a DM with me, or in any channel." +
-                                 $"\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!" +
-                                 $"\n\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme`" +
-                                 $" in a DM with me, or in any channel." +
-                                 $"\n\nGLHF, and enjoy your stay.";
+            var description =
+                "Now that the verification time has ended, there are a few things I wanted to tell you! Feel free to ask a question in " +
+                $"any of the relevant channels you see. Just try to keep things on topic. Please spend a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
+                "\n\nAdditionally, you've been given a role called `CSGO Playtester` and `TF2 Playtester`. These roles are used to notify you when we have a playtest starting. You can remove yourself from the " +
+                "notifications by typing: `>playtester` in a DM with me, or in any channel." +
+                "\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!" +
+                "\n\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme`" +
+                " in a DM with me, or in any channel." +
+                "\n\nGLHF, and enjoy your stay.";
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Welcome, {user.Username}, to the Source Engine Discord!", user.GetAvatarUrl())

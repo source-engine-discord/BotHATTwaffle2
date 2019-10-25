@@ -190,7 +190,8 @@ namespace BotHATTwaffle2.Commands
             embed.AddField("Messages Read", _dataService.MessageCount.ToString(), true);
             embed.AddField("Commands Executed", _dataService.CommandCount.ToString(), true);
             embed.AddField("Run Time",
-                $"{DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}", true);
+                $"{DateTime.Now.Subtract(_dataService.StartTime).ToString("d'd 'h'h 'm'm'").TrimStart(' ', 'd', 'h', 'm', '0')}",
+                true);
 
 
             embed.WithFooter("Build date");
@@ -200,9 +201,8 @@ namespace BotHATTwaffle2.Commands
 
             var users = _dataService.PatreonsRole.Members.ToArray();
             GeneralUtil.Shuffle(users);
-            bool tick = true;
+            var tick = true;
             foreach (var user in users)
-            {
                 if (tick)
                 {
                     thanksTo += $"`{user}`,    ";
@@ -213,9 +213,8 @@ namespace BotHATTwaffle2.Commands
                     thanksTo += $"`{user}`\n";
                     tick = true;
                 }
-            }
 
-            embed.AddField($"Thanks to support from these Patreons",thanksTo.TrimEnd(new[] {',',' '}),true);
+            embed.AddField("Thanks to support from these Patreons", thanksTo.TrimEnd(',', ' '), true);
 
             await ReplyAsync(string.Empty, false, embed.Build());
         }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -147,8 +146,8 @@ namespace BotHATTwaffle2.Services.Playtesting
             while (true)
             {
                 //Variables used later.
-                int index = -1;
-                bool isValid = false;
+                var index = -1;
+                var isValid = false;
 
                 await Display(
                     "Type the ID of the field you want to edit or type `Schedule` to schedule the playtest.\n" +
@@ -168,7 +167,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                         isValid = true;
                     }
                     else
+                    {
                         break;
+                    }
                 }
 
                 if (_userMessage.Content.Equals("save", StringComparison.OrdinalIgnoreCase))
@@ -184,14 +185,16 @@ namespace BotHATTwaffle2.Services.Playtesting
                     else
                     {
                         saveEmbed.WithColor(165, 55, 55);
-                        await _instructionsMessage.ModifyAsync(x => x.Content = "There was an issue saving the request");
+                        await _instructionsMessage.ModifyAsync(x =>
+                            x.Content = "There was an issue saving the request");
                         await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
                     }
+
                     return;
                 }
 
                 //Exiting
-                    if (_userMessage == null ||
+                if (_userMessage == null ||
                     _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     await CancelRequest();
@@ -209,9 +212,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
 
                 //Get the relevant index from the user message only if we aren't getting here from a forced server schedule.
-                if(!isValid)
+                if (!isValid)
                     isValid = int.TryParse(_userMessage.Content, out index);
-                
+
                 //Valid number, and between the valid indexes?
                 if (isValid && index >= 0 && index <= _arrayValues.Length)
                 {
@@ -231,10 +234,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                         //Invalid, let's try again.
                         _userMessage = await _interactive.NextMessageAsync(_context);
 
-                        if (_userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
-                        {
-                            break;
-                        }
+                        if (_userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
 
                         //No reply - fully exit
                         if (_userMessage == null)
@@ -247,7 +247,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
 
             //Scheduling
-            if(!_context.IsPrivate)
+            if (!_context.IsPrivate)
                 await _userMessage.DeleteAsync();
 
             var finalEmbed = RebuildEmbed();
@@ -280,9 +280,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                     $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
 
-                if(wbEmbed != null)
+                if (wbEmbed != null)
                     await _dataService.CSGOTestingChannel.SendMessageAsync(embed: wbEmbed.Build());
-                  
+
                 return;
             }
 
@@ -302,20 +302,24 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             while (true)
             {
-                bool isValid = false;
-                int index = -1;
+                var isValid = false;
+                var index = -1;
                 await Display(
                     "Type the ID of the field you want to edit or type `Submit` to submit your playtest request.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
                 if (_userMessage.Content.Equals("submit", StringComparison.OrdinalIgnoreCase))
                 {
-                    if(_testRequest.Preferredserver != "No preference" && !_testRequest.Game.Equals(DatabaseUtil.GetTestServer(_testRequest.Preferredserver).Game, StringComparison.OrdinalIgnoreCase))
+                    if (_testRequest.Preferredserver != "No preference" && !_testRequest.Game.Equals(
+                            DatabaseUtil.GetTestServer(_testRequest.Preferredserver).Game,
+                            StringComparison.OrdinalIgnoreCase))
                     {
                         index = 11;
                         isValid = true;
                     }
                     else
+                    {
                         break;
+                    }
                 }
 
                 if (_userMessage == null ||
@@ -330,7 +334,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 if (isValid && index >= 0 && index <= _arrayValues.Length)
                 {
-                    bool valid = false;
+                    var valid = false;
                     await Display(_wizardText[index]);
                     while (!valid)
                     {
@@ -370,25 +374,23 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await _context.Channel.SendMessageAsync(
                         $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
                 }
-                
+
                 var schedule = await _playtestService.GetUpcomingEvents(true, false);
 
-                string creators = "";
+                var creators = "";
                 foreach (var c in _testRequest.CreatorsDiscord)
-                {
                     creators += _dataService.GetSocketGuildUser(c).Mention + " ";
-                }
 
                 //Set as alert user just in case.
-                string testingAdminMention = _dataService.AlertUser.Mention;
-                SocketTextChannel mentionChannel = _dataService.AdminBotsChannel;
+                var testingAdminMention = _dataService.AlertUser.Mention;
+                var mentionChannel = _dataService.AdminBotsChannel;
 
                 if (_testRequest.Game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
                 {
                     testingAdminMention = _dataService.CSGOPlaytestAdmin.Mention;
                     mentionChannel = _dataService.CSGOTestingChannel;
                 }
-                else if (_testRequest.Game.Equals("tf2",StringComparison.OrdinalIgnoreCase))
+                else if (_testRequest.Game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
                 {
                     testingAdminMention = _dataService.TF2PlaytestAdmin.Mention;
                     mentionChannel = _dataService.TF2TestingChannel;
@@ -423,13 +425,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     //Try DM
                     await _context.User.SendMessageAsync(
-                        $"Here is a quick request for your test to quickly submit again later.```>Request { _testRequest}```");
+                        $"Here is a quick request for your test to quickly submit again later.```>Request {_testRequest}```");
                 }
                 catch
                 {
                     //Just reply instead
                     await _context.Channel.SendMessageAsync(
-                        $"Here is a quick request for your test to quickly submit again later.```>Request { _testRequest}```");
+                        $"Here is a quick request for your test to quickly submit again later.```>Request {_testRequest}```");
                 }
             }
         }
@@ -631,29 +633,19 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var conflicts = "";
             if (_otherRequests != null && _otherRequests.ToList().Count > 0)
-            {
                 foreach (var req in _otherRequests.Where(x => x.TestDate == _testRequest.TestDate))
                     conflicts +=
                         $"**Map:** `{req.MapName}`\n**Test Date:** `{req.TestDate}`\n**Status:** `Test Requested`\n\n";
-            }
 
-            string modConflicts = "";
+            var modConflicts = "";
 
             if (_scheduledTests != null && _scheduledTests.Items.Count > 0)
-            {
                 foreach (var item in _scheduledTests.Items)
-                {
                     if (item.Summary.Contains("unavailable", StringComparison.OrdinalIgnoreCase))
-                    {
                         modConflicts += $"`{item.Summary.Replace(" - Click for details", "")}`\n";
-                    }
                     else
-                    {
                         conflicts +=
                             $"**Map:** `{item.Summary}`\n**Test Date:** `{item.Start.DateTime}`\n**Status:** `Scheduled`\n\n";
-                    }
-                }
-            }
             if (conflicts.Length > 1)
             {
                 conflicts = conflicts.Trim() +
@@ -665,7 +657,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (modConflicts.Length > 1)
             {
                 modConflicts = modConflicts.Trim() +
-                            " ```These moderators are unavailable to run this test. You may still continue scheduling, as another moderator may accept this test.```";
+                               " ```These moderators are unavailable to run this test. You may still continue scheduling, as another moderator may accept this test.```";
                 embed.AddField("Moderators Unavailable", modConflicts);
             }
 
@@ -678,7 +670,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task CancelRequest()
         {
-            if(_userMessage != null)
+            if (_userMessage != null)
                 await _context.Channel.SendMessageAsync("Request cancelled!");
             else
                 await _context.Channel.SendMessageAsync("Interactive builder timed out!");
@@ -711,7 +703,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                         if (dt > DateTime.Now.AddMonths(2))
                         {
-                            await Display($"You cannot schedule more than 2 months in advance.\nYou provided `{data}`\n" + _wizardText[0]);
+                            await Display(
+                                $"You cannot schedule more than 2 months in advance.\nYou provided `{data}`\n" +
+                                _wizardText[0]);
                             return false;
                         }
 
@@ -760,7 +754,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await Display($"Invalid game.\nYou provided `{data}`\n" +
                                   _wizardText[2]);
                     return false;
-                    
+
 
                 case "mapname":
                     _testRequest.MapName = data;

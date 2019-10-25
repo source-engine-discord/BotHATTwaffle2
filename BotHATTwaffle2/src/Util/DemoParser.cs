@@ -3,13 +3,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Renci.SshNet;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using Renci.SshNet;
 
 namespace BotHATTwaffle2.src.Util
 {
-    class DemoParser
+    internal class DemoParser
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static LogHandler _log;
@@ -32,14 +32,15 @@ namespace BotHATTwaffle2.src.Util
                 return null;
 
             //Start the process
-            ProcessStartInfo processStartInfo = new ProcessStartInfo(@"IDemO\CSGODemoCSV.exe", $"-folders \"{path}\"");
+            var processStartInfo = new ProcessStartInfo(@"IDemO\CSGODemoCSV.exe", $"-folders \"{path}\"");
             processStartInfo.WorkingDirectory = "IDemO";
-            Process demoProcess = Process.Start(processStartInfo);
-            
+            var demoProcess = Process.Start(processStartInfo);
+
             //Unable to start for some reason. Bail.
             if (demoProcess == null)
             {
-                _ = _log.LogMessage("Failed to find process to parse demo. Aborting Demo parse.",alert:true, color: LOG_COLOR);
+                _ = _log.LogMessage("Failed to find process to parse demo. Aborting Demo parse.", alert: true,
+                    color: LOG_COLOR);
                 return null;
             }
 
@@ -52,7 +53,8 @@ namespace BotHATTwaffle2.src.Util
             if (localDirectoryInfo
                     .EnumerateFiles().Count(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)) != 1)
             {
-                _ = _log.LogMessage("There is not exactly 1 JSON file in `matches` directory. Aborting.", alert: true, color: LOG_COLOR);
+                _ = _log.LogMessage("There is not exactly 1 JSON file in `matches` directory. Aborting.", alert: true,
+                    color: LOG_COLOR);
                 return null;
             }
 
@@ -68,7 +70,7 @@ namespace BotHATTwaffle2.src.Util
             //Delete all files in the directory.
             foreach (var file in localDirectoryInfo.EnumerateFiles())
             {
-                _ = _log.LogMessage($"Deleting: {file.FullName}",channel: false, color: LOG_COLOR);
+                _ = _log.LogMessage($"Deleting: {file.FullName}", false, color: LOG_COLOR);
                 file.Delete();
             }
 
@@ -87,11 +89,12 @@ namespace BotHATTwaffle2.src.Util
                 }
                 catch (Exception e)
                 {
-                    await _log.LogMessage($"Failed to connect to SFTP server. {_dataService.RSettings.ProgramSettings.DemoFtpServer}" +
-                                          $"\n {e.Message}", alert: true, color: LOG_COLOR);
+                    await _log.LogMessage(
+                        $"Failed to connect to SFTP server. {_dataService.RSettings.ProgramSettings.DemoFtpServer}" +
+                        $"\n {e.Message}", alert: true, color: LOG_COLOR);
                     return false;
                 }
-                
+
                 try
                 {
                     client.ChangeDirectory(_dataService.RSettings.ProgramSettings.DemoFtpPath);
@@ -103,8 +106,9 @@ namespace BotHATTwaffle2.src.Util
                 }
                 catch (Exception e)
                 {
-                    await _log.LogMessage($"Failed to download file from playtest server. {_dataService.RSettings.ProgramSettings.DemoFtpServer}" +
-                                          $"\n{e.Message}", alert:true, color: LOG_COLOR);
+                    await _log.LogMessage(
+                        $"Failed to download file from playtest server. {_dataService.RSettings.ProgramSettings.DemoFtpServer}" +
+                        $"\n{e.Message}", alert: true, color: LOG_COLOR);
                     return false;
                 }
 

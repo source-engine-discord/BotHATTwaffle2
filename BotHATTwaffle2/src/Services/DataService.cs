@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Commands.Readers;
@@ -19,6 +18,12 @@ namespace BotHATTwaffle2.Services
         private const ConsoleColor LOG_COLOR = ConsoleColor.Blue;
         private readonly DiscordSocketClient _client;
         private LogHandler _log;
+        public int CommandCount = 0;
+
+        public List<SocketUser> IgnoreListenList = new List<SocketUser>();
+        public int MessageCount = 0;
+
+        public DateTime StartTime;
 
         public DataService(DiscordSocketClient client)
         {
@@ -46,7 +51,7 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel BotChannel { get; private set; }
         public SocketVoiceChannel LevelTestVoiceChannel { get; private set; }
         public SocketTextChannel AdminBotsChannel { get; private set; }
-        
+
 
         // Roles
         public SocketRole CSGOPlayTesterRole { get; private set; }
@@ -62,14 +67,8 @@ namespace BotHATTwaffle2.Services
         public SocketUser AlertUser { get; private set; }
         public SocketRole CSGOPlaytestAdmin { get; private set; }
         public SocketRole TF2PlaytestAdmin { get; private set; }
-
-        public DateTime StartTime;
-        public int CommandCount = 0;
-        public int MessageCount = 0;
         public bool IncludePlayerCount { get; set; }
         public string PlayerCount { get; set; }
-
-        public List<SocketUser> IgnoreListenList = new List<SocketUser>();
 
         public async Task DeserializeConfig()
         {
@@ -144,7 +143,8 @@ namespace BotHATTwaffle2.Services
             Console.WriteLine($"Active Guild: {Guild?.Name}\n");
 
             LevelTestVoiceChannel = Guild.GetVoiceChannel(RSettings.General.LevelTestingVoice);
-            Console.WriteLine($"LevelTestVoiceChannel ID:{LevelTestVoiceChannel.Id} Discovered Name:{LevelTestVoiceChannel.Name}");
+            Console.WriteLine(
+                $"LevelTestVoiceChannel ID:{LevelTestVoiceChannel.Id} Discovered Name:{LevelTestVoiceChannel.Name}");
 
             LogChannel = await ParseChannel(RSettings.ProgramSettings.LogChannel);
             Console.WriteLine($"LogChannel ID:{LogChannel.Id} Discovered Name:{LogChannel.Name}");
@@ -176,7 +176,8 @@ namespace BotHATTwaffle2.Services
                 $"TF2 AnnouncementChannel ID:{TF2AnnouncementChannel.Id} Discovered Name:{TF2AnnouncementChannel.Name}");
 
             CSGOTestingChannel = await ParseChannel(RSettings.General.CSGOTestingChannel);
-            Console.WriteLine($"CSGO TestingChannel ID:{CSGOTestingChannel.Id} Discovered Name:{CSGOTestingChannel.Name}");
+            Console.WriteLine(
+                $"CSGO TestingChannel ID:{CSGOTestingChannel.Id} Discovered Name:{CSGOTestingChannel.Name}");
 
             TF2TestingChannel = await ParseChannel(RSettings.General.TF2TestingChannel);
             Console.WriteLine($"TF2 TestingChannel ID:{TF2TestingChannel.Id} Discovered Name:{TF2TestingChannel.Name}");
@@ -320,14 +321,14 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        /// Takes a string that may contain channel mention strings, and replaces them with the channel name.
+        ///     Takes a string that may contain channel mention strings, and replaces them with the channel name.
         /// </summary>
         /// <param name="input">String to modify</param>
         /// <returns></returns>
         public string RemoveChannelMentionStrings(string input)
         {
             var currentString = input;
-            
+
             //Discord channel mention string pattern
             var channelRegex = new Regex("<#\\d+>");
 
@@ -344,7 +345,7 @@ namespace BotHATTwaffle2.Services
                     var channel = Guild.GetChannel(channelId);
 
                     //Channel exists, replace
-                    if(channel != null)
+                    if (channel != null)
                         currentString = currentString.Replace(match.Value, channel.Name);
                 }
             }
@@ -353,7 +354,7 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        /// Converts a string of users to a list of socket users
+        ///     Converts a string of users to a list of socket users
         /// </summary>
         /// <param name="input">String containing users</param>
         /// <param name="splitChar">Char to split with</param>
@@ -379,7 +380,7 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        /// Finds a user in the Guild. If the input type is unknown, this method can be used.
+        ///     Finds a user in the Guild. If the input type is unknown, this method can be used.
         /// </summary>
         /// <param name="input">String with user#1234 or ID</param>
         /// <returns>SocketGuildUser that was found</returns>
@@ -388,7 +389,6 @@ namespace BotHATTwaffle2.Services
             SocketGuildUser user = null;
             try
             {
-                
                 if (input.StartsWith("<@") && input.EndsWith(">"))
                 {
                     var numbersOnly = new Regex(@"[0-9]+");
@@ -397,12 +397,13 @@ namespace BotHATTwaffle2.Services
                     if (ulong.TryParse(input, out var id))
                         user = Guild.GetUser(id);
                 }
-                else if (input.Contains('#'))//Check if username#1234 was provided
+                else if (input.Contains('#')) //Check if username#1234 was provided
                 {
                     var split = input.Split('#');
                     ushort.TryParse(split[1], out var disc);
-                    user = Guild.Users.FirstOrDefault(x => x.Username.Equals(split[0],StringComparison.OrdinalIgnoreCase)
-                                                           && x.DiscriminatorValue == disc);
+                    user = Guild.Users.FirstOrDefault(x =>
+                        x.Username.Equals(split[0], StringComparison.OrdinalIgnoreCase)
+                        && x.DiscriminatorValue == disc);
                 }
                 //Check if ID was provided instead
                 else
@@ -422,8 +423,8 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        /// Gets a socketGuildUser based on ID. Useful for converting a user from SocketUser to SocketGuildUser
-        /// for use outside of the Guild.
+        ///     Gets a socketGuildUser based on ID. Useful for converting a user from SocketUser to SocketGuildUser
+        ///     for use outside of the Guild.
         /// </summary>
         /// <param name="input">user ID</param>
         /// <returns>SocketGuildUser that was found</returns>
@@ -445,7 +446,7 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        /// Gets a message object
+        ///     Gets a message object
         /// </summary>
         /// <param name="channel">Channel to look in</param>
         /// <param name="messageId">ID of message</param>
@@ -457,7 +458,7 @@ namespace BotHATTwaffle2.Services
         }
 
         /// <summary>
-        /// Takes a user ID and attempts to unmute them
+        ///     Takes a user ID and attempts to unmute them
         /// </summary>
         /// <param name="userId">UserID to unmute</param>
         /// <param name="reason">Reason for unmute</param>
@@ -474,7 +475,8 @@ namespace BotHATTwaffle2.Services
                     //If null, mute timed out
                     reason = reason ?? "The mute timed out.";
 
-                    await _log.LogMessage($"Removed mute from `{guildUser.Username}` because {reason}.", color: LOG_COLOR);
+                    await _log.LogMessage($"Removed mute from `{guildUser.Username}` because {reason}.",
+                        color: LOG_COLOR);
                     return true;
                 }
                 catch (Exception e)

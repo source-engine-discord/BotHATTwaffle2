@@ -2,7 +2,7 @@
 
 namespace BotHATTwaffle2.Models.LiteDB
 {
-    class UserJoinMessage
+    internal class UserJoinMessage
     {
         public int Id { get; set; }
         public ulong UserId { get; set; }

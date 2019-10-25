@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.src.Util;
@@ -13,9 +12,8 @@ using Google.Apis.Calendar.v3.Data;
 
 namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 {
-    class CsgoPlaytestEvent : PlaytestEvent
+    internal class CsgoPlaytestEvent : PlaytestEvent
     {
-        public string CompPassword { get; set; }
         public CsgoPlaytestEvent(DataService data, LogHandler log, Event playtestEvent) : base(data, log, playtestEvent)
         {
             Game = Games.CSGO;
@@ -23,6 +21,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             TestingChannel = _dataService.CSGOTestingChannel;
             TesterRole = _dataService.CSGOPlayTesterRole;
         }
+
+        public string CompPassword { get; set; }
 
         protected override void SetGameMode(string input)
         {
@@ -39,6 +39,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                     CompPassword = _dataService.RSettings.General.CompPasswords[i];
                     DatabaseUtil.StoreCompPw(this);
                 }
+
                 IsCasual = false;
 
                 TesterRole = _dataService.CompetitiveTesterRole;
@@ -91,7 +92,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 ? _dataService.RSettings.General.CSGOCasualConfig
                 : _dataService.RSettings.General.CSGOCompConfig;
 
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "mp_teamname_1 Chicken; mp_teamname_2 Ido");
+            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
+                "mp_teamname_1 Chicken; mp_teamname_2 Ido");
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {config}");
             await Task.Delay(3000);
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
@@ -99,7 +101,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             _ = Task.Run(async () =>
             {
-                for (int i = 0; i < 4; i++)
+                for (var i = 0; i < 4; i++)
                 {
                     _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                         $"script ScriptPrintMessageCenterAll(\"<font color=\\\"#B5F2A2\\\">Playtest of {PlaytestCommandInfo.Title} is live! Be respectful and GLHF!</font>\");",
@@ -107,11 +109,12 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                     await Task.Delay(3000);
                 }
             });
-            
+
             PlaytestCommandRunning = false;
         }
 
-        public override async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService, RconService rconService)
+        public override async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService,
+            RconService rconService)
         {
             await base.PlaytestCommandPost(replyInContext, logReceiverService, rconService);
 
@@ -122,26 +125,25 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             _ = Task.Run(async () =>
             {
                 await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
-                $"host_workshop_map {PlaytestCommandInfo.WorkshopId}");
+                    $"host_workshop_map {PlaytestCommandInfo.WorkshopId}");
                 await Task.Delay(15000); //Wait for map to change
 
                 await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                     $"sv_cheats 1; bot_stop 1;exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0");
 
                 if (!IsCasual)
-                    await rconService.RconCommand(ServerLocation,$"sv_password {CompPassword}");
+                    await rconService.RconCommand(ServerLocation, $"sv_password {CompPassword}");
 
                 //Display ingame notification for in game voice and make it stick for a while.
                 _ = Task.Run(async () =>
                 {
-                    for (int i = 0; i < 4; i++)
+                    for (var i = 0; i < 4; i++)
                     {
                         _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                             "script ScriptPrintMessageCenterAll(\"<font color=\\\"#FFA163\\\">Please join the level testing voice channel for feedback!</font>\");",
                             false);
                         await Task.Delay(3000);
                     }
-
                 });
 
                 var demoPath = await DownloadHandler.DownloadPlaytestDemo(PlaytestCommandInfo);
@@ -153,7 +155,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("JIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\n" + e.Message);
+                    Console.WriteLine("JIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\nJIMCODE\n" +
+                                      e.Message);
                 }
 
                 var embed = new EmbedBuilder()
@@ -168,14 +171,14 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                     embed.AddField("Analyzed Demo",
                         $"[View Processed Demo Here!]({demoSiteUrlBase}{jasonFile.Name.Replace(jasonFile.Extension, "")})");
 
-                await AnnouncmentChannel.SendMessageAsync(PlaytestCommandInfo.CreatorMentions,embed: embed.Build());
-                
+                await AnnouncmentChannel.SendMessageAsync(PlaytestCommandInfo.CreatorMentions, embed: embed.Build());
+
                 PlaytestCommandRunning = false;
             });
         }
 
         public override async Task PlaytestStartingInTask(RconService rconService, LogReceiverService logReceiverService
-        , AnnouncementMessage announcementMessage)
+            , AnnouncementMessage announcementMessage)
         {
             await base.PlaytestStartingInTask(rconService, logReceiverService, announcementMessage);
 
@@ -185,31 +188,32 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             if (!IsCasual)
             {
                 foreach (var creator in Creators)
-                {
                     try
                     {
                         var user = _dataService.GetSocketGuildUser(creator.Id);
                         if (user.Roles.All(x => x.Id != _dataService.CompetitiveTesterRole.Id))
                         {
-                            await _log.LogMessage($"{user} ID:{user.Id} does not have competitive tester role for this comp test. Applying.");
+                            await _log.LogMessage(
+                                $"{user} ID:{user.Id} does not have competitive tester role for this comp test. Applying.");
                             await user.AddRoleAsync(_dataService.CompetitiveTesterRole);
                         }
                     }
                     catch
-                    { }
-                }
+                    {
+                    }
 
                 await _dataService.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
                     .WithAuthor(CleanedTitle)
-                    .AddField("Connect Information",$"`connect {ServerLocation}; password {CompPassword}`")
+                    .AddField("Connect Information", $"`connect {ServerLocation}; password {CompPassword}`")
                     .WithColor(new Color(55, 55, 165))
                     .Build());
 
-                await rconService.RconCommand(ServerLocation,$"sv_password {CompPassword}");
+                await rconService.RconCommand(ServerLocation, $"sv_password {CompPassword}");
             }
         }
 
-        public override async Task PlaytestTwentyMinuteTask(RconService rconService, LogReceiverService logReceiverService)
+        public override async Task PlaytestTwentyMinuteTask(RconService rconService,
+            LogReceiverService logReceiverService)
         {
             await base.PlaytestTwentyMinuteTask(rconService, logReceiverService);
 
@@ -231,7 +235,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Run a loop to validate that the level has actually changed.
             _ = Task.Run(async () =>
             {
-                int tries = 0;
+                var tries = 0;
                 //Loop until timeout, or success
                 while (tries < 10)
                 {
@@ -266,7 +270,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Start the log listener for users to give feedback before the test starts.
             var gameMode = IsCasual ? "casual" : "comp";
             logReceiverService.EnableFeedback($"{StartDateTime:MM_dd_yyyy}" +
-                                               $"_{CleanedTitle.Substring(0, CleanedTitle.IndexOf(' '))}_{gameMode}");
+                                              $"_{CleanedTitle.Substring(0, CleanedTitle.IndexOf(' '))}_{gameMode}");
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Setting up test server for {CleanedTitle}")
@@ -312,10 +316,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 _ = _log.LogMessage("CSGO class PlaytestStartingTask", false, color: LOG_COLOR);
 
             if (!IsCasual)
-            {
                 await rconService.RconCommand(ServerLocation,
                     $"sv_password {CompPassword}");
-            }
         }
 
         public override string ToString()

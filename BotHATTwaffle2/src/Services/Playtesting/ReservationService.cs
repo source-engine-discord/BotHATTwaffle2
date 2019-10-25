@@ -13,14 +13,13 @@ namespace BotHATTwaffle2.Services.Playtesting
 {
     public class ReservationService
     {
+        private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
-        private readonly DiscordSocketClient _client;
         private readonly LogReceiverService _logReceiverService;
 
-        public bool CanReserve { get; private set; }
-
-        public ReservationService(DataService data, LogHandler log, Random random, DiscordSocketClient client, LogReceiverService logReceiverService)
+        public ReservationService(DataService data, LogHandler log, Random random, DiscordSocketClient client,
+            LogReceiverService logReceiverService)
         {
             _logReceiverService = logReceiverService;
             _dataService = data;
@@ -30,20 +29,22 @@ namespace BotHATTwaffle2.Services.Playtesting
             CanReserve = true;
         }
 
+        public bool CanReserve { get; private set; }
+
         /// <summary>
-        /// Releases all server reservations.
-        /// Alerts users of why their reservations were released.
+        ///     Releases all server reservations.
+        ///     Alerts users of why their reservations were released.
         /// </summary>
         public async Task ClearAllServerReservations()
         {
             //Get all active reservations
             var allReservations = DatabaseUtil.GetAllServerReservation();
-            
+
             foreach (var reservation in allReservations)
             {
                 SocketGuildUser user = null;
                 string mention = null;
-                string userName = "" + reservation.UserId;
+                var userName = "" + reservation.UserId;
                 try
                 {
                     user = _dataService.Guild.GetUser(reservation.UserId);
@@ -59,24 +60,22 @@ namespace BotHATTwaffle2.Services.Playtesting
                     userName = user.ToString();
                 }
 
-                await _dataService.CSGOTestingChannel.SendMessageAsync(mention, embed: BuildServerReleaseEmbed(userName, reservation,
+                await _dataService.CSGOTestingChannel.SendMessageAsync(mention, embed: BuildServerReleaseEmbed(userName,
+                    reservation,
                     "All server reservations have been cleared. This happens when a scheduled playtest starts soon."));
             }
 
             var jobs = JobManager.AllSchedules.Where(x => x.Name.StartsWith("[TSRelease_"));
 
             //Clear all jobs that are server releases
-            foreach (var job in jobs)
-            {
-                JobManager.RemoveJob(job.Name);
-            }
+            foreach (var job in jobs) JobManager.RemoveJob(job.Name);
 
             //Lastly drop the collection to fully remove all reservations.
             DatabaseUtil.RemoveAllServerReservations();
         }
 
         /// <summary>
-        /// Builds the embed for releasing a server
+        ///     Builds the embed for releasing a server
         /// </summary>
         /// <param name="user">Username of reservation holder</param>
         /// <param name="reservation">Server reservation to build for</param>
@@ -90,13 +89,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 .WithAuthor($"{user}'s reservation ended on {server.Address}")
                 .WithColor(new Color(255, 100, 0))
                 .WithDescription($"Your reservation on {server.Address} has ended because: `{reason}`" +
-                                 $"\n*Thanks for testing with us!*");
+                                 "\n*Thanks for testing with us!*");
 
             return embed.Build();
         }
 
         /// <summary>
-        /// Releases a server reservation
+        ///     Releases a server reservation
         /// </summary>
         /// <param name="userId">userId of server to release</param>
         /// <param name="reason">Reason for release</param>
@@ -104,7 +103,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         public Embed ReleaseServer(ulong userId, string reason)
         {
             var reservation = DatabaseUtil.GetServerReservation(userId);
-            string userName = "" + reservation.UserId;
+            var userName = "" + reservation.UserId;
             try
             {
                 userName = _dataService.Guild.GetUser(reservation.UserId).ToString();
@@ -113,28 +112,28 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 //Can't get user, they likely left.
             }
+
             var embed = BuildServerReleaseEmbed(userName, reservation, reason);
 
             //Find the job that is a reservation, and has the user ID
-            var job = JobManager.AllSchedules.SingleOrDefault(x => x.Name.Contains($"{userId}") && x.Name.StartsWith("[TSRelease_"));
+            var job = JobManager.AllSchedules.SingleOrDefault(x =>
+                x.Name.Contains($"{userId}") && x.Name.StartsWith("[TSRelease_"));
 
             //Remove it if not null
             if (job != null)
                 JobManager.RemoveJob(job.Name);
 
             //Is this the server with the log running?
-            if(_logReceiverService.EnableLog && _logReceiverService.ActiveServer.ServerId == reservation.ServerId)
-            {
+            if (_logReceiverService.EnableLog && _logReceiverService.ActiveServer.ServerId == reservation.ServerId)
                 _logReceiverService.StopLogReceiver();
-            }
 
             DatabaseUtil.RemoveServerReservation(userId);
             return embed;
         }
 
         /// <summary>
-        /// Prevents server reservations from being made
-        /// Clears any existing when called.
+        ///     Prevents server reservations from being made
+        ///     Clears any existing when called.
         /// </summary>
         public async Task DisableReservations()
         {

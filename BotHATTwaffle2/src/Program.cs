@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BotHATTwaffle2
 {
-    class Program
+    internal class Program
     {
         private static DiscordSocketClient _client;
         private static CommandService _commands;
@@ -82,10 +82,14 @@ namespace BotHATTwaffle2
             _dataService.SetLogHandler(_services.GetRequiredService<LogHandler>());
 
             //Set handlers for static classes
-            DatabaseUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
-            DownloadHandler.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
-            GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>(), _services.GetRequiredService<Random>());
-            DemoParser.SetHandlers(_services.GetRequiredService<LogHandler>(), _services.GetRequiredService<DataService>());
+            DatabaseUtil.SetHandlers(_services.GetRequiredService<LogHandler>(),
+                _services.GetRequiredService<DataService>());
+            DownloadHandler.SetHandlers(_services.GetRequiredService<LogHandler>(),
+                _services.GetRequiredService<DataService>());
+            GeneralUtil.SetHandlers(_services.GetRequiredService<LogHandler>(),
+                _services.GetRequiredService<DataService>(), _services.GetRequiredService<Random>());
+            DemoParser.SetHandlers(_services.GetRequiredService<LogHandler>(),
+                _services.GetRequiredService<DataService>());
 
             await _client.StartAsync();
 

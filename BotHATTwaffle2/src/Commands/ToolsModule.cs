@@ -8,8 +8,8 @@ using Discord.WebSocket;
 namespace BotHATTwaffle2.Commands
 {
     /// <summary>
-    /// Contains commands which provide links to various Source development tools.
-    /// TODO: Look into creating a generic class which can build these kinds of commands from JSON data.
+    ///     Contains commands which provide links to various Source development tools.
+    ///     TODO: Look into creating a generic class which can build these kinds of commands from JSON data.
     /// </summary>
     public class ToolsModule : ModuleBase<SocketCommandContext>
     {
@@ -38,9 +38,10 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://www.tophattwaffle.com/downloads/vtfedit/",
                 ThumbnailUrl = "https://content.tophattwaffle.com/BotHATTwaffle/vtfedit.png",
                 Color = new Color(255, 206, 199),
-                Description = "VTFEdit is a lightweight tool used to convert images into Valve's proprietary format - VTF " +
-                              "(Valve Texture Format). Because it has a GUI, it is substantially easier to use than Valve's " +
-                              "own CLI tool, VTEX (Valve Texture Tool)."
+                Description =
+                    "VTFEdit is a lightweight tool used to convert images into Valve's proprietary format - VTF " +
+                    "(Valve Texture Format). Because it has a GUI, it is substantially easier to use than Valve's " +
+                    "own CLI tool, VTEX (Valve Texture Tool)."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -62,8 +63,9 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://www.tophattwaffle.com/downloads/gcfscape/",
                 ThumbnailUrl = "https://content.tophattwaffle.com/BotHATTwaffle/gcfscape.png",
                 Color = new Color(63, 56, 156),
-                Description = "GCFScape is a tool for exploring, extracting, and managing content in various package formats " +
-                              "used by Valve and Steam. Supported formats include VPK, GCF, PAK, BSP, and more."
+                Description =
+                    "GCFScape is a tool for exploring, extracting, and managing content in various package formats " +
+                    "used by Valve and Steam. Supported formats include VPK, GCF, PAK, BSP, and more."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -83,11 +85,13 @@ namespace BotHATTwaffle2.Commands
                 },
                 Title = "Click Here",
                 Url = "https://steamcommunity.com/groups/CrowbarTool",
-                ThumbnailUrl = "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/ee/eedea029f691ffde0a0938c3048564555fcd5bac_full.jpg",
+                ThumbnailUrl =
+                    "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/ee/eedea029f691ffde0a0938c3048564555fcd5bac_full.jpg",
                 Color = new Color(0, 128, 0),
-                Description = "Crowbar decompiles GoldSource and Source models (MDL and ANI file formats) and provides a " +
-                              "It provides a convenient way to open HLMV (model viewer) with or without a selected model. " +
-                              "It can search and unpack VPK, Tactical Intervention FPX, and Garry's Mod GMA packages."
+                Description =
+                    "Crowbar decompiles GoldSource and Source models (MDL and ANI file formats) and provides a " +
+                    "It provides a convenient way to open HLMV (model viewer) with or without a selected model. " +
+                    "It can search and unpack VPK, Tactical Intervention FPX, and Garry's Mod GMA packages."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -109,9 +113,10 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://gira-x.github.io/VMT-Editor/",
                 ThumbnailUrl = "https://content.tophattwaffle.com/BotHATTwaffle/vmteditor.png",
                 Color = new Color(50, 50, 50),
-                Description = "VMT Editor is, hands down, one of the best VMT (Valve Material Type) creation tools that " +
-                              "exists for the Source engine. It quickly became a standard tool for most designers that " +
-                              "regularly create VMT files. Created by Yanzl over at MapCore."
+                Description =
+                    "VMT Editor is, hands down, one of the best VMT (Valve Material Type) creation tools that " +
+                    "exists for the Source engine. It quickly became a standard tool for most designers that " +
+                    "regularly create VMT files. Created by Yanzl over at MapCore."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -132,9 +137,10 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://www.tophattwaffle.com/downloads/vide/",
                 ThumbnailUrl = "https://content.tophattwaffle.com/BotHATTwaffle/vide.png",
                 Color = new Color(50, 50, 50),
-                Description = "VIDE (Valve Integrated Development Environment) is a 3rd-party program which contains various " +
-                              "tools. It is popular for its pakfile lump editor (packing assets into a level), but it can do " +
-                              "so much more than that."
+                Description =
+                    "VIDE (Valve Integrated Development Environment) is a 3rd-party program which contains various " +
+                    "tools. It is popular for its pakfile lump editor (packing assets into a level), but it can do " +
+                    "so much more than that."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -178,8 +184,9 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://dev.wallworm.com/",
                 ThumbnailUrl = "https://content.tophattwaffle.com/BotHATTwaffle/worm_logo.png",
                 Color = new Color(21, 21, 21),
-                Description = "Wall Worm tools enable developers to design assets and level in Autodesk's 3ds Max and export " +
-                              "them into the Source Engine. It's the best thing to ever happen to Source Engine modelling."
+                Description =
+                    "Wall Worm tools enable developers to design assets and level in Autodesk's 3ds Max and export " +
+                    "them into the Source Engine. It's the best thing to ever happen to Source Engine modelling."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -201,9 +208,10 @@ namespace BotHATTwaffle2.Commands
                 Url = "https://www.tophattwaffle.com/downloads/bspsource/",
                 ThumbnailUrl = "https://content.tophattwaffle.com/BotHATTwaffle/BSPSource_icon.png",
                 Color = new Color(84, 137, 71),
-                Description = "BSPSource is a tool for decompiling Source's BSP (Binary Space Partition) files into VMF " +
-                              "(Valve Map Format) files that can be opened with Hammer. It is a great tool to see how things " +
-                              "are done in a map. It should not be used to steal content."
+                Description =
+                    "BSPSource is a tool for decompiling Source's BSP (Binary Space Partition) files into VMF " +
+                    "(Valve Map Format) files that can be opened with Hammer. It is a great tool to see how things " +
+                    "are done in a map. It should not be used to steal content."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -223,7 +231,8 @@ namespace BotHATTwaffle2.Commands
                 },
                 Title = "Click Here",
                 Url = "https://github.com/Terri00/CS-GO-Auto-Radar/blob/tavr/README.md",
-                ThumbnailUrl = "https://camo.githubusercontent.com/a13fe7791b6752a3b8db0e89cd758f07966a198b/68747470733a2f2f692e696d6775722e636f6d2f6a4e57554c56302e706e67",
+                ThumbnailUrl =
+                    "https://camo.githubusercontent.com/a13fe7791b6752a3b8db0e89cd758f07966a198b/68747470733a2f2f692e696d6775722e636f6d2f6a4e57554c56302e706e67",
                 Color = new Color(50, 50, 50),
                 Description = "Automatically make a radar with every compile of a map you do. Specify the layout in " +
                               "hammer by adding brushes to a visgroup named 'tar_layout', and Auto Radar will do the rest."
@@ -246,10 +255,12 @@ namespace BotHATTwaffle2.Commands
                 },
                 Title = "Click Here",
                 Url = "https://github.com/Artfunkel/BlenderSourceTools",
-                ThumbnailUrl = "https://www.blendswap.com/files/images/2017/07/23/Blend/89002/dffa3371bf3bd129701856cef1d37ed1.jpg",
+                ThumbnailUrl =
+                    "https://www.blendswap.com/files/images/2017/07/23/Blend/89002/dffa3371bf3bd129701856cef1d37ed1.jpg",
                 Color = new Color(50, 50, 50),
-                Description = "Blender Source Tools allow Blender to import and export Studiomdl Data and DMX model files,  " +
-                              "as well as automatically generating .qc files."
+                Description =
+                    "Blender Source Tools allow Blender to import and export Studiomdl Data and DMX model files,  " +
+                    "as well as automatically generating .qc files."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());
@@ -271,9 +282,10 @@ namespace BotHATTwaffle2.Commands
                 Url = "http://www.interlopers.net/errors",
                 ThumbnailUrl = "https://www.tophattwaffle.com/wp-content/uploads/2017/12/selectall.jpg",
                 Color = new Color(84, 137, 71),
-                Description = "The compile log checker on Interlopers is a web tool which analyzes compile logs of maps to " +
-                              "detect compilation issues and propose solutions. Simply copy and paste an entire log or a " +
-                              "section with an error and click the button to have the log checked."
+                Description =
+                    "The compile log checker on Interlopers is a web tool which analyzes compile logs of maps to " +
+                    "detect compilation issues and propose solutions. Simply copy and paste an entire log or a " +
+                    "section with an error and click the button to have the log checked."
             };
 
             await ReplyAsync(string.Empty, false, embed.Build());

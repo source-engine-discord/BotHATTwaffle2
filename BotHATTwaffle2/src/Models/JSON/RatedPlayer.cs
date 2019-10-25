@@ -1,17 +1,16 @@
-﻿using System;
-
-namespace BotHATTwaffle2.Models.JSON
+﻿namespace BotHATTwaffle2.Models.JSON
 {
-    class RatedPlayer
+    internal class RatedPlayer
     {
         private string _name;
+
         public string Name
         {
             get => _name ?? "Unknown Player";
             set => _name = value;
         }
 
-        public Int64 SteamID { get; set; }
+        public long SteamID { get; set; }
         public double Rating { get; set; }
 
         public override string ToString()

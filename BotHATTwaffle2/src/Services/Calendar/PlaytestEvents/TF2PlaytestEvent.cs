@@ -1,7 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
@@ -10,7 +8,7 @@ using Google.Apis.Calendar.v3.Data;
 
 namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 {
-    class Tf2PlaytestEvent : PlaytestEvent
+    internal class Tf2PlaytestEvent : PlaytestEvent
     {
         public Tf2PlaytestEvent(DataService data, LogHandler log, Event playtestEvent) : base(data, log, playtestEvent)
         {
@@ -35,7 +33,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Generic setup
             await base.PlaytestCommandPre(replyInContext, logReceiverService, rconService);
 
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {_dataService.RSettings.General.TF2Config}");
+            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
+                $"exec {_dataService.RSettings.General.TF2Config}");
             await Task.Delay(1000);
             await rconService.RconCommand(ServerLocation, $"changelevel workshop/{PlaytestCommandInfo.WorkshopId}");
 
@@ -49,14 +48,15 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             await base.PlaytestCommandStart(replyInContext, rconService);
 
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, $"exec {_dataService.RSettings.General.TF2Config}");
+            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
+                $"exec {_dataService.RSettings.General.TF2Config}");
             await Task.Delay(3000);
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                 $"tv_record {PlaytestCommandInfo.DemoName}; say Recording {PlaytestCommandInfo.DemoName}");
 
             _ = Task.Run(async () =>
             {
-                for (int i = 0; i < 4; i++)
+                for (var i = 0; i < 4; i++)
                 {
                     _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                         $"say Playtest of {PlaytestCommandInfo.Title} is live! Be respectful and GLHF!",
@@ -68,19 +68,20 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             PlaytestCommandRunning = false;
         }
 
-        public override async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService, RconService rconService)
+        public override async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService,
+            RconService rconService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestCommandPost", false, color: LOG_COLOR);
 
             await base.PlaytestCommandPost(replyInContext, logReceiverService, rconService);
-            
+
             await rconService.RconCommand(ServerLocation, $"changelevel workshop/{PlaytestCommandInfo.WorkshopId}");
             await Task.Delay(15000); //Wait for map to change
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                 $"sv_cheats 1; exec {_dataService.RSettings.General.PostgameConfig};sv_voiceenable 0");
 
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,"mp_tournament 1");
+            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "mp_tournament 1");
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "mp_tournament_restart");
 
             await DownloadHandler.DownloadPlaytestDemo(PlaytestCommandInfo);
@@ -111,7 +112,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 _ = _log.LogMessage("TF2 class PlaytestStartingInTask", false, color: LOG_COLOR);
         }
 
-        public override async Task PlaytestTwentyMinuteTask(RconService rconService, LogReceiverService logReceiverService)
+        public override async Task PlaytestTwentyMinuteTask(RconService rconService,
+            LogReceiverService logReceiverService)
         {
             await base.PlaytestTwentyMinuteTask(rconService, logReceiverService);
 
@@ -126,7 +128,6 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         public override async Task PlaytestFifteenMinuteTask(RconService rconService,
             LogReceiverService logReceiverService)
         {
-
             await base.PlaytestFifteenMinuteTask(rconService, logReceiverService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)

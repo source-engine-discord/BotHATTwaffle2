@@ -3,8 +3,8 @@
 namespace BotHATTwaffle2.Models.LiteDB
 {
     /// <summary>
-    /// This class is used to store information for the >playtest command so the information can persist
-    /// between restarts.
+    ///     This class is used to store information for the >playtest command so the information can persist
+    ///     between restarts.
     /// </summary>
     public class PlaytestCommandInfo
     {

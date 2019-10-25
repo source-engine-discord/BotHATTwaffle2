@@ -24,7 +24,7 @@ namespace BotHATTwaffle2.Services
             var commands = new StringBuilder();
 
             var addedCommands = new List<string>();
-            
+
             // Sorts commands alphabetically and builds the help strings.
             foreach (var cmd in module.Commands.OrderBy(c => c.Name))
             {
@@ -108,7 +108,8 @@ namespace BotHATTwaffle2.Services
         /// <inheritdoc />
         /// <remarks>
         ///     Attempts to fetch role names from the attribute if the string constructor was used. Otherwise, if the context is a
-        ///     guild, converts IDs to names. If not in a guild, the name in <see>
+        ///     guild, converts IDs to names. If not in a guild, the name in
+        ///     <see>
         ///         <cref>Role</cref>
         ///     </see>
         ///     is used. If it's not in the enum,

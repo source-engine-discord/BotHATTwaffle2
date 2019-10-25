@@ -9,24 +9,23 @@ using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
 using CoreRCON;
 using CoreRCON.Parsers.Standard;
-using Discord.WebSocket;
 
 namespace BotHATTwaffle2.Services.SRCDS
 {
     public class LogReceiverService
     {
-        private string _publicIpAddress;
+        private static bool _isActive;
+        private static string _lastKnownPath;
         private readonly DataService _dataService;
-        private readonly RconService _rconService;
         private readonly LogHandler _logHandler;
-        private PlaytestService _playtestService;
-        public bool EnableLog = false;
-        private bool _enableFeedback = false;
-        public Server ActiveServer;
+        private readonly RconService _rconService;
+        private bool _enableFeedback;
         private string _path;
-        private static bool _isActive = false;
-        private static string _lastKnownPath = null;
-        
+        private PlaytestService _playtestService;
+        private readonly string _publicIpAddress;
+        public Server ActiveServer;
+        public bool EnableLog;
+
         public LogReceiverService(DataService dataService, RconService rconService, LogHandler logHandler)
         {
             _rconService = rconService;
@@ -42,8 +41,8 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        /// Starts listening on a port for server messages. This will also add the location of the Bot to the server's log
-        /// address. The listening port needs to be forwarded on UDP
+        ///     Starts listening on a port for server messages. This will also add the location of the Bot to the server's log
+        ///     address. The listening port needs to be forwarded on UDP
         /// </summary>
         /// <param name="serverString">Server to start listening on</param>
         public async void StartLogReceiver(string serverString)
@@ -57,9 +56,10 @@ namespace BotHATTwaffle2.Services.SRCDS
             //Need a valid server
             if (ActiveServer == null)
                 return;
-            
+
             EnableLog = true;
-            await _rconService.RconCommand(ActiveServer.ServerId, $"logaddress_add {_publicIpAddress}:{_dataService.RSettings.ProgramSettings.ListenPort}");
+            await _rconService.RconCommand(ActiveServer.ServerId,
+                $"logaddress_add {_publicIpAddress}:{_dataService.RSettings.ProgramSettings.ListenPort}");
 
             var ip = GeneralUtil.GetIPHost(ActiveServer.Address).AddressList.FirstOrDefault();
 
@@ -67,22 +67,19 @@ namespace BotHATTwaffle2.Services.SRCDS
             var log = new LogReceiver(_dataService.RSettings.ProgramSettings.ListenPort, new IPEndPoint(ip, 27015));
 
             await _logHandler.LogMessage($"Starting LogReceiver for `{ActiveServer.Address}` - `{ip}` using:\n" +
-                                         "`logaddress_add " + _publicIpAddress + ":" + _dataService.RSettings.ProgramSettings.ListenPort + "`");
+                                         "`logaddress_add " + _publicIpAddress + ":" +
+                                         _dataService.RSettings.ProgramSettings.ListenPort + "`");
 
             //Start the task and run it forever in a loop. The bool changes at a later time which breaks the loop
             //and removes this client so we can make another one later on.
             await Task.Run(async () =>
             {
-                log.Listen<GenericCommand>(ganericCommand => { HandleIngameCommand(ActiveServer, ganericCommand);});
-                
+                log.Listen<GenericCommand>(ganericCommand => { HandleIngameCommand(ActiveServer, ganericCommand); });
+
                 if (_dataService.RSettings.ProgramSettings.Debug)
-                    log.ListenRaw(msg => { Console.WriteLine("RAW: "+msg); });
+                    log.ListenRaw(msg => { Console.WriteLine("RAW: " + msg); });
 
-                while (EnableLog)
-                {
-                    await Task.Delay(1000);
-                }
-
+                while (EnableLog) await Task.Delay(1000);
             });
             await _logHandler.LogMessage($"Disposing LogReceiver from `{ActiveServer.Address}` - `{ip}`");
             log.Dispose();
@@ -96,7 +93,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        /// Restarts the log listener if for some reason a discord disconnect happens.
+        ///     Restarts the log listener if for some reason a discord disconnect happens.
         /// </summary>
         public async Task RestartLogAfterDisconnect()
         {
@@ -106,7 +103,7 @@ namespace BotHATTwaffle2.Services.SRCDS
 
             //If we are still running, stop.
             StopLogReceiver();
-            
+
             //All time for the existing log receiver to be completely closed, if running.
             await Task.Delay(5000);
 
@@ -136,11 +133,11 @@ namespace BotHATTwaffle2.Services.SRCDS
                         Name = "Ido",
                         Team = "Bot"
                     }
-
                 });
 
                 return true;
             }
+
             return false;
         }
 
@@ -150,8 +147,8 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        /// Handles ingame commands mapping to discord commands. Not all commands will work.
-        /// Since some commands require a context, we have some manual leg work to "build" the context when needed.
+        ///     Handles ingame commands mapping to discord commands. Not all commands will work.
+        ///     Since some commands require a context, we have some manual leg work to "build" the context when needed.
         /// </summary>
         /// <param name="server">Game server we are using</param>
         /// <param name="genericCommand">Generic command containing what command to fire, with what options.</param>
@@ -187,13 +184,14 @@ namespace BotHATTwaffle2.Services.SRCDS
                     break;
 
                 default:
-                    await _rconService.RconCommand(server.Address, $"say Unknown Command from {genericCommand.Player.Name}");
+                    await _rconService.RconCommand(server.Address,
+                        $"say Unknown Command from {genericCommand.Player.Name}");
                     break;
             }
         }
 
         /// <summary>
-        /// Allows users to use public command in-game.
+        ///     Allows users to use public command in-game.
         /// </summary>
         /// <param name="server"></param>
         /// <param name="genericCommand"></param>
@@ -202,7 +200,8 @@ namespace BotHATTwaffle2.Services.SRCDS
             var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
             if (user == null)
             {
-                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                await _rconService.RconCommand(server.Address,
+                    $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
                 return;
             }
 
@@ -225,7 +224,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        /// Allows users to join the playtest Queue in-game.
+        ///     Allows users to join the playtest Queue in-game.
         /// </summary>
         /// <param name="server"></param>
         /// <param name="genericCommand"></param>
@@ -241,7 +240,8 @@ namespace BotHATTwaffle2.Services.SRCDS
 
             if (user == null)
             {
-                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                await _rconService.RconCommand(server.Address,
+                    $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
                 return;
             }
 
@@ -252,7 +252,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        /// Allows users to remove themselves from the playtest queue in-game
+        ///     Allows users to remove themselves from the playtest queue in-game
         /// </summary>
         /// <param name="server"></param>
         /// <param name="genericCommand"></param>
@@ -268,17 +268,17 @@ namespace BotHATTwaffle2.Services.SRCDS
 
             if (user == null)
             {
-                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}");
+                await _rconService.RconCommand(server.Address,
+                    $"say No Discord user link found for {genericCommand.Player.Name}");
                 return;
             }
 
             if (!await _playtestService.FeedbackSession.RemoveUser(user.Id))
                 await _rconService.RconCommand(server.Address, $"say Failed to remove {user} from queue");
-
         }
 
         /// <summary>
-        /// Checks if the user trying to use RCON is in the SteamID whitelist.
+        ///     Checks if the user trying to use RCON is in the SteamID whitelist.
         /// </summary>
         /// <param name="server">Server to send RCON to</param>
         /// <param name="genericCommand">Command to send</param>
@@ -289,14 +289,16 @@ namespace BotHATTwaffle2.Services.SRCDS
 
             if (user == null)
             {
-                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                await _rconService.RconCommand(server.Address,
+                    $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
                 return;
             }
 
             //Make sure the user has access
             if (!user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
             {
-                await _rconService.RconCommand(server.Address, $"say {genericCommand.Player.Name} does not have permissions for rcon");
+                await _rconService.RconCommand(server.Address,
+                    $"say {genericCommand.Player.Name} does not have permissions for rcon");
                 return;
             }
 
@@ -304,7 +306,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        /// Adds ingame feedback to a text file which will be sent to the create at a later date.
+        ///     Adds ingame feedback to a text file which will be sent to the create at a later date.
         /// </summary>
         /// <param name="server">Server to send acks to</param>
         /// <param name="genericCommand">Message to log</param>
@@ -317,20 +319,20 @@ namespace BotHATTwaffle2.Services.SRCDS
             Directory.CreateDirectory("Feedback");
 
             if (!File.Exists(_path))
-            {
                 // Create a file to write to.
-                using (StreamWriter sw = File.CreateText(_path))
+                using (var sw = File.CreateText(_path))
                 {
-                    sw.WriteLine($"{DateTime.Now} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
+                    sw.WriteLine(
+                        $"{DateTime.Now} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
                 }
-            }
             else
-            // This text is always added, making the file longer over time
-            // if it is not deleted.
-            using (StreamWriter sw = File.AppendText(_path))
-            {
-                sw.WriteLine($"{DateTime.Now:t} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
-            }
+                // This text is always added, making the file longer over time
+                // if it is not deleted.
+                using (var sw = File.AppendText(_path))
+                {
+                    sw.WriteLine(
+                        $"{DateTime.Now:t} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
+                }
 
             await _rconService.RconCommand(server.ServerId, $"say Feedback from {genericCommand.Player.Name} captured!",
                 false);
@@ -344,7 +346,10 @@ namespace BotHATTwaffle2.Services.SRCDS
             _path = "Feedback\\" + fileName + ".txt";
         }
 
-        public string GetFilePath() => _path;
+        public string GetFilePath()
+        {
+            return _path;
+        }
 
         private async void HandlePlaytestCommand(Server server, GenericCommand genericCommand)
         {
@@ -352,21 +357,24 @@ namespace BotHATTwaffle2.Services.SRCDS
 
             if (user == null)
             {
-                await _rconService.RconCommand(server.Address, $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
+                await _rconService.RconCommand(server.Address,
+                    $"say No Discord user link found for {genericCommand.Player.Name}. See >help link in Discord");
                 return;
             }
 
             //Make sure the user has access
             if (!user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
             {
-                await _rconService.RconCommand(server.Address, $"say {genericCommand.Player.Name} does not have permissions for playtest command");
+                await _rconService.RconCommand(server.Address,
+                    $"say {genericCommand.Player.Name} does not have permissions for playtest command");
                 return;
             }
 
             //Not valid - abort
             if (!_playtestService.PlaytestCommandPreCheck())
             {
-                await _rconService.RconCommand(server.Address, "say A playtest command is running, or no valid test exists.");
+                await _rconService.RconCommand(server.Address,
+                    "say A playtest command is running, or no valid test exists.");
                 return;
             }
 

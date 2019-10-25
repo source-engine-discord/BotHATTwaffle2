@@ -1,19 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using BotHATTwaffle2.Models.LiteDB;
 using Google.Apis.Calendar.v3.Data;
-using SixLabors.Shapes;
 
 namespace BotHATTwaffle2.src.Services.Calendar
 {
     public class Playtest
     {
-
-        public int TestType { get; private set; }
-        public string TestName { get; private set; }
-        public DateTime StartTime { get; private set;}
-
         public enum TypeOfTest
         {
             Scheduled,
@@ -29,17 +21,21 @@ namespace BotHATTwaffle2.src.Services.Calendar
 
         public Playtest(Event googleCalendarEvent)
         {
-            TestType = (int)TypeOfTest.Scheduled;
+            TestType = (int) TypeOfTest.Scheduled;
             TestName = googleCalendarEvent.Summary;
             StartTime = googleCalendarEvent.Start.DateTime.Value;
         }
 
         public Playtest(PlaytestRequest playtestRequest)
         {
-            TestType = (int)TypeOfTest.Requested;
+            TestType = (int) TypeOfTest.Requested;
             TestName = playtestRequest.MapName;
             StartTime = playtestRequest.TestDate;
         }
+
+        public int TestType { get; }
+        public string TestName { get; }
+        public DateTime StartTime { get; }
 
         public override string ToString()
         {

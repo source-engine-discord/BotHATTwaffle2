@@ -1,4 +1,10 @@
-﻿using BotHATTwaffle2.Handlers;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using Discord.WebSocket;
@@ -7,28 +13,21 @@ using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace BotHATTwaffle2.Services.Calendar
 {
     public class GoogleCalendar
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Gray;
-        private readonly CalendarService _calendar;
-        private readonly DataService _dataService;
-        private readonly LogHandler _log;
 
         private static List<PlaytestEvent> _playtestEvents;
 
         private static CsgoPlaytestEvent _activeCsgoPlaytestEvent;
         private static Tf2PlaytestEvent _activeTf2PlaytestEvent;
         private static PlaytestEvent _previousPlaytestEvent;
+        private readonly CalendarService _calendar;
+        private readonly DataService _dataService;
+        private readonly LogHandler _log;
 
         public GoogleCalendar(DataService dataService, LogHandler log)
         {
@@ -68,7 +67,10 @@ namespace BotHATTwaffle2.Services.Calendar
             }
         }
 
-        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent) => _previousPlaytestEvent = playtestEvent;
+        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent)
+        {
+            _previousPlaytestEvent = playtestEvent;
+        }
 
         public async Task UpdateTestEventCache()
         {
@@ -85,12 +87,12 @@ namespace BotHATTwaffle2.Services.Calendar
             request.TimeMin = DateTime.Now;
             request.TimeMax = DateTime.Now.AddMonths(2);
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
-            
+
             // Executes the request for events and retrieves the first event in the resulting items.
             var requestResult = await request.ExecuteAsync();
             var eventItems = requestResult.Items;
-            
-            List<PlaytestEvent> tempPlaytestEvents = new List<PlaytestEvent>();
+
+            var tempPlaytestEvents = new List<PlaytestEvent>();
 
             //Prase into correct object types
             foreach (var eventItem in eventItems)
@@ -123,9 +125,11 @@ namespace BotHATTwaffle2.Services.Calendar
                 _ = _log.LogMessage($"{_playtestEvents.Count} test events found!", false, color: LOG_COLOR);
 
             //Get next active tests
-            var tempNextTf2Test = _playtestEvents.FirstOrDefault(x => x.Game == PlaytestEvent.Games.TF2) as Tf2PlaytestEvent;
+            var tempNextTf2Test =
+                _playtestEvents.FirstOrDefault(x => x.Game == PlaytestEvent.Games.TF2) as Tf2PlaytestEvent;
 
-            var tempNextCsgoTest = _playtestEvents.FirstOrDefault(x => x.Game == PlaytestEvent.Games.CSGO) as CsgoPlaytestEvent;
+            var tempNextCsgoTest =
+                _playtestEvents.FirstOrDefault(x => x.Game == PlaytestEvent.Games.CSGO) as CsgoPlaytestEvent;
 
             if (tempNextCsgoTest == null)
             {
@@ -134,14 +138,29 @@ namespace BotHATTwaffle2.Services.Calendar
             }
             else if (!tempNextCsgoTest.Equals(_activeCsgoPlaytestEvent))
             {
+                //Try deleting the old message
+                try
+                {
+                    await _activeCsgoPlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeCsgoPlaytestEvent
+                        .AnnouncementMessage);
+                }
+                catch
+                {
+                }
+
                 _activeCsgoPlaytestEvent = tempNextCsgoTest;
                 if (_activeCsgoPlaytestEvent.TestValid())
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"{_activeCsgoPlaytestEvent.Title} is valid and switched to active event.", false, color: LOG_COLOR);
+                        await _log.LogMessage(
+                            $"{_activeCsgoPlaytestEvent.Title} is valid and switched to active event.", false,
+                            color: LOG_COLOR);
                 }
                 else
-                    await _log.LogMessage($"Test not valid!\n{_activeCsgoPlaytestEvent}", alert: true, color: LOG_COLOR);
+                {
+                    await _log.LogMessage($"Test not valid!\n{_activeCsgoPlaytestEvent}", alert: true,
+                        color: LOG_COLOR);
+                }
             }
 
             if (tempNextTf2Test == null)
@@ -151,19 +170,32 @@ namespace BotHATTwaffle2.Services.Calendar
             }
             else if (!tempNextTf2Test.Equals(_activeTf2PlaytestEvent))
             {
+                //Try deleting the old message
+                try
+                {
+                    await _activeTf2PlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeTf2PlaytestEvent
+                        .AnnouncementMessage);
+                }
+                catch
+                {
+                }
+
                 _activeTf2PlaytestEvent = tempNextTf2Test;
                 if (_activeTf2PlaytestEvent.TestValid())
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"{_activeTf2PlaytestEvent.Title} is valid and switched to active event.", false, color: LOG_COLOR);
+                        await _log.LogMessage($"{_activeTf2PlaytestEvent.Title} is valid and switched to active event.",
+                            false, color: LOG_COLOR);
                 }
                 else
+                {
                     await _log.LogMessage($"Test not valid!\n{_activeTf2PlaytestEvent}", alert: true, color: LOG_COLOR);
+                }
             }
         }
 
         /// <summary>
-        /// Checks the testing calendar for if a test already exists for that date.
+        ///     Checks the testing calendar for if a test already exists for that date.
         /// </summary>
         /// <param name="testTime">DateTime to check with</param>
         /// <returns>True if event conflict found</returns>
@@ -185,7 +217,7 @@ namespace BotHATTwaffle2.Services.Calendar
         }
 
         /// <summary>
-        /// Checks the testing calendar for if a test already exists for that date.
+        ///     Checks the testing calendar for if a test already exists for that date.
         /// </summary>
         /// <param name="testTime">DateTime to check with</param>
         /// <returns>True if event conflict found</returns>
@@ -206,9 +238,9 @@ namespace BotHATTwaffle2.Services.Calendar
 
             return events;
         }
-        
+
         /// <summary>
-        /// Adds a test event to the testing calendar.
+        ///     Adds a test event to the testing calendar.
         /// </summary>
         /// <param name="playtestRequest">Playtest request to add</param>
         /// <param name="moderator">Moderator for the test</param>
@@ -227,55 +259,54 @@ namespace BotHATTwaffle2.Services.Calendar
 
             //Create list and add the required attendee.
             var attendeeLists = new List<EventAttendee>();
-            
+
             //Add every other user's email
             foreach (var email in playtestRequest.Emails)
-            {
-                if(!string.IsNullOrWhiteSpace(email))
-                    attendeeLists.Add(new EventAttendee { Email = email });
-            }
+                if (!string.IsNullOrWhiteSpace(email))
+                    attendeeLists.Add(new EventAttendee {Email = email});
 
-            string description = $"Creator: {string.Join(", " ,playtestRequest.CreatorsDiscord)}\n" +
-                                 $"Map Images: {playtestRequest.ImgurAlbum}\n" +
-                                 $"Workshop Link: {playtestRequest.WorkshopURL}\n" +
-                                 $"Game Mode: {playtestRequest.TestType}\n" +
-                                 $"Moderator: {moderator.Id}\n" +
-                                 $"Description: {playtestRequest.TestGoals}";
+            var description = $"Creator: {string.Join(", ", playtestRequest.CreatorsDiscord)}\n" +
+                              $"Map Images: {playtestRequest.ImgurAlbum}\n" +
+                              $"Workshop Link: {playtestRequest.WorkshopURL}\n" +
+                              $"Game Mode: {playtestRequest.TestType}\n" +
+                              $"Moderator: {moderator.Id}\n" +
+                              $"Description: {playtestRequest.TestGoals}";
 
-            Event newEvent = new Event()
+            var newEvent = new Event
             {
-                Summary = $"{playtestRequest.Game.ToUpper()} | {playtestRequest.MapName} by {creators.TrimEnd(',',' ')}",
+                Summary =
+                    $"{playtestRequest.Game.ToUpper()} | {playtestRequest.MapName} by {creators.TrimEnd(',', ' ')}",
                 Location = playtestRequest.Preferredserver,
                 Description = description,
-                Start = new EventDateTime()
+                Start = new EventDateTime
                 {
                     DateTime = playtestRequest.TestDate,
-                    TimeZone = "America/Chicago",
+                    TimeZone = "America/Chicago"
                 },
-                End = new EventDateTime()
+                End = new EventDateTime
                 {
                     DateTime = playtestRequest.TestDate.AddHours(2),
-                    TimeZone = "America/Chicago",
+                    TimeZone = "America/Chicago"
                 },
                 Attendees = attendeeLists
             };
 
             try
             {
-                EventsResource.InsertRequest request = _calendar.Events.Insert(newEvent, _dataService.RSettings.ProgramSettings.TestCalendarId);
-                Event createdEvent = await request.ExecuteAsync();
+                var request = _calendar.Events.Insert(newEvent, _dataService.RSettings.ProgramSettings.TestCalendarId);
+                var createdEvent = await request.ExecuteAsync();
             }
             catch (Exception e)
             {
-                await _log.LogMessage($"Issue added test event to calendar!\n{e.Message}",color:LOG_COLOR);
+                await _log.LogMessage($"Issue added test event to calendar!\n{e.Message}", color: LOG_COLOR);
                 return false;
             }
-            
+
             return true;
         }
 
         /// <summary>
-        /// Returns the next valid playtest event.
+        ///     Returns the next valid playtest event.
         /// </summary>
         /// <returns>Valid playtest event. Null if no tests found. Null if test is invalid.</returns>
         public PlaytestEvent GetNextPlaytestEvent()
@@ -292,7 +323,7 @@ namespace BotHATTwaffle2.Services.Calendar
         }
 
         /// <summary>
-        /// Returns the next valid playtest event for the specific game.
+        ///     Returns the next valid playtest event for the specific game.
         /// </summary>
         /// <returns>Valid playtest event. Null if no tests found. Null if test is invalid.</returns>
         public PlaytestEvent GetNextPlaytestEvent(string game)
@@ -317,7 +348,7 @@ namespace BotHATTwaffle2.Services.Calendar
         }
 
         /// <summary>
-        /// Returns the next valid playtest event for the specific game enum
+        ///     Returns the next valid playtest event for the specific game enum
         /// </summary>
         /// <param name="game"></param>
         /// <returns></returns>
@@ -338,9 +369,9 @@ namespace BotHATTwaffle2.Services.Calendar
         }
 
         /// <summary>
-        /// Returns a valid "Stacked" playtest event. A playtest is "stacked" when it has a start time that would have
-        /// setup events happen while another test event is active. Meaning a test ending at 2pm, with one starting at 2:30.
-        /// The 2:30 test is "stacked" since it has a setup task taking place at 1:30, before the 2pm end of the other test.
+        ///     Returns a valid "Stacked" playtest event. A playtest is "stacked" when it has a start time that would have
+        ///     setup events happen while another test event is active. Meaning a test ending at 2pm, with one starting at 2:30.
+        ///     The 2:30 test is "stacked" since it has a setup task taking place at 1:30, before the 2pm end of the other test.
         /// </summary>
         /// <returns>Returns stacked playtest</returns>
         public PlaytestEvent GetStackedPlaytestEvent()

@@ -1,22 +1,18 @@
-﻿using BotHATTwaffle2.Handlers;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using BotHATTwaffle2.Services.SRCDS;
-using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
-using System.Net.Sockets;
-using System.Reflection.Metadata.Ecma335;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 
 namespace BotHATTwaffle2.Services.Playtesting
 {
@@ -24,21 +20,24 @@ namespace BotHATTwaffle2.Services.Playtesting
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
         private static AnnouncementMessage _announcementMessage;
+
+        private static readonly Dictionary<PlaytestEvent.Games, DateTime> _knownTests =
+            new Dictionary<PlaytestEvent.Games, DateTime>();
+
         private readonly GoogleCalendar _calendar;
+        private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly int _failedRetryCount = 60;
         private readonly LogHandler _log;
+        private readonly LogReceiverService _logReceiverService;
+        private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
-        private readonly DiscordSocketClient _client;
         private int _failedToFetch;
         public bool PlaytestStartAlert = true;
-        private readonly RconService _rconService;
-        private readonly LogReceiverService _logReceiverService;
-        private static Dictionary<PlaytestEvent.Games, DateTime> _knownTests = new Dictionary<PlaytestEvent.Games, DateTime>();
-        public VoiceFeedbackSession FeedbackSession { get; private set; }
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random,
-            ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService,DiscordSocketClient client)
+            ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService,
+            DiscordSocketClient client)
         {
             _dataService = data;
             _log = log;
@@ -54,12 +53,20 @@ namespace BotHATTwaffle2.Services.Playtesting
             _logReceiverService.SetPlayTestService(this);
         }
 
-        public void ResetCommandRunningFlag() => _calendar.GetNextPlaytestEvent().PlaytestCommandRunning = false;
+        public VoiceFeedbackSession FeedbackSession { get; private set; }
 
-        public bool PlaytestCommandPreCheck() => _calendar.GetNextPlaytestEvent().PlaytestCommandPreCheck();
+        public void ResetCommandRunningFlag()
+        {
+            _calendar.GetNextPlaytestEvent().PlaytestCommandRunning = false;
+        }
+
+        public bool PlaytestCommandPreCheck()
+        {
+            return _calendar.GetNextPlaytestEvent().PlaytestCommandPreCheck();
+        }
 
         /// <summary>
-        /// Creates a new feedback session for a playtest
+        ///     Creates a new feedback session for a playtest
         /// </summary>
         /// <returns>True if created, false otherwise</returns>
         public bool CreateVoiceFeedbackSession()
@@ -74,24 +81,25 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Ends the active feedback session
+        ///     Ends the active feedback session
         /// </summary>
         /// <returns>True if successful, false otherwise</returns>
         public bool EndVoiceFeedbackSession()
         {
             if (FeedbackSession == null)
                 return false;
-            
+
             FeedbackSession.Dispose();
             FeedbackSession = null;
             return true;
         }
-        
 
-        public async Task<PlaytestCommandInfo> PlaytestcommandGenericAction(bool replyInContext, string command, string message = null)
+
+        public async Task<PlaytestCommandInfo> PlaytestcommandGenericAction(bool replyInContext, string command,
+            string message = null)
         {
             var testEvent = _calendar.GetNextPlaytestEvent();
-            await testEvent.PlaytestcommandGenericAction(replyInContext,command,_rconService,message);
+            await testEvent.PlaytestcommandGenericAction(replyInContext, command, _rconService, message);
             return testEvent.PlaytestCommandInfo;
         }
 
@@ -143,7 +151,9 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (testEvent == null)
             {
-                _ = _log.LogMessage($"Failure running PostOrUpdateAnnouncement for {game}!\nNo test found.", false, color: LOG_COLOR);
+                if (_dataService.RSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage($"Failure running PostOrUpdateAnnouncement for {game}!\nNo test found.", false,
+                        color: LOG_COLOR);
                 return;
             }
 
@@ -155,7 +165,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (testEvent.AnnouncementMessage != null)
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Attempting to deleted outdated announcement for {game}", false, color: LOG_COLOR);
+                        _ = _log.LogMessage($"Attempting to deleted outdated announcement for {game}", false,
+                            color: LOG_COLOR);
                     try
                     {
                         await testEvent.AnnouncmentChannel.DeleteMessageAsync(testEvent.AnnouncementMessage);
@@ -167,14 +178,15 @@ namespace BotHATTwaffle2.Services.Playtesting
                             false, color: LOG_COLOR);
                     }
                 }
+
                 testEvent.SetAnnouncementMessage(null);
 
                 return;
             }
-            
+
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Posting or updating playtest announcement", false, color: LOG_COLOR);
-            
+
             if (testEvent.AnnouncementMessage == null)
                 await PostNewAnnouncement(testEvent);
             else
@@ -182,15 +194,15 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Builds an embed that shows upcoming playtest events and events from the queue
+        ///     Builds an embed that shows upcoming playtest events and events from the queue
         /// </summary>
         /// <param name="getSchedule">Get events from Queue</param>
         /// <param name="getCalendar">Get events from Calendar</param>
         /// <returns>Built embed with events</returns>
         public async Task<EmbedBuilder> GetUpcomingEvents(bool getSchedule, bool getCalendar)
         {
-            string author = "Current ";
-            var embed = new EmbedBuilder().WithColor(new Color(55,55,165))
+            var author = "Current ";
+            var embed = new EmbedBuilder().WithColor(new Color(55, 55, 165))
                 .WithFooter($"Current CT Time: {DateTime.Now}")
                 .WithDescription("[View Testing Calendar](http://playtesting.tophattwaffle.com) " +
                                  "| [View Testing Requirements](https://www.tophattwaffle.com/playtesting) " +
@@ -202,9 +214,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 var testQueue = DatabaseUtil.GetAllPlaytestRequests().ToList();
                 //No tests found - do nothing
                 if (testQueue.Count == 0)
-                {
                     embed.AddField("No playtest requests found!", "Submit your own with: `>request`");
-                }
                 else
                     for (var i = 0; i < testQueue.Count; i++)
                     {
@@ -239,30 +249,30 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 author += "Scheduled Playtests";
                 var testEvents = await _calendar.GetNextMonthAsync(DateTime.Now);
-                if (testEvents.Items.Count  == 0)
-                {
+                if (testEvents.Items.Count == 0)
                     embed.AddField("No scheduled playtests found!", "Submit yours with: `>request`");
-                }
                 else
-                {
                     foreach (var item in testEvents.Items)
                     {
                         if (embed.Fields.Count >= 24)
                             break;
 
                         //Get the moderator for each test
-                        string strippedHtml = item.Description.Replace("<br>", "\n").Replace("&nbsp;", "");
+                        var strippedHtml = item.Description.Replace("<br>", "\n").Replace("&nbsp;", "");
                         strippedHtml = Regex.Replace(strippedHtml, "<.*?>", string.Empty);
-                        var description = strippedHtml.Trim().Split('\n').Select(line => line.Substring(line.IndexOf(':') + 1).Trim()).ToImmutableArray();
+                        var description = strippedHtml.Trim().Split('\n')
+                            .Select(line => line.Substring(line.IndexOf(':') + 1).Trim()).ToImmutableArray();
                         var mod = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
 
-                        embed.AddField(item.Summary, $"`Scheduled`\nStart Time: `{item.Start.DateTime:ddd, MMM d, HH:mm}`\nEnd Time: `{item.End.DateTime:ddd, MMM d, HH:mm}`\nModerator: {mod.Mention}", true);
+                        embed.AddField(item.Summary,
+                            $"`Scheduled`\nStart Time: `{item.Start.DateTime:ddd, MMM d, HH:mm}`\nEnd Time: `{item.End.DateTime:ddd, MMM d, HH:mm}`\nModerator: {mod.Mention}",
+                            true);
                     }
-                }
             }
 
             if (embed.Fields.Count >= 24)
-                embed.AddField("Max Fields Added","Somehow there are more items than Discord embeds allow. Some items omitted.");
+                embed.AddField("Max Fields Added",
+                    "Somehow there are more items than Discord embeds allow. Some items omitted.");
 
             embed.WithAuthor(author);
             return embed;
@@ -280,12 +290,14 @@ namespace BotHATTwaffle2.Services.Playtesting
         private async Task UpdateAnnouncementMessage(PlaytestEvent playtestEvent)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
-                _ = _log.LogMessage($"Updating playtest announcement for {playtestEvent.Title}", false, color: LOG_COLOR);
+                _ = _log.LogMessage($"Updating playtest announcement for {playtestEvent.Title}", false,
+                    color: LOG_COLOR);
 
             try
             {
                 //Compare the current title and the last known title.
-                if (_knownTests.ContainsKey(playtestEvent.Game) && playtestEvent.EventEditTime.Value.Equals(_knownTests[playtestEvent.Game]))
+                if (_knownTests.ContainsKey(playtestEvent.Game) &&
+                    playtestEvent.EventEditTime.Value.Equals(_knownTests[playtestEvent.Game]))
                 {
                     await playtestEvent.AnnouncementMessage.ModifyAsync(x =>
                     {
@@ -319,7 +331,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
             }
         }
-        
+
         /// <summary>
         ///     Posts a new playtest announcement
         /// </summary>
@@ -349,11 +361,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 testEvent.SetAnnouncementMessage(playtestAnnouncementMessage);
 
                 //Store the titles along with the game key so we can check against them later.
-                if (_knownTests.ContainsKey(testEvent.Game))
-                {
-                    _knownTests.Remove(testEvent.Game);
-                }
-                _knownTests.Add(testEvent.Game,testEvent.EventEditTime.Value);
+                if (_knownTests.ContainsKey(testEvent.Game)) _knownTests.Remove(testEvent.Game);
+                _knownTests.Add(testEvent.Game, testEvent.EventEditTime.Value);
             }
             catch
             {
@@ -391,7 +400,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (oldMessage == null)
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"No message found in DB to reattach to for {game}", false, color: LOG_COLOR);
+                        _ = _log.LogMessage($"No message found in DB to reattach to for {game}", false,
+                            color: LOG_COLOR);
 
                     return;
                 }
@@ -415,8 +425,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     try
                     {
-                        testEvent.SetAnnouncementMessage(await testEvent.AnnouncmentChannel.GetMessageAsync(oldMessage.AnnouncementId) as
-                            IUserMessage);
+                        testEvent.SetAnnouncementMessage(
+                            await testEvent.AnnouncmentChannel.GetMessageAsync(oldMessage.AnnouncementId) as
+                                IUserMessage);
 
                         if (testEvent.AnnouncementMessage != null)
                             _ = _log.LogMessage($"Retrieved old announcement for: {testEvent.Title}", false,
@@ -469,9 +480,9 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             //If the test is null, likely only when first starting, abort.
             if (testEvent == null)
-               return;
+                return;
 
-            string game = testEvent.Game.ToString();
+            var game = testEvent.Game.ToString();
 
             //Clear old jobs, if any.
             ClearScheduledAnnouncements(game);
@@ -480,7 +491,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 return;
 
             var startDateTime = testEvent.StartDateTime;
-            _ = _log.LogMessage($"Playtest of {testEvent.Title} scheduled for: {startDateTime}", false, color: LOG_COLOR);
+            _ = _log.LogMessage($"Playtest of {testEvent.Title} scheduled for: {startDateTime}", false,
+                color: LOG_COLOR);
 
             if (startDateTime != null && DateTime.Compare(DateTime.Now.AddMinutes(60), startDateTime.Value) < 0)
             {
@@ -512,7 +524,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                                     $"\n{JobManager.GetSchedule($"[Playtest15Minute_{game}]").NextRun}", false,
                     color: LOG_COLOR);
             }
-            
+
             if (startDateTime != null && DateTime.Compare(DateTime.Now, startDateTime.Value) < 0)
             {
                 JobManager.AddJob(async () => await PlaytestStartingTask(testEvent), s => s
@@ -524,14 +536,15 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
         }
 
-        
+
         /// <summary>
         ///     Posts a new announcement message and alerts playtester role
         /// </summary>
         /// <returns></returns>
         public async Task PlaytestStartingInTask(PlaytestEvent playtestEvent)
         {
-            _ = _log.LogMessage($"Running playtesting starting in X minutes task for {playtestEvent.Title}", true, color: LOG_COLOR);
+            _ = _log.LogMessage($"Running playtesting starting in X minutes task for {playtestEvent.Title}", true,
+                color: LOG_COLOR);
 
             await _reservationService.DisableReservations();
 
@@ -544,8 +557,9 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task PlaytestTwentyMinuteTask(PlaytestEvent playtestEvent)
         {
-            _ = _log.LogMessage($"Running playtesting starting in 20 minutes task for {playtestEvent.Title}", true, color: LOG_COLOR);
-            await playtestEvent.PlaytestTwentyMinuteTask(_rconService,_logReceiverService);
+            _ = _log.LogMessage($"Running playtesting starting in 20 minutes task for {playtestEvent.Title}", true,
+                color: LOG_COLOR);
+            await playtestEvent.PlaytestTwentyMinuteTask(_rconService, _logReceiverService);
         }
 
         /// <summary>
@@ -582,7 +596,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             await testEvent.TestingChannel.SendMessageAsync(
                 $"Currently looking for **{neededPlayers}** players. {testEvent.TesterRole.Mention}\n" +
-                $"Type `>playtester` to stop getting all playtest notifications.",
+                "Type `>playtester` to stop getting all playtest notifications.",
                 embed: _announcementMessage.CreatePlaytestEmbed(testEvent,
                     true, testEvent.AnnouncementMessage.Id));
 

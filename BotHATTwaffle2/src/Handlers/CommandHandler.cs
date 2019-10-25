@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.TypeReader;
-using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -20,7 +19,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
-        
+
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)
         {
@@ -67,13 +66,14 @@ namespace BotHATTwaffle2.Handlers
             if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
                   message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
-                  message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos, StringComparison.OrdinalIgnoreCase)) ||
+                  message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos,
+                      StringComparison.OrdinalIgnoreCase)) ||
                 message.Author.IsBot)
-                {
-                    //Fire and forget listening on the message.
-                    Listen(messageParam);
-                    return;
-                }
+            {
+                //Fire and forget listening on the message.
+                Listen(messageParam);
+                return;
+            }
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_client, message);
@@ -107,7 +107,8 @@ namespace BotHATTwaffle2.Handlers
                     // be empty if somehow no match is found.
                     var commandName =
                         Regex.Match(context.Message.Content,
-                                _dataService.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)", RegexOptions.IgnoreCase)
+                                _dataService.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)",
+                                RegexOptions.IgnoreCase)
                             .Groups[1].Value;
 
                     await context.Channel.SendMessageAsync(
@@ -115,7 +116,7 @@ namespace BotHATTwaffle2.Handlers
 
                     break;
                 case CommandError.UnmetPrecondition:
-                    string reason = result.ErrorReason;
+                    var reason = result.ErrorReason;
 
                     //Give user a more accurate representation of what roles they need.
                     switch (result.ErrorReason)
@@ -127,9 +128,10 @@ namespace BotHATTwaffle2.Handlers
                             reason = $"This command requires you to have the `{_dataService.ModeratorRole.Name}` role.";
                             break;
                         case "User requires guild permission Administrator.":
-                            reason = $"This command requires you be a server Administrator.";
+                            reason = "This command requires you be a server Administrator.";
                             break;
                     }
+
                     await context.Channel.SendMessageAsync(reason);
                     break;
                 case CommandError.ParseFailed:
@@ -155,9 +157,9 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// This is used to scan each message for less important things.
-        /// Mostly used for shit posting, but also does useful things like nag users
-        /// to use more up to date tools, or automatically answer some simple questions.
+        ///     This is used to scan each message for less important things.
+        ///     Mostly used for shit posting, but also does useful things like nag users
+        ///     to use more up to date tools, or automatically answer some simple questions.
         /// </summary>
         /// <param name="message">Message that got us here</param>
         /// <returns></returns>
@@ -180,10 +182,12 @@ namespace BotHATTwaffle2.Handlers
             if (message.Author.IsBot) return;
 
             // Embed Steam workshop links
-            if (message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/", StringComparison.OrdinalIgnoreCase) || message.Content.Contains("://steamcommunity.com/workshop/filedetails/", StringComparison.OrdinalIgnoreCase))
+            if (message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/",
+                    StringComparison.OrdinalIgnoreCase) || message.Content.Contains(
+                    "://steamcommunity.com/workshop/filedetails/", StringComparison.OrdinalIgnoreCase))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                Workshop workshop = new Workshop();
+                var workshop = new Workshop();
                 await workshop.SendWorkshopEmbed(message, _dataService);
 
                 return;
@@ -213,10 +217,7 @@ namespace BotHATTwaffle2.Handlers
 
             // Recommend WallWorm over propper
             if (_dataService.RSettings.AutoReplies.Propper.Any(s => message.Content.ToLower().Contains(s)))
-            {
                 await Propper();
-                return;
-            }
 
             // Methods for building the embeds that the if statements caught above
             async Task PlaytestRequest()
@@ -227,10 +228,13 @@ namespace BotHATTwaffle2.Handlers
 
                 //Get the creator
                 var creator = _dataService.GetSocketUser(input[1]);
-                string creatorMention = creator != null ? creator.Mention : input[1];
-                Workshop workshop = new Workshop();
-                await _dataService.CSGOTestingChannel.SendMessageAsync($"{creatorMention} has submitted a playtest request!",embed: 
-                    (await workshop.HandleWorkshopEmbeds(message, _dataService, $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)", input[4]))
+                var creatorMention = creator != null ? creator.Mention : input[1];
+                var workshop = new Workshop();
+                await _dataService.CSGOTestingChannel.SendMessageAsync(
+                    $"{creatorMention} has submitted a playtest request!", embed:
+                    (await workshop.HandleWorkshopEmbeds(message, _dataService,
+                        $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
+                        input[4]))
                     .Build());
             }
 
@@ -243,10 +247,11 @@ namespace BotHATTwaffle2.Handlers
             {
                 var carveEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
-                    .WithTitle($"DO NOT USE CARVE!")
+                    .WithTitle("DO NOT USE CARVE!")
                     .WithThumbnailUrl("https://i.ytimg.com/vi/xh9Kr2iO4XI/maxresdefault.jpg")
-                    .WithDescription("You were asking about carve. We don't use carve here. Not only does it create bad brushwork, but it " +
-                                     "can also cause Hammer to stop responding and crash. If you're here trying to defend using carve, just stop - you are wrong.")
+                    .WithDescription(
+                        "You were asking about carve. We don't use carve here. Not only does it create bad brushwork, but it " +
+                        "can also cause Hammer to stop responding and crash. If you're here trying to defend using carve, just stop - you are wrong.")
                     .WithColor(new Color(243, 128, 72));
 
                 await message.Channel.SendMessageAsync(embed: carveEmbed.Build());
@@ -261,11 +266,12 @@ namespace BotHATTwaffle2.Handlers
             {
                 var packingEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
-                    .WithTitle($"Click here to learn how to use VIDE!")
+                    .WithTitle("Click here to learn how to use VIDE!")
                     .WithUrl("https://www.tophattwaffle.com/packing-custom-content-using-vide-in-steampipe/")
                     .WithThumbnailUrl("https://www.tophattwaffle.com/wp-content/uploads/2013/11/vide.png")
-                    .WithDescription("I noticed you may be looking for information on how to pack custom content into your level. " +
-                                     "This is easily done using VIDE. Click the link above to download VIDE and learn how to use it.")
+                    .WithDescription(
+                        "I noticed you may be looking for information on how to pack custom content into your level. " +
+                        "This is easily done using VIDE. Click the link above to download VIDE and learn how to use it.")
                     .WithColor(new Color(243, 128, 72));
 
                 await message.Channel.SendMessageAsync(embed: packingEmbed.Build());
@@ -280,7 +286,7 @@ namespace BotHATTwaffle2.Handlers
             {
                 var pakratEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
-                    .WithTitle($"Click here to learn how to use VIDE!")
+                    .WithTitle("Click here to learn how to use VIDE!")
                     .WithUrl("https://www.tophattwaffle.com/packing-custom-content-using-vide-in-steampipe/")
                     .WithThumbnailUrl("https://www.tophattwaffle.com/wp-content/uploads/2013/11/vide.png")
                     .WithDescription("I was minding my own business when I heard you mention something about PakRat. " +
@@ -300,13 +306,14 @@ namespace BotHATTwaffle2.Handlers
             {
                 var wallWormEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
-                    .WithTitle($"Click here to go to the WallWorm site!")
+                    .WithTitle("Click here to go to the WallWorm site!")
                     .WithUrl("https://dev.wallworm.com/")
                     .WithThumbnailUrl("https://www.tophattwaffle.com/wp-content/uploads/2017/12/worm_logo.png")
-                    .WithDescription("I saw you were asking about propper. While Propper still works, it's advised to learn " +
-                                     "a better modeling solution. The preferred method for Source Engine is using 3dsmax with WallWorm Model Tools" +
-                                     " If you don't want to learn 3dsmax and WWMT, you can learn to configure propper at the link below.: " +
-                                     "\n\nhttps://www.tophattwaffle.com/configuring-propper-for-steampipe/")
+                    .WithDescription(
+                        "I saw you were asking about propper. While Propper still works, it's advised to learn " +
+                        "a better modeling solution. The preferred method for Source Engine is using 3dsmax with WallWorm Model Tools" +
+                        " If you don't want to learn 3dsmax and WWMT, you can learn to configure propper at the link below.: " +
+                        "\n\nhttps://www.tophattwaffle.com/configuring-propper-for-steampipe/")
                     .WithColor(new Color(243, 128, 72));
 
                 await message.Channel.SendMessageAsync(embed: wallWormEmbed.Build());

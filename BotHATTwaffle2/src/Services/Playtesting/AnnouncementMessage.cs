@@ -24,8 +24,8 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Creates a playtest embed with all information setup as needed.
-        /// This expects the calendar to have the latest even cached.
+        ///     Creates a playtest embed with all information setup as needed.
+        ///     This expects the calendar to have the latest even cached.
         /// </summary>
         /// <param name="isCasual">If true, shows password. Otherwise password will be hidden</param>
         /// <param name="testEvent"></param>
@@ -42,10 +42,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (!testEvent.IsCasual)
                 testType = "Competitive";
 
-            int creatorIndex = 0;
+            var creatorIndex = 0;
             var creatorSpelling = "Creator";
-            string creatorProfile = "Unable to get creator(s)";
-            string thumbnailUrl = _dataService.Guild.IconUrl;
+            var creatorProfile = "Unable to get creator(s)";
+            var thumbnailUrl = _dataService.Guild.IconUrl;
 
             try
             {
@@ -65,7 +65,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     for (var i = 1; i < testEvent.Creators.Count; i++)
                         creatorProfile +=
-                            $"\n{testEvent.Creators[i].ToString()}";
+                            $"\n{testEvent.Creators[i]}";
 
                     thumbnailUrl = testEvent.Creators[creatorIndex].GetAvatarUrl();
                 }
@@ -73,10 +73,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             catch
             {
                 _ = _log.LogMessage(
-                    $"```Failed to get all creators while building the playtest embed. This is likely because " +
-                    $"they have left the server. Remove the creator from the test event.```",color:LOG_COLOR);
+                    "```Failed to get all creators while building the playtest embed. This is likely because " +
+                    "they have left the server. Remove the creator from the test event.```", color: LOG_COLOR);
             }
-            
+
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage(
@@ -112,7 +112,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 while (_lastImageIndex == randomIndex) randomIndex = _random.Next(testEvent.GalleryImages.Count);
 
                 if (_dataService.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage($"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
+                    _ = _log.LogMessage(
+                        $"Using random gallery index {randomIndex} of {testEvent.GalleryImages.Count - 1} (0 Index!)",
                         false, color: LOG_COLOR);
 
                 _lastImageIndex = randomIndex;
@@ -125,12 +126,13 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             if (testEvent.IsCasual)
             {
-                displayedConnectionInfo = $"`connect {testEvent.ServerLocation}; password {_dataService.RSettings.General.CasualPassword}`";
+                displayedConnectionInfo =
+                    $"`connect {testEvent.ServerLocation}; password {_dataService.RSettings.General.CasualPassword}`";
                 footer = "All players welcome to join";
             }
             else
             {
-                displayedConnectionInfo = $"*This is a competitive 5v5 test, where not everyone can play.*";
+                displayedConnectionInfo = "*This is a competitive 5v5 test, where not everyone can play.*";
                 footer = "Connection info hidden due to competitive test";
             }
 
@@ -145,37 +147,35 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             playtestEmbed.AddField("Test Starts In", countdownString, true);
             playtestEmbed.AddField(creatorSpelling, creatorProfile, true);
-            playtestEmbed.AddField("Moderator",testEvent.Moderator.ToString(), true);
+            playtestEmbed.AddField("Moderator", testEvent.Moderator.ToString(), true);
 
             //Make sure player count isn't null. It may be null if RCON is failing for some reason.
             if (_dataService.IncludePlayerCount && _dataService.PlayerCount != null)
-            {
                 playtestEmbed.AddField("Players Connected", _dataService.PlayerCount, true);
-            }
 
             playtestEmbed.AddField("Connect to",
                 $"{displayedConnectionInfo}");
-            
+
             //Small VS large embed differences
             string information;
             if (smallEmbed)
             {
                 playtestEmbed.ThumbnailUrl = embedImageUrl;
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
-                              $"[Testing Information](https://www.tophattwaffle.com/playtesting) | " +
+                              "[Testing Information](https://www.tophattwaffle.com/playtesting) | " +
                               $"[More Information](https://discordapp.com/channels/{_dataService.Guild.Id}/{_dataService.CSGOAnnouncementChannel.Id}/{fullMessage})";
             }
             else
             {
                 information = $"[Screenshots]({testEvent.ImageGallery}) | " +
-                              $"[Testing Information](https://www.tophattwaffle.com/playtesting)";
+                              "[Testing Information](https://www.tophattwaffle.com/playtesting)";
                 playtestEmbed.ImageUrl = embedImageUrl;
                 playtestEmbed.ThumbnailUrl = thumbnailUrl;
                 playtestEmbed.AddField("When",
                     $"{testEvent.StartDateTime.GetValueOrDefault():MMMM ddd d, HH:mm} | {est} EST | {pst} PST | {utc} UTC");
             }
 
-            playtestEmbed.AddField("Information",information);
+            playtestEmbed.AddField("Information", information);
 
             return playtestEmbed.Build();
         }

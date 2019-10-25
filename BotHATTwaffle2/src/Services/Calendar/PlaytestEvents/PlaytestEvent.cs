@@ -10,51 +10,29 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
-using CoreRCON;
 using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
-using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
 
 namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 {
     public class PlaytestEvent
     {
-        protected const ConsoleColor LOG_COLOR = ConsoleColor.DarkGray;
-        protected readonly DataService _dataService;
-        protected readonly LogHandler _log;
-        protected const string demoUrl = "http://demos.tophattwaffle.com";
-        protected const string demoSiteUrlBase = @"https://www.tophattwaffle.com/demos/?demo=";
         public enum Games
         {
             CSGO = 0,
             TF2 = 1
         }
 
+        protected const ConsoleColor LOG_COLOR = ConsoleColor.DarkGray;
+        protected const string demoUrl = "http://demos.tophattwaffle.com";
+        protected const string demoSiteUrlBase = @"https://www.tophattwaffle.com/demos/?demo=";
+        protected readonly DataService _dataService;
+        protected readonly LogHandler _log;
+
         //TODO: Set relevant permissions on variables
         public bool IsCasual;
-        public bool IsValid { get; private set; }
-        public DateTime? EventEditTime { get; set; } //What is the last time the event was edited?
-        public DateTime? StartDateTime { get; set; }
-        public DateTime? EndDateTime { get; set; }
-        public string Title { get; set; }
-        public string CleanedTitle { get; }
-        public List<SocketUser> Creators { get; set; }
-        public Uri ImageGallery { get; set; }
-        public Uri WorkshopLink { get; set; }
-        public SocketUser Moderator { get; set; }
-        public string Description { get; set; }
-        public string ServerLocation { get; set; }
-        public List<string> GalleryImages { get; set; }
-        public bool CanUseGallery { get; private set; }
-        public Games Game { get; protected set; }
-        public PlaytestCommandInfo PlaytestCommandInfo { get; private set; }
-        public bool PlaytestCommandRunning { get; set; }
-        public SocketTextChannel AnnouncmentChannel { get; protected set; }
-        public SocketTextChannel TestingChannel { get; protected set; }
-        public IUserMessage AnnouncementMessage { get; private set; }
-        public SocketRole TesterRole { get; protected set; }
 
         public bool PlaytestAlert = true;
 
@@ -78,6 +56,28 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             CleanedTitle = Title.Substring(Title.IndexOf('|') + 1).Trim();
         }
 
+        public bool IsValid { get; private set; }
+        public DateTime? EventEditTime { get; set; } //What is the last time the event was edited?
+        public DateTime? StartDateTime { get; set; }
+        public DateTime? EndDateTime { get; set; }
+        public string Title { get; set; }
+        public string CleanedTitle { get; }
+        public List<SocketUser> Creators { get; set; }
+        public Uri ImageGallery { get; set; }
+        public Uri WorkshopLink { get; set; }
+        public SocketUser Moderator { get; set; }
+        public string Description { get; set; }
+        public string ServerLocation { get; set; }
+        public List<string> GalleryImages { get; set; }
+        public bool CanUseGallery { get; private set; }
+        public Games Game { get; protected set; }
+        public PlaytestCommandInfo PlaytestCommandInfo { get; private set; }
+        public bool PlaytestCommandRunning { get; set; }
+        public SocketTextChannel AnnouncmentChannel { get; protected set; }
+        public SocketTextChannel TestingChannel { get; protected set; }
+        public IUserMessage AnnouncementMessage { get; private set; }
+        public SocketRole TesterRole { get; protected set; }
+
         public bool Equals(PlaytestEvent playtestEvent)
         {
             if (playtestEvent?.EventEditTime == EventEditTime)
@@ -97,7 +97,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                     color: LOG_COLOR);
 
             //Replace <br>s with \n for new line, replace &nbsp as well
-            string strippedHtml = Description.Replace("<br>", "\n").Replace("&nbsp;", "");
+            var strippedHtml = Description.Replace("<br>", "\n").Replace("&nbsp;", "");
 
             //Strip out HTML tags
             strippedHtml = Regex.Replace(strippedHtml, "<.*?>", string.Empty);
@@ -146,7 +146,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Parse the event along with relevant API calls.
             ParseEvent();
 
-            if (Title != null && Creators.Count > 0 && ImageGallery != null && WorkshopLink != null && Moderator != null &&
+            if (Title != null && Creators.Count > 0 && ImageGallery != null && WorkshopLink != null &&
+                Moderator != null &&
                 Description != null && ServerLocation != null)
             {
                 //Can we use the gallery images?
@@ -164,6 +165,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 IsValid = true;
                 return true;
             }
+
             _ = _log.LogMessage($"Test event is not valid!\n{ToString()}", false, color: LOG_COLOR);
 
             IsValid = false;
@@ -179,7 +181,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             PlaytestCommandRunning = true;
 
             await _log.LogMessage("Running Playtest Pre Tasks!", color: LOG_COLOR);
-            
+
             //Store test information for later use. Will be written to the DB.
             var gameMode = IsCasual ? "casual" : "comp";
             string mentions = null;
@@ -195,14 +197,13 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 WorkshopId = GeneralUtil.GetWorkshopIdFromFqdn(WorkshopLink.ToString()),
                 ServerAddress = ServerLocation,
                 Title = CleanedTitle,
-                ThumbNailImage = CanUseGallery ? GalleryImages[0]: _dataService.RSettings.General.FallbackTestImageUrl,
+                ThumbNailImage = CanUseGallery ? GalleryImages[0] : _dataService.RSettings.General.FallbackTestImageUrl,
                 ImageAlbum = ImageGallery.ToString(),
                 CreatorMentions = mentions,
                 StartDateTime = StartDateTime.GetValueOrDefault(),
                 Game = Game.ToString()
             };
 
-            
 
             //Start receiver if it isn't already
             logReceiverService.StartLogReceiver(PlaytestCommandInfo.ServerAddress);
@@ -248,27 +249,25 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 await Task.Delay(25000);
                 var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
                 GeneralUtil.Shuffle(patreonUsers);
-                string thanks = "";
-                foreach (var patreonsRoleMember in patreonUsers)
-                {
-                    thanks += $"{patreonsRoleMember.Username}, ";
-                }
+                var thanks = "";
+                foreach (var patreonsRoleMember in patreonUsers) thanks += $"{patreonsRoleMember.Username}, ";
 
                 await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
-                    $"say Thanks to these supporters: {thanks.TrimEnd(new[] {',', ' '})}");
+                    $"say Thanks to these supporters: {thanks.TrimEnd(',', ' ')}");
                 await Task.Delay(2000);
                 await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                     @"Say Become a supporter at www.patreon.com/tophattwaffle");
             });
         }
 
-        public virtual async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService, RconService rconService)
+        public virtual async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService,
+            RconService rconService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestCommandPost", false, color: LOG_COLOR);
 
             PlaytestCommandRunning = true;
-            
+
             await _log.LogMessage("Running Playtest Post Tasks!", color: LOG_COLOR);
             //No context to send these messages to - default them
             if (!replyInContext)
@@ -281,9 +280,10 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             if (File.Exists(logReceiverService.GetFilePath()))
             {
-                Directory.CreateDirectory($"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{PlaytestCommandInfo.StartDateTime:yyyy}" +
-                                          $"\\{PlaytestCommandInfo.StartDateTime:MM} - {PlaytestCommandInfo.StartDateTime:MMMM}" +
-                                          $"\\{PlaytestCommandInfo.DemoName}");
+                Directory.CreateDirectory(
+                    $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{PlaytestCommandInfo.StartDateTime:yyyy}" +
+                    $"\\{PlaytestCommandInfo.StartDateTime:MM} - {PlaytestCommandInfo.StartDateTime:MMMM}" +
+                    $"\\{PlaytestCommandInfo.DemoName}");
 
                 File.Copy(logReceiverService.GetFilePath(),
                     $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{PlaytestCommandInfo.StartDateTime:yyyy}" +
@@ -291,7 +291,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                     $"\\{PlaytestCommandInfo.DemoName}\\{PlaytestCommandInfo.DemoName}.txt"
                     , true);
 
-                await AnnouncmentChannel.SendFileAsync(logReceiverService.GetFilePath(),"");
+                await AnnouncmentChannel.SendFileAsync(logReceiverService.GetFilePath(), "");
             }
 
             _ = Task.Run(async () =>
@@ -299,14 +299,11 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 await Task.Delay(35000);
                 var patreonUsers = _dataService.PatreonsRole.Members.ToArray();
                 GeneralUtil.Shuffle(patreonUsers);
-                string thanks = "";
-                foreach (var patreonsRoleMember in patreonUsers)
-                {
-                    thanks += $"{patreonsRoleMember.Username}, ";
-                }
+                var thanks = "";
+                foreach (var patreonsRoleMember in patreonUsers) thanks += $"{patreonsRoleMember.Username}, ";
 
                 await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
-                    $"say Thanks to these supporters: {thanks.TrimEnd(new[] { ',', ' ' })}");
+                    $"say Thanks to these supporters: {thanks.TrimEnd(',', ' ')}");
                 await Task.Delay(2000);
                 await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                     @"Say Become a supporter at www.patreon.com/tophattwaffle");
@@ -317,7 +314,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             logReceiverService.SetNotActive();
         }
 
-        public async Task PlaytestcommandGenericAction(bool replyInContext, string command, RconService rconService, string message = null)
+        public async Task PlaytestcommandGenericAction(bool replyInContext, string command, RconService rconService,
+            string message = null)
         {
             if (!replyInContext)
                 await _dataService.CSGOTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
@@ -334,16 +332,10 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         public bool PlaytestCommandPreCheck()
         {
             //Stop executing if we are already running a command
-            if (PlaytestCommandRunning)
-            {
-                return false;
-            }
+            if (PlaytestCommandRunning) return false;
 
             //Make sure we have a valid event, if not, abort.
-            if (!IsValid)
-            {
-                return false;
-            }
+            if (!IsValid) return false;
 
             //Reload the last used playtest if the current event is null
             if (PlaytestCommandInfo == null)
@@ -360,7 +352,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             AnnouncementMessage = message;
         }
 
-        public virtual async Task PlaytestStartingInTask(RconService rconService, LogReceiverService logReceiverService, AnnouncementMessage announcementMessage)
+        public virtual async Task PlaytestStartingInTask(RconService rconService, LogReceiverService logReceiverService,
+            AnnouncementMessage announcementMessage)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestStartingInTask", false, color: LOG_COLOR);
@@ -392,18 +385,14 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 countdown.ToString("d'D 'h' Hour 'm' Minutes'").TrimStart(' ', 'D', 'H', 'o', 'u', 'r', '0')
                     .Replace(" 0 Minutes", "");
 
-            await rconService.RconCommand(ServerLocation,$"sv_cheats 0");
+            await rconService.RconCommand(ServerLocation, "sv_cheats 0");
             var mentionRole = TesterRole;
             //Handle comp or casual
             if (IsCasual)
-            {
                 await rconService.RconCommand(ServerLocation,
                     $"sv_password {_dataService.RSettings.General.CasualPassword}");
-            }
             else
-            {
                 mentionRole = _dataService.CompetitiveTesterRole;
-            }
 
             //Skip the alert.
             if (!PlaytestAlert)
@@ -414,8 +403,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             await TesterRole.ModifyAsync(x => { x.Mentionable = true; });
             await TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
-                                                               $"There is a playtest starting in {countdownString}." +
-                                                               "\nType `>playtester` to stop getting all playtest notifications.",
+                                                  $"There is a playtest starting in {countdownString}." +
+                                                  "\nType `>playtester` to stop getting all playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
             await TesterRole.ModifyAsync(x => { x.Mentionable = false; });
 
@@ -432,7 +421,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 }
         }
 
-        public virtual async Task PlaytestTwentyMinuteTask(RconService rconService, LogReceiverService logReceiverService)
+        public virtual async Task PlaytestTwentyMinuteTask(RconService rconService,
+            LogReceiverService logReceiverService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestTwentyMinuteTask", false, color: LOG_COLOR);
@@ -446,7 +436,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             logReceiverService.StartLogReceiver(ServerLocation);
         }
 
-        public virtual async Task PlaytestFifteenMinuteTask(RconService rconService, LogReceiverService logReceiverService)
+        public virtual async Task PlaytestFifteenMinuteTask(RconService rconService,
+            LogReceiverService logReceiverService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestFifteenMinuteTask", false, color: LOG_COLOR);
@@ -459,7 +450,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             logReceiverService.StartLogReceiver(ServerLocation);
         }
 
-        public virtual async Task PlaytestStartingTask(RconService rconService, LogReceiverService logReceiverService, AnnouncementMessage announcementMessage)
+        public virtual async Task PlaytestStartingTask(RconService rconService, LogReceiverService logReceiverService,
+            AnnouncementMessage announcementMessage)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestStartingTask", false, color: LOG_COLOR);
@@ -471,14 +463,11 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             var mentionRole = TesterRole;
             //Handle comp or casual
             if (IsCasual)
-            {
-                await rconService.RconCommand(ServerLocation,$"sv_password {_dataService.RSettings.General.CasualPassword}");
-            }
+                await rconService.RconCommand(ServerLocation,
+                    $"sv_password {_dataService.RSettings.General.CasualPassword}");
             else
-            {
                 mentionRole = _dataService.CompetitiveTesterRole;
-            }
-            
+
 
             //Skip the alert.
             if (!PlaytestAlert)
@@ -490,28 +479,28 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
 
             await _dataService.CSGOTestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
-                                                                   $"There is a playtest starting __now__!" +
-                                                                   $"\nType `>playtester` to stop getting all playtest notifications.",
-                embed: announcementMessage.CreatePlaytestEmbed(this,true, AnnouncementMessage.Id));
+                                                                   "There is a playtest starting __now__!" +
+                                                                   "\nType `>playtester` to stop getting all playtest notifications.",
+                embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
         }
 
         public override string ToString()
         {
-            return "eventValid: " + IsValid 
-                                  + "\nGame: " + Game.ToString()
-              + "\neventEditTime: " + EventEditTime
-              + "\ndateTime: " + StartDateTime
-              + "\nEndDateTime: " + EndDateTime
-              + "\ntitle: " + Title
-              + "\nimageGallery: " + ImageGallery
-              + "\nworkshopLink: " + WorkshopLink
-              + "\nisCasual: " + IsCasual
-              + "\nmoderator: " + Moderator
-              + "\ndescription: " + Description
-              + "\nserverLocation: " + ServerLocation
-              + "\ncreators: " + string.Join(", ", Creators);
+            return "eventValid: " + IsValid
+                                  + "\nGame: " + Game
+                                  + "\neventEditTime: " + EventEditTime
+                                  + "\ndateTime: " + StartDateTime
+                                  + "\nEndDateTime: " + EndDateTime
+                                  + "\ntitle: " + Title
+                                  + "\nimageGallery: " + ImageGallery
+                                  + "\nworkshopLink: " + WorkshopLink
+                                  + "\nisCasual: " + IsCasual
+                                  + "\nmoderator: " + Moderator
+                                  + "\ndescription: " + Description
+                                  + "\nserverLocation: " + ServerLocation
+                                  + "\ncreators: " + string.Join(", ", Creators);
         }
     }
 }

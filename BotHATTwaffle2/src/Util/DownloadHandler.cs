@@ -6,18 +6,18 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Util;
+using FluentFTP;
 using Renci.SshNet;
 using Renci.SshNet.Sftp;
-using FluentFTP;
 
 namespace BotHATTwaffle2.Handlers
 {
-    class DownloadHandler
+    internal class DownloadHandler
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static LogHandler _log;
         private static DataService _dataService;
-        
+
         public static void SetHandlers(LogHandler log, DataService data)
         {
             _dataService = data;
@@ -31,7 +31,7 @@ namespace BotHATTwaffle2.Handlers
             if (server == null)
                 return null;
 
-            string dateInsert = "";
+            var dateInsert = "";
             //Arrived from a public test, where a proper start time did not exist.
             if (playtestCommandInfo.StartDateTime == new DateTime())
             {
@@ -39,8 +39,9 @@ namespace BotHATTwaffle2.Handlers
                 playtestCommandInfo.StartDateTime = DateTime.Now;
             }
 
-            string localPath = $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{playtestCommandInfo.StartDateTime:yyyy}" +
-                               $"\\{playtestCommandInfo.StartDateTime:MM} - {playtestCommandInfo.StartDateTime:MMMM}\\{dateInsert}{playtestCommandInfo.DemoName}";
+            var localPath =
+                $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{playtestCommandInfo.StartDateTime:yyyy}" +
+                $"\\{playtestCommandInfo.StartDateTime:MM} - {playtestCommandInfo.StartDateTime:MMMM}\\{dateInsert}{playtestCommandInfo.DemoName}";
 
             string remoteBspPath = null;
 
@@ -55,7 +56,7 @@ namespace BotHATTwaffle2.Handlers
             }
             else
             {
-                await _log.LogMessage($"Game for playtest is invalid. This should never happen.",true,true,true);
+                await _log.LogMessage("Game for playtest is invalid. This should never happen.", true, true, true);
                 return null;
             }
 
@@ -78,7 +79,8 @@ namespace BotHATTwaffle2.Handlers
                         }
                         catch (Exception e)
                         {
-                            await _log.LogMessage($"Failed to connect to FTP server. {server.Address}\n {e.Message}", alert: true, color:LOG_COLOR);
+                            await _log.LogMessage($"Failed to connect to FTP server. {server.Address}\n {e.Message}",
+                                alert: true, color: LOG_COLOR);
                             return null;
                         }
 
@@ -89,17 +91,21 @@ namespace BotHATTwaffle2.Handlers
                                 GetFile(client, server.FtpPath, playtestCommandInfo.DemoName));
 
                             //Download BSP
-                            string bspFile = GetFile(client, remoteBspPath, ".bsp");
-                            client.DownloadFile($"{localPath}\\{Path.GetFileName(bspFile)}",bspFile);
+                            var bspFile = GetFile(client, remoteBspPath, ".bsp");
+                            client.DownloadFile($"{localPath}\\{Path.GetFileName(bspFile)}", bspFile);
                         }
                         catch (Exception e)
                         {
-                            await _log.LogMessage($"Failed to download file from playtest server. {server.Address}\n{e.Message}", color: LOG_COLOR);
+                            await _log.LogMessage(
+                                $"Failed to download file from playtest server. {server.Address}\n{e.Message}",
+                                color: LOG_COLOR);
                         }
-                        
+
                         client.Disconnect();
 
-                        await _log.LogMessage($"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```", color: LOG_COLOR);
+                        await _log.LogMessage(
+                            $"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```",
+                            color: LOG_COLOR);
                     }
 
                     break;
@@ -112,7 +118,8 @@ namespace BotHATTwaffle2.Handlers
                         }
                         catch (Exception e)
                         {
-                            await _log.LogMessage($"Failed to connect to SFTP server. {server.Address}\n {e.Message}", alert: true, color: LOG_COLOR);
+                            await _log.LogMessage($"Failed to connect to SFTP server. {server.Address}\n {e.Message}",
+                                alert: true, color: LOG_COLOR);
                             return null;
                         }
 
@@ -134,22 +141,29 @@ namespace BotHATTwaffle2.Handlers
                         }
                         catch (Exception e)
                         {
-                            await _log.LogMessage($"Failed to download file from playtest server. {server.Address}\n{e.Message}", color: LOG_COLOR);
+                            await _log.LogMessage(
+                                $"Failed to download file from playtest server. {server.Address}\n{e.Message}",
+                                color: LOG_COLOR);
                         }
 
                         client.Disconnect();
 
-                        await _log.LogMessage($"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```", color: LOG_COLOR);
+                        await _log.LogMessage(
+                            $"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```",
+                            color: LOG_COLOR);
                     }
 
                     break;
                 default:
-                    await _log.LogMessage($"The FTP type on the server is incorrectly set. {server.Address} is using {server.FtpType}",alert:true, color: LOG_COLOR);
+                    await _log.LogMessage(
+                        $"The FTP type on the server is incorrectly set. {server.Address} is using {server.FtpType}",
+                        alert: true, color: LOG_COLOR);
                     break;
             }
 
             //Return the path to the demo.
-            return Directory.GetFiles(localPath).FirstOrDefault(x => x.EndsWith(".dem",StringComparison.OrdinalIgnoreCase));
+            return Directory.GetFiles(localPath)
+                .FirstOrDefault(x => x.EndsWith(".dem", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string GetFile(FtpClient client, string path, string name)

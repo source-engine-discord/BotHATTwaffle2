@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -12,31 +10,28 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Services.Steam;
-using BotHATTwaffle2.src.Services.Calendar;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using FluentScheduler;
-using Google.Apis.Calendar.v3.Data;
-using Google.Apis.Download;
 
 namespace BotHATTwaffle2.Commands
 {
     public class PlaytestModule : InteractiveBase
     {
+        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
+        private readonly GoogleCalendar _calendar;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
-        private readonly ReservationService _reservationService;
-        private readonly GoogleCalendar _calendar;
+        private readonly LogReceiverService _logReceiverService;
         private readonly PlaytestService _playtestService;
         private readonly RconService _rconService;
+        private readonly ReservationService _reservationService;
         private readonly ScheduleHandler _scheduleHandler;
-        private readonly LogReceiverService _logReceiverService;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.DarkCyan;
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService, RconService rconService,
@@ -68,12 +63,12 @@ namespace BotHATTwaffle2.Commands
                  "\n`push` / `pri` - Pushes a user to be next after the current user giving feedback." +
                  "\n`pop` / `remove` - Removes a user from the queue." +
                  "\n`#` - Changes feedback duration. Example: `>fbq 5` sets to 5 minutes.")]
-        public async Task FeedbackQueueAsync([Optional]string command, [Optional]SocketUser user)
+        public async Task FeedbackQueueAsync([Optional] string command, [Optional] SocketUser user)
         {
             await Context.Message.DeleteAsync();
             if (command == null)
             {
-                if(_playtestService.CreateVoiceFeedbackSession())
+                if (_playtestService.CreateVoiceFeedbackSession())
                 {
                     await _dataService.CSGOTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
                         .WithAuthor("New Feedback Queue Session Started!")
@@ -81,21 +76,24 @@ namespace BotHATTwaffle2.Commands
                             "In order to keep things moving and civil, a Feedback Queue has been started!" +
                             "\n\nUsers can enter the queue with `>q` and wait for their turn. When it is their turn, " +
                             $"they will have {_dataService.RSettings.General.FeedbackDuration} minutes to give their feedback. " +
-                            $"This is to give everyone a chance to speak, without some users taking a long time." +
-                            $"\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
-                            $"already given their feedback." +
-                            $"\n\nWhen done with your feedback, or to remove yourself from the queue, type `>done`." +
-                            $"\n\nIf you need to go sooner, please let a moderator know.")
+                            "This is to give everyone a chance to speak, without some users taking a long time." +
+                            "\n\nIf you have a lot to say, please wait until the end when the majority of users have " +
+                            "already given their feedback." +
+                            "\n\nWhen done with your feedback, or to remove yourself from the queue, type `>done`." +
+                            "\n\nIf you need to go sooner, please let a moderator know.")
                         .WithColor(55, 165, 55)
                         .Build());
                     await _log.LogMessage($"`{Context.User}` has started a feedback queue!", color: LOG_COLOR);
                 }
                 else
+                {
                     await ReplyAsync(
                         "Unable to create new feedback session. Possible reasons:" +
                         "\n• A session already exists" +
                         "\n• The active test is not valid" +
                         "\n• The active test is not CSGO");
+                }
+
                 return;
             }
 
@@ -127,6 +125,7 @@ namespace BotHATTwaffle2.Commands
 
                         return;
                     }
+
                     await _log.LogMessage($"`{Context.User}` has started listening to user feedback", color: LOG_COLOR);
                     _scheduleHandler.DisablePlayingUpdate();
                     break;
@@ -158,7 +157,7 @@ namespace BotHATTwaffle2.Commands
                     {
                         var msg = await ReplyAsync(embed: new EmbedBuilder()
                             .WithAuthor("User cannot be empty.")
-                            .WithColor(165,55,55).Build());
+                            .WithColor(165, 55, 55).Build());
                         _ = Task.Run(async () =>
                         {
                             await Task.Delay(5000);
@@ -166,8 +165,10 @@ namespace BotHATTwaffle2.Commands
                         });
                         return;
                     }
+
                     await _playtestService.FeedbackSession.AddUserToTopQueue(user);
-                    await _log.LogMessage($"`{Context.User}` has pushed {user} to the top of the feedback queue", color: LOG_COLOR);
+                    await _log.LogMessage($"`{Context.User}` has pushed {user} to the top of the feedback queue",
+                        color: LOG_COLOR);
                     break;
                 case "pop":
                 case "remove":
@@ -183,6 +184,7 @@ namespace BotHATTwaffle2.Commands
                         });
                         return;
                     }
+
                     if (!await _playtestService.FeedbackSession.RemoveUser(user.Id))
                     {
                         var msg = await ReplyAsync(embed: new EmbedBuilder()
@@ -194,7 +196,9 @@ namespace BotHATTwaffle2.Commands
                             await msg.DeleteAsync();
                         });
                     }
-                    await _log.LogMessage($"`{Context.User}` has removed {user} from the feedback queue", color: LOG_COLOR);
+
+                    await _log.LogMessage($"`{Context.User}` has removed {user} from the feedback queue",
+                        color: LOG_COLOR);
                     break;
                 default:
                     await ReplyAsync(embed: new EmbedBuilder()
@@ -236,7 +240,7 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            if(!await _playtestService.FeedbackSession.AddUserToQueue(Context.User))
+            if (!await _playtestService.FeedbackSession.AddUserToQueue(Context.User))
             {
                 var msg = await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"{Context.User} unable to be added to queue.")
@@ -249,11 +253,10 @@ namespace BotHATTwaffle2.Commands
                     await msg.DeleteAsync();
                 });
             }
-
         }
 
         [Command("FeedbackDone", RunMode = RunMode.Async)]
-        [Alias("fbd","done")]
+        [Alias("fbd", "done")]
         [RequireContext(ContextType.Guild)]
         [Summary("Signals that you're done giving feedback, or want to remove yourself from the queue.")]
         public async Task DoneFeedbackQueue()
@@ -268,7 +271,7 @@ namespace BotHATTwaffle2.Commands
                 await msg.DeleteAsync();
                 return;
             }
-            
+
             if (!await _playtestService.FeedbackSession.RemoveUser(Context.User.Id))
             {
                 var msg = await ReplyAsync(embed: new EmbedBuilder()
@@ -283,11 +286,12 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Schedule", RunMode = RunMode.Async)]
-        [Alias("pts","upcoming")]
+        [Alias("pts", "upcoming")]
         [Summary("Allows users to view testing queue and schedule.")]
         [Remarks("For members, displays test in the queue and scheduled on the calendar." +
                  "If you're moderation staff, allows for officially scheduling the playtest event after making any needed changes.")]
-        public async Task ScheduleTestAsync([Summary("If `true`, displays scheduled tests as well.")][Optional]bool getList)
+        public async Task ScheduleTestAsync([Summary("If `true`, displays scheduled tests as well.")] [Optional]
+            bool getList)
         {
             if (!getList)
             {
@@ -295,9 +299,10 @@ namespace BotHATTwaffle2.Commands
                 var calendarBuilder = new CalendarBuilder(await _calendar.GetNextMonthAsync(DateTime.Now),
                     DatabaseUtil.GetAllPlaytestRequests());
                 await calendarBuilder.DiscordPlaytestCalender(Context);
-                await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled and Requested Tests**" +
-                "\nGreen are scheduled tests, blue are requested.\nType `>pts true` to get a list of test instead of an image.\n" +
-                $"All times are CT Timezone. Current time CT: `{DateTime.Now:g}`");
+                await Context.Channel.SendFileAsync("renderedCalendar.png",
+                    "**Currently Scheduled and Requested Tests**" +
+                    "\nGreen are scheduled tests, blue are requested.\nType `>pts true` to get a list of test instead of an image.\n" +
+                    $"All times are CT Timezone. Current time CT: `{DateTime.Now:g}`");
             }
             else
             {
@@ -310,7 +315,8 @@ namespace BotHATTwaffle2.Commands
 
                     var display = await ReplyAsync(embed: embed.Build());
 
-                    var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
+                    var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar,
+                        _playtestService);
                     await requestBuilder.SchedulePlaytestAsync(display);
 
                     _dataService.IgnoreListenList.Remove(Context.User);
@@ -328,16 +334,19 @@ namespace BotHATTwaffle2.Commands
                  "If you have a filled out template, you can send that with the command to skip the interactive builder. " +
                  "An example of the filled out template is on the playtesting webpage.\n\nTemplate:" +
                  "```>Request Date:\nEmails:\nMapName:\nDiscord:\nImgur:\nWorkshop:\nType:\nDescription:\nSpawns:\nPreviousTest:\nServer:```")]
-        public async Task PlaytestRequestAsync([Summary("A pre-built playtest event based on the template.")][Optional][Remainder]string playtestInformation)
+        public async Task PlaytestRequestAsync(
+            [Summary("A pre-built playtest event based on the template.")] [Optional] [Remainder]
+            string playtestInformation)
         {
             _dataService.IgnoreListenList.Add(Context.User);
 
-            var requestBuilder = new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
+            var requestBuilder =
+                new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
 
             if (playtestInformation != null)
             {
                 //If we are here from a full dump, split it to handle
-                string[] split = playtestInformation.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                var split = playtestInformation.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
 
                 if (split.Length != 12)
                 {
@@ -353,10 +362,11 @@ namespace BotHATTwaffle2.Commands
                 var calendarBuilder = new CalendarBuilder(await _calendar.GetNextMonthAsync(DateTime.Now),
                     DatabaseUtil.GetAllPlaytestRequests());
                 await calendarBuilder.DiscordPlaytestCalender(Context);
-                await Context.Channel.SendFileAsync("renderedCalendar.png", "**Currently Scheduled and Requested Tests**" +
-                                                                            "\nGreen are scheduled tests, blue are requested.\n" +
-                                                                            "https://www.tophattwaffle.com/playtesting" +
-                                                                            $"\nAll times are CT Timezone. Current time CT: `{DateTime.Now:g}`");
+                await Context.Channel.SendFileAsync("renderedCalendar.png",
+                    "**Currently Scheduled and Requested Tests**" +
+                    "\nGreen are scheduled tests, blue are requested.\n" +
+                    "https://www.tophattwaffle.com/playtesting" +
+                    $"\nAll times are CT Timezone. Current time CT: `{DateTime.Now:g}`");
 
                 await requestBuilder.BuildPlaytestRequestWizard();
             }
@@ -374,7 +384,7 @@ namespace BotHATTwaffle2.Commands
         [RequireUserPermission(ChannelPermission.UseExternalEmojis)]
         public async Task PublicTestStartAsync(
             [Summary("The server to reserve")] string serverCode,
-            [Optional][Summary("The ID of a Steam Workshop map for the server to host")]
+            [Optional] [Summary("The ID of a Steam Workshop map for the server to host")]
             string workshopId)
         {
             //Check if reservations can be made.
@@ -406,7 +416,7 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            string formattedServer = GeneralUtil.GetServerCode(serverCode);
+            var formattedServer = GeneralUtil.GetServerCode(serverCode);
 
             //Attempt add, see if successful
             var success = DatabaseUtil.AddServerReservation(new ServerReservation
@@ -436,8 +446,9 @@ namespace BotHATTwaffle2.Commands
             server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
 
             //Add the job to release the server
-            JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{Context.User.Mention}",
-            embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
+            JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync(
+                    $"{Context.User.Mention}",
+                    embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
                 s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
 
             var rconCommand = $"sv_password {_dataService.RSettings.General.CasualPassword}";
@@ -467,12 +478,13 @@ namespace BotHATTwaffle2.Commands
             if (!_logReceiverService.EnableLog)
             {
                 _logReceiverService.StartLogReceiver(server.ServerId);
-                embed.AddField("Ingame Chat Active","You may use `>pc` in-game to send commands to the server!");
+                embed.AddField("Ingame Chat Active", "You may use `>pc` in-game to send commands to the server!");
             }
 
             await ReplyAsync(embed: embed.Build());
 
-            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has reserved `{server.Address}`", color:LOG_COLOR);
+            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has reserved `{server.Address}`",
+                color: LOG_COLOR);
         }
 
         [Command("PublicAnnounce")]
@@ -522,11 +534,11 @@ namespace BotHATTwaffle2.Commands
             {
                 embed = await new Workshop().HandleWorkshopEmbeds(Context.Message, _dataService, inputId: result[1]);
 
-                if(embed != null)
+                if (embed != null)
                 {
                     await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                       $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
-                                                                       $"\nType `>roleme Community Tester` to get this role.",
+                                                                           $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                                           "\nType `>roleme Community Tester` to get this role.",
                         embed: embed.Build());
                 }
                 else //Workshop builder returned bad / no data. Don't send an embed.
@@ -542,13 +554,15 @@ namespace BotHATTwaffle2.Commands
             {
                 //No embed
                 await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                   $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
+                                                                       $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
             }
 
             if (!reservation.Announced)
                 await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
 
-            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` alerted for their community playtest on `{server.Address}`", color: LOG_COLOR);
+            await _log.LogMessage(
+                $"`{Context.User}` `{Context.User.Id}` alerted for their community playtest on `{server.Address}`",
+                color: LOG_COLOR);
         }
 
         [Command("PublicDemo", RunMode = RunMode.Async)]
@@ -588,14 +602,15 @@ namespace BotHATTwaffle2.Commands
             {
                 DemoName = $"{levelInfo[2]}_Community",
                 WorkshopId = levelInfo[1],
-                ServerAddress = reservation.ServerId,
+                ServerAddress = reservation.ServerId
             };
 
             switch (command.ToLower())
             {
-                case"start":
-                    var demoReply = await _rconService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord; tv_record {testInfo.DemoName}" +
-                                                                                           $";say {testInfo.DemoName} now recording!");
+                case "start":
+                    var demoReply = await _rconService.RconCommand(testInfo.ServerAddress,
+                        $"tv_stoprecord; tv_record {testInfo.DemoName}" +
+                        $";say {testInfo.DemoName} now recording!");
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Command sent to {testInfo.ServerAddress}", _dataService.Guild.IconUrl)
                         .WithDescription($"```{demoReply}```")
@@ -603,17 +618,16 @@ namespace BotHATTwaffle2.Commands
                     break;
 
                 case "stop":
-                    var stopReply = await _rconService.RconCommand(testInfo.ServerAddress, $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
+                    var stopReply = await _rconService.RconCommand(testInfo.ServerAddress,
+                        $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
 
                     //Download demo, don't wait.
-                    _ = Task.Run(() =>
-                    {
-                        _ = DownloadHandler.DownloadPlaytestDemo(testInfo);
-                    });
-                    
+                    _ = Task.Run(() => { _ = DownloadHandler.DownloadPlaytestDemo(testInfo); });
+
                     const string demoUrl = "http://demos.tophattwaffle.com";
                     var embed = new EmbedBuilder()
-                        .WithAuthor($"Download playtest demo for {testInfo.DemoName}", _dataService.Guild.IconUrl, demoUrl)
+                        .WithAuthor($"Download playtest demo for {testInfo.DemoName}", _dataService.Guild.IconUrl,
+                            demoUrl)
                         .WithThumbnailUrl(_client.CurrentUser.GetAvatarUrl())
                         .WithColor(new Color(243, 128, 72))
                         .WithDescription(
@@ -626,7 +640,6 @@ namespace BotHATTwaffle2.Commands
                     await ReplyAsync("Invalid command. Consult `>Help PublicDemo`");
                     break;
             }
-
         }
 
         [Command("PublicCommand", RunMode = RunMode.Async)]
@@ -642,8 +655,11 @@ namespace BotHATTwaffle2.Commands
             //Allow viewing of commands without a reservation
             if (command == null)
             {
-
-                StringBuilder sv = new StringBuilder(),mp = new StringBuilder(), bot = new StringBuilder(), exec = new StringBuilder(), misc = new StringBuilder();
+                StringBuilder sv = new StringBuilder(),
+                    mp = new StringBuilder(),
+                    bot = new StringBuilder(),
+                    exec = new StringBuilder(),
+                    misc = new StringBuilder();
 
                 foreach (var s in _dataService.RSettings.Lists.PublicCommands)
                 {
@@ -674,7 +690,7 @@ namespace BotHATTwaffle2.Commands
 
                     misc.AppendLine(s);
                 }
-                
+
 
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Allowed test server commands", _dataService.Guild.IconUrl)
@@ -731,8 +747,9 @@ namespace BotHATTwaffle2.Commands
                 else
                 {
                     delayed = await ReplyAsync(embed: new EmbedBuilder()
-                        .WithDescription($"⏰RCON command to `{server.Address}` is taking longer than normal...\nSit tight while I'll " +
-                                         "try a few more times.")
+                        .WithDescription(
+                            $"⏰RCON command to `{server.Address}` is taking longer than normal...\nSit tight while I'll " +
+                            "try a few more times.")
                         .WithColor(new Color(165, 55, 55)).Build());
                     reply = await rconCommand;
                 }
@@ -817,8 +834,8 @@ namespace BotHATTwaffle2.Commands
                 "server reservation manually."));
 
 
-
-            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually", color: LOG_COLOR);
+            await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually",
+                color: LOG_COLOR);
         }
 
         [Command("Servers")]
@@ -832,7 +849,8 @@ namespace BotHATTwaffle2.Commands
                 .WithThumbnailUrl(_dataService.Guild.IconUrl)
                 .WithColor(new Color(255, 135, 57));
 
-            foreach (var server in foundServers) embed.AddField(server.Address, $"Server Type: `{server.Game.ToUpper()}`\n{server.Description}", true);
+            foreach (var server in foundServers)
+                embed.AddField(server.Address, $"Server Type: `{server.Game.ToUpper()}`\n{server.Description}", true);
 
             await ReplyAsync(embed: embed.Build());
         }
@@ -844,20 +862,20 @@ namespace BotHATTwaffle2.Commands
                  "\nType `>playtester [subscribe/both]` to add all subscriptions." +
                  "\nType `>playtester [unsubscribe/remove]` to remove all subscriptions." +
                  "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription.")]
-        public async Task PlaytesterAsync([Optional]string game)
+        public async Task PlaytesterAsync([Optional] string game)
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
             var embed = new EmbedBuilder()
                 .WithAuthor($"Playtest Subscriptions - {user}", Context.User.GetAvatarUrl())
-                .WithColor(55,55,165);
-            string description = "";
+                .WithColor(55, 55, 165);
+            var description = "";
 
             var csgoStatus = user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id);
             var tf2Status = user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id);
 
             if (string.IsNullOrWhiteSpace(game))
                 game = "remove";
-            
+
             switch (game.ToLower())
             {
                 case "remove":
@@ -893,7 +911,7 @@ namespace BotHATTwaffle2.Commands
 
                 default:
                     description += "**Unknown command.**\n" +
-                                  "Please type `>help playtester`";
+                                   "Please type `>help playtester`";
                     break;
             }
 

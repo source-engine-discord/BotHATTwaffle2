@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace BotHATTwaffle2.Models.LiteDB
+﻿namespace BotHATTwaffle2.Models.LiteDB
 {
-    class CompPw
+    internal class CompPw
     {
         public int Id { get; set; }
         public string Title { get; set; }

@@ -1,11 +1,7 @@
-﻿using System.ComponentModel;
-using Newtonsoft.Json;
-
-namespace BotHATTwaffle2
+﻿namespace BotHATTwaffle2
 {
     public class General
     {
-
         public string WelcomeMessage { get; set; }
         public string GeneralChannel { get; set; }
         public string WelcomeChannel { get; set; }
