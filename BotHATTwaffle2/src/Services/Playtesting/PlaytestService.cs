@@ -342,8 +342,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _ = _log.LogMessage($"Posting new announcement for {testEvent.Title}", false, color: LOG_COLOR);
 
             //Stop asking server for player counts
-            _dataService.IncludePlayerCount = false;
-            _dataService.PlayerCount = "0";
+            _dataService.SetIncludePlayerCount(false);
+            _dataService.SetPlayerCount("0");
             //We posted a new announcement, meaning we can allow reservations again.
             _reservationService.AllowReservations();
 

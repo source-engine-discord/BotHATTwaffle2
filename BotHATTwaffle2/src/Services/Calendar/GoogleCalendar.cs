@@ -104,6 +104,16 @@ namespace BotHATTwaffle2.Services.Calendar
                     tempPlaytestEvents.Add(new Tf2PlaytestEvent(_dataService, _log, eventItem));
             }
 
+            //Prevent the previous playtest event from counting as another playtest.
+            foreach (var tempPlaytestEvent in tempPlaytestEvents)
+            {
+                if (tempPlaytestEvent.Equals(_previousPlaytestEvent))
+                {
+                    tempPlaytestEvents.Remove(tempPlaytestEvent);
+                    break;
+                }
+            }
+
             if (tempPlaytestEvents.Count == 0)
             {
                 _playtestEvents = null;
@@ -113,11 +123,6 @@ namespace BotHATTwaffle2.Services.Calendar
 
                 return;
             }
-
-            //Prevent the previous playtest event from counting as another playtest.
-            foreach (var tempPlaytestEvent in tempPlaytestEvents)
-                if (tempPlaytestEvent.Equals(_previousPlaytestEvent))
-                    tempPlaytestEvents.Remove(tempPlaytestEvent);
 
             _playtestEvents = tempPlaytestEvents;
 

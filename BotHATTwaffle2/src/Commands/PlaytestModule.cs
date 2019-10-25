@@ -859,7 +859,7 @@ namespace BotHATTwaffle2.Commands
         [Alias("pt")]
         [Summary("Changes what playtest notifications your get.")]
         [Remarks("Type `>playtester` to remove all subscriptions." +
-                 "\nType `>playtester [subscribe/both]` to add all subscriptions." +
+                 "\nType `>playtester [subscribe/both/all]` to add all subscriptions." +
                  "\nType `>playtester [unsubscribe/remove]` to remove all subscriptions." +
                  "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription.")]
         public async Task PlaytesterAsync([Optional] string game)
@@ -888,6 +888,7 @@ namespace BotHATTwaffle2.Commands
                     tf2Status = false;
                     break;
 
+                case "all":
                 case "both":
                 case "subscribe":
                     description += "**All subscriptions added!**\n";
@@ -925,7 +926,10 @@ namespace BotHATTwaffle2.Commands
             async Task ToggleRoles(bool csgo, bool tf2)
             {
                 if (csgo && user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id))
+                {
                     await user.RemoveRoleAsync(_dataService.CSGOPlayTesterRole);
+                    await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
+                }
                 else
                     await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
 

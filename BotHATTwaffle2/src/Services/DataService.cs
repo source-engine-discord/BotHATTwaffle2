@@ -67,8 +67,14 @@ namespace BotHATTwaffle2.Services
         public SocketUser AlertUser { get; private set; }
         public SocketRole CSGOPlaytestAdmin { get; private set; }
         public SocketRole TF2PlaytestAdmin { get; private set; }
-        public bool IncludePlayerCount { get; set; }
-        public string PlayerCount { get; set; }
+        public static bool IncludePlayerCount { get; set; }
+        public static string PlayerCount { get; set; }
+
+        public bool GetIncludePlayerCount() => IncludePlayerCount;
+        public string GetPlayerCount() => PlayerCount;
+
+        public void SetPlayerCount(string playerCount) => PlayerCount = playerCount;
+        public void SetIncludePlayerCount(bool includeCount) => IncludePlayerCount = includeCount;
 
         public async Task DeserializeConfig()
         {

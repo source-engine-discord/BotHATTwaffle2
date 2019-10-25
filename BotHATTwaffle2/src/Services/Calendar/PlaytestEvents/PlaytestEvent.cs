@@ -372,8 +372,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             });
 
             //Start asking the server for player counts.
-            _dataService.IncludePlayerCount = true;
-
+            _dataService.SetIncludePlayerCount(true);
             //Start asking for player counts
             JobManager.AddJob(
                 async () => await rconService.GetPlayCountFromServer(ServerLocation),
@@ -404,7 +403,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             await TesterRole.ModifyAsync(x => { x.Mentionable = true; });
             await TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
                                                   $"There is a playtest starting in {countdownString}." +
-                                                  "\nType `>playtester` to stop getting all playtest notifications.",
+                                                  $"\nType `>playtester {Game.ToString()}` to stop getting {Game.ToString()} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
             await TesterRole.ModifyAsync(x => { x.Mentionable = false; });
 
@@ -427,7 +426,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestTwentyMinuteTask", false, color: LOG_COLOR);
 
-            _dataService.IncludePlayerCount = true;
+            _dataService.SetIncludePlayerCount(true);
 
             //Ensure server is awake and RCON connection is established.
             await rconService.WakeRconServer(ServerLocation);
@@ -442,7 +441,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestFifteenMinuteTask", false, color: LOG_COLOR);
 
-            _dataService.IncludePlayerCount = true;
+            _dataService.SetIncludePlayerCount(true);
 
             //Ensure server is awake and RCON connection is established. Run other things while waking server
             _ = rconService.WakeRconServer(ServerLocation);
@@ -480,7 +479,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             await _dataService.CSGOTestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
                                                                    "There is a playtest starting __now__!" +
-                                                                   "\nType `>playtester` to stop getting all playtest notifications.",
+                                                                   $"\nType `>playtester {Game.ToString()}` to stop getting {Game.ToString()} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = false; });

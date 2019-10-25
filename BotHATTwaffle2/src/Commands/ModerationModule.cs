@@ -57,10 +57,9 @@ namespace BotHATTwaffle2.Commands
 //        [RequireUserPermission(GuildPermission.KickMembers)]
 //        public async Task TestAsync()
 //        {
-//            const string playerbaseUrl = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
-//            var response = new WebClient().DownloadString(playerbaseUrl).Trim();
-//
-//            await _log.LogMessage($"Got the following response when updating playerbase: `{response}`", color: LOG_COLOR);
+//            JobManager.AddJob(
+//                async () => await _rconService.GetPlayCountFromServer("can"),
+//                s => s.WithName("[QueryPlayerCount]").ToRunEvery(10).Seconds());
 //        }
 
         [Command("MatchMaking", RunMode = RunMode.Async)]

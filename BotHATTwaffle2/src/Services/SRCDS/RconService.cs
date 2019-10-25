@@ -209,7 +209,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             //Remove extra information from string
             var formatted = results.FirstOrDefault()?.Substring(10);
 
-            _dataService.PlayerCount = formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal));
+            _dataService.SetPlayerCount(formatted?.Substring(0, formatted.IndexOf(" ", StringComparison.Ordinal)));
         }
 
         /// <summary>
