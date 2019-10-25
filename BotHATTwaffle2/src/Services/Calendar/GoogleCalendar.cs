@@ -105,14 +105,7 @@ namespace BotHATTwaffle2.Services.Calendar
             }
 
             //Prevent the previous playtest event from counting as another playtest.
-            foreach (var tempPlaytestEvent in tempPlaytestEvents)
-            {
-                if (tempPlaytestEvent.Equals(_previousPlaytestEvent))
-                {
-                    tempPlaytestEvents.Remove(tempPlaytestEvent);
-                    break;
-                }
-            }
+            tempPlaytestEvents.RemoveAll(x => x.Equals(_previousPlaytestEvent));
 
             if (tempPlaytestEvents.Count == 0)
             {
