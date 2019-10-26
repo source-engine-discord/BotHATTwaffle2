@@ -151,7 +151,10 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             //Make sure player count isn't null. It may be null if RCON is failing for some reason.
             if (_dataService.GetIncludePlayerCount() && _dataService.GetPlayerCount() != null)
-                playtestEmbed.AddField("Players Connected", _dataService.GetPlayerCount(), true);
+            {
+                var playerCount = _dataService.GetPlayerCount();
+                playtestEmbed.AddField("Players Connected", playerCount, true);
+            }
 
             playtestEmbed.AddField("Connect to",
                 $"{displayedConnectionInfo}");

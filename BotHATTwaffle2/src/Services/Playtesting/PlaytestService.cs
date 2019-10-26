@@ -487,12 +487,15 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (testEvent == null)
                 return;
 
+            if (_dataService.RSettings.ProgramSettings.Debug)
+                _ = _log.LogMessage($"SchedulePlaytestAnnouncements for {testEvent.Title}", false, color: LOG_COLOR);
+
             var game = testEvent.Game.ToString();
 
             //Clear old jobs, if any.
             ClearScheduledAnnouncements(game);
 
-            if (testEvent.AnnouncementMessage == null || !testEvent.IsValid)
+            if (!testEvent.IsValid)
                 return;
 
             var startDateTime = testEvent.StartDateTime;

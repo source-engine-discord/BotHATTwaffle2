@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -858,10 +859,10 @@ namespace BotHATTwaffle2.Commands
         [Command("Playtester")]
         [Alias("pt")]
         [Summary("Changes what playtest notifications your get.")]
-        [Remarks("Type `>playtester` to remove all subscriptions." +
-                 "\nType `>playtester [subscribe/both/all]` to add all subscriptions." +
-                 "\nType `>playtester [unsubscribe/remove]` to remove all subscriptions." +
-                 "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription.")]
+        [Remarks("Type `>playtester` or `>pt [Unsubscribe]` to remove all subscriptions (Does not remove competitive)." +
+                 "\nType `>playtester [Subscribe]` to add all subscriptions." +
+                 "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription." +
+                 "\nType `>playtester [Comp]` to remove the competitive tester. You cannot re-add it yourself if removed.")]
         public async Task PlaytesterAsync([Optional] string game)
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
@@ -870,44 +871,53 @@ namespace BotHATTwaffle2.Commands
                 .WithColor(55, 55, 165);
             var description = "";
 
-            var csgoStatus = user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id);
-            var tf2Status = user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id);
+            int csgoStatus =-1;
+            int tf2Status = -1;
+            int compStatus = -1;
 
             if (string.IsNullOrWhiteSpace(game))
-                game = "remove";
+                game = "unsubscribe";
 
             switch (game.ToLower())
             {
-                case "remove":
                 case "unsubscribe":
                     description += "**All subscriptions removed!**\n";
                     await user.RemoveRoleAsync(_dataService.CSGOPlayTesterRole);
                     await user.RemoveRoleAsync(_dataService.TF2PlayTesterRole);
-                    await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
-                    csgoStatus = false;
-                    tf2Status = false;
+                    csgoStatus = 0;
+                    tf2Status = 0;
                     break;
 
-                case "all":
-                case "both":
                 case "subscribe":
                     description += "**All subscriptions added!**\n";
                     await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
                     await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
-                    csgoStatus = true;
-                    tf2Status = true;
+                    csgoStatus = 1;
+                    tf2Status = 1;
                     break;
 
                 case "tf2":
                     description += "**Toggled TF2 Subscription!**\n";
-                    await ToggleRoles(false, true);
-                    tf2Status = !tf2Status;
+                    tf2Status = await ToggleRole(_dataService.TF2PlayTesterRole);
+                    break;
+
+                case "comp":
+                    if (user.Roles.Any(x => x.Id == _dataService.CommunityTesterRole.Id))
+                    {
+                        await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
+                        compStatus = 0;
+                        description += "**Competitive Playtester Removed!**\n";
+                    }
+                    else
+                    {
+                        description += "**You need to have Competitive Playtester to remove it.**\n";
+                        compStatus = 0;
+                    }
                     break;
 
                 case "csgo":
                     description += "**Toggled CSGO Subscription!**\n";
-                    await ToggleRoles(true, false);
-                    csgoStatus = !csgoStatus;
+                    csgoStatus = await ToggleRole(_dataService.CSGOPlayTesterRole);
                     break;
 
                 default:
@@ -916,27 +926,36 @@ namespace BotHATTwaffle2.Commands
                     break;
             }
 
-            description += $"CSGO Playtesting: `{(csgoStatus ? "Subscribed" : "Unsubscribed")}`\n" +
-                           $"TF2 Playtesting: `{(tf2Status ? "Subscribed" : "Unsubscribed")}`";
+            //Refresh user object
+            user = _dataService.GetSocketGuildUser(user.Id);
+
+            if (csgoStatus == -1)
+                csgoStatus = user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id) ? 1 : 0;
+            
+            if (tf2Status == -1)
+                tf2Status = user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id) ? 1 : 0;
+            
+            if (compStatus == -1)
+                compStatus = user.Roles.Any(x => x.Id == _dataService.CompetitiveTesterRole.Id) ? 1 : 0;
+            
+            description += $"CSGO Playtesting: `{(csgoStatus == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
+                           $"TF2 Playtesting: `{(tf2Status == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
+                           $"Competitive Playtesting: `{(compStatus == 1 ? "Subscribed" : "Unsubscribed")}`";
             embed.WithFooter("Type >help playtester for more information");
             embed.WithDescription(description);
 
             await ReplyAsync(embed: embed.Build());
 
-            async Task ToggleRoles(bool csgo, bool tf2)
+            async Task<int> ToggleRole(SocketRole role)
             {
-                if (csgo && user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id))
+                if (user.Roles.All(x => x.Id != role.Id))
                 {
-                    await user.RemoveRoleAsync(_dataService.CSGOPlayTesterRole);
-                    await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
+                    await user.AddRoleAsync(role);
+                    return 1;
                 }
-                else
-                    await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
 
-                if (tf2 && user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id))
-                    await user.RemoveRoleAsync(_dataService.TF2PlayTesterRole);
-                else
-                    await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
+                await user.RemoveRoleAsync(role);
+                return 0;
             }
         }
     }

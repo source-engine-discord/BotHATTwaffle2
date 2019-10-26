@@ -67,10 +67,7 @@ namespace BotHATTwaffle2.Services.Calendar
             }
         }
 
-        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent)
-        {
-            _previousPlaytestEvent = playtestEvent;
-        }
+        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent) => _previousPlaytestEvent = playtestEvent;
 
         public async Task UpdateTestEventCache()
         {
