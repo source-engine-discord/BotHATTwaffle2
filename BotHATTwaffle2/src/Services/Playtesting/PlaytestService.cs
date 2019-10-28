@@ -115,7 +115,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Delay setting previous test event to prevent playtest channel from getting out of order.
             _ = Task.Run(async () =>
             {
-                await Task.Delay(90 * 1000);
+                await Task.Delay(180 * 1000);
                 _calendar.SetPreviousPlaytestEvent(testEvent);
             });
 
