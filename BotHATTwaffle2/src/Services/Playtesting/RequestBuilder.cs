@@ -266,10 +266,20 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _embedMessage.ModifyAsync(x => x.Embed = finalEmbed.Build());
 
                 //Build the string to mention all creators on the event.
+                var mentionChannel = _dataService.AdminBotsChannel;
                 string mentions = null;
                 _testRequest.CreatorsDiscord.ForEach(x => mentions += $"{_dataService.GetSocketGuildUser(x).Mention} ");
 
-                await _dataService.CSGOTestingChannel.SendMessageAsync(
+                if (_testRequest.Game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
+                {
+                    mentionChannel = _dataService.CSGOTestingChannel;
+                }
+                else if (_testRequest.Game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
+                {
+                    mentionChannel = _dataService.TF2TestingChannel;
+                }
+
+                await mentionChannel.SendMessageAsync(
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)");
 
                 await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
@@ -281,7 +291,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
 
                 if (wbEmbed != null)
-                    await _dataService.CSGOTestingChannel.SendMessageAsync(embed: wbEmbed.Build());
+                    await mentionChannel.SendMessageAsync(embed: wbEmbed.Build());
 
                 return;
             }
