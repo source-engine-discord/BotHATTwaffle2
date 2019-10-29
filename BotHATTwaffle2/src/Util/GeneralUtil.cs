@@ -30,14 +30,14 @@ namespace BotHATTwaffle2.Util
         /// <summary>
         ///     Takes a original SteamID and finds the SteamID64 version
         /// </summary>
-        /// <param name="steamID">STEAM_1:0:123456 string</param>
+        /// <param name="steamId">STEAM_1:0:123456 string</param>
         /// <returns>The SteamID64 version</returns>
-        public static long TranslateSteamID(string steamID)
+        public static long TranslateSteamIdToSteam64(string steamId)
         {
             long result = 0;
 
             var template = new Regex(@"STEAM_(\d):([0-1]):(\d+)");
-            var matches = template.Matches(steamID);
+            var matches = template.Matches(steamId);
             if (matches.Count <= 0) return 0;
             var parts = matches[0].Groups;
             if (parts.Count != 4) return 0;
@@ -48,6 +48,23 @@ namespace BotHATTwaffle2.Util
 
             result = ((1 + (1 << 20) + x) << 32) | (y + z);
             return result;
+        }
+
+        public static string TranslateSteamId3ToSteamId(string steamId)
+        {
+            var template = new Regex(@"\[([IUMGAPCgTLca]):([0-5]):([0-9]+)\]");
+
+            if (!template.IsMatch(steamId))
+                return steamId;
+            var match = template.Match(steamId);
+            var parts = match.Groups;
+            int y = 0;
+            var z = double.Parse(parts[3].Value);
+
+            if (z % 2 != 0)
+                y = 1;
+
+            return $"STEAM_1:{y}:{Math.Floor(z / 2)}";
         }
 
         /// <summary>

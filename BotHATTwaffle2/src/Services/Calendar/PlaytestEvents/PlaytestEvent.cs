@@ -477,7 +477,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
 
-            await _dataService.CSGOTestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
+            await TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
                                                                    "There is a playtest starting __now__!" +
                                                                    $"\nType `>playtester {Game.ToString()}` to stop getting {Game.ToString()} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));

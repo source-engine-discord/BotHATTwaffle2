@@ -104,7 +104,7 @@ namespace BotHATTwaffle2.Commands
             //Get the IDs, skip 0 which means no ID found for that line.
             foreach (var s in splitStatus)
             {
-                var id = GeneralUtil.TranslateSteamID(s);
+                var id = GeneralUtil.TranslateSteamIdToSteam64(s);
 
                 if (id != 0)
                     playerIds64.Add(id);
