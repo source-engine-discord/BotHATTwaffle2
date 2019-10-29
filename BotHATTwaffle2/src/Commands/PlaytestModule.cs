@@ -528,6 +528,20 @@ namespace BotHATTwaffle2.Commands
                 DatabaseUtil.UpdateAnnouncedServerReservation(Context.User.Id);
             }
 
+            SocketTextChannel testingChannel = null;
+            if (server.Game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
+                testingChannel = _dataService.CSGOTestingChannel;
+            else if (server.Game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
+                testingChannel = _dataService.TF2TestingChannel;
+
+            if(testingChannel == null)
+            {
+                await ReplyAsync("The game server's marked game isn't valid. This should never happen. I alerted an admin.");
+                await _log.LogMessage(
+                    "Force announce was run, but the game for the server is not CSGO or TF2. This should never happen.",alert:true);
+                return;
+            }
+
             var embed = new EmbedBuilder();
 
             //Length 3 means workshop
@@ -537,7 +551,7 @@ namespace BotHATTwaffle2.Commands
 
                 if (embed != null)
                 {
-                    await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                    await testingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
                                                                            $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
                                                                            "\nType `>roleme Community Tester` to get this role.",
                         embed: embed.Build());
@@ -554,7 +568,7 @@ namespace BotHATTwaffle2.Commands
             else
             {
                 //No embed
-                await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
+                await testingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
                                                                        $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
             }
 
