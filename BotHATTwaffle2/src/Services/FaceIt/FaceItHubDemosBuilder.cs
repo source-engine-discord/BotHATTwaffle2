@@ -389,9 +389,7 @@ namespace BotHATTwaffle2.src.Services.FaceIt
                             FileInfo gzipFileName = new FileInfo(fileLocationGz);
                             using (FileStream fileToDecompressAsStream = gzipFileName.OpenRead())
                             {
-                                string decompressedFileName = fileLocationDem;
-
-                                using (FileStream decompressedStream = File.Create(decompressedFileName))
+                                using (FileStream decompressedStream = File.Create(fileLocationDem))
                                 {
                                     using (GZipStream decompressionStream = new GZipStream(fileToDecompressAsStream, CompressionMode.Decompress))
                                     {
@@ -461,7 +459,7 @@ namespace BotHATTwaffle2.src.Services.FaceIt
             List<FileInfo> jasonFiles = new List<FileInfo>();
             try
             {
-                jasonFiles = DemoParser.ParseFaceItHubDemos(Path.GetDirectoryName(demosPath));
+                jasonFiles = DemoParser.ParseFaceItHubDemos(Path.GetDirectoryName(demosPath)).Result;
             }
             catch (Exception e)
             {

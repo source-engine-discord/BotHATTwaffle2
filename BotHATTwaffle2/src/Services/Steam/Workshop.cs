@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Models.JSON.Steam;
 using BotHATTwaffle2.Util;
@@ -37,6 +41,161 @@ namespace BotHATTwaffle2.Services.Steam
             }
 
             return true;
+        }
+
+        public async Task DownloadWorkshopBsp(DataService _dataService, string fileLocation, string workshopId)
+        {
+            //var apiKey = _dataService.RSettings.ProgramSettings.SteamworksAPI;
+
+            // Send the POST request for item info
+            using (var clientItem = new HttpClient())
+            {
+                //Define our key value pairs
+                var kvp1 = new KeyValuePair<string, string>("itemcount", "1");
+
+                //Create empty key value pair and populate it based input variables.
+                var kvp2 = new KeyValuePair<string, string>("publishedfileids[0]", workshopId);
+
+                var contentItem = new FormUrlEncodedContent(new[]
+                {
+                    kvp1, kvp2
+                });
+
+                string resultContentItem;
+                RootWorkshop workshopJsonItem;
+                var retryCount = 0;
+
+                while (true)
+                {
+                    try
+                    {
+                        // Send the actual post request
+                        clientItem.BaseAddress =
+                            new Uri("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/");
+                        var resultItem = await clientItem.PostAsync("", contentItem);
+                        resultContentItem = await resultItem.Content.ReadAsStringAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        //Don't know what can happen here. Unless we crash later on, just going to catch everything
+                        Console.WriteLine(e);
+                        return;
+                    }
+
+                    //Check if response is empty
+                    if (resultContentItem == "{}")
+                        return;
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        Console.WriteLine(resultContentItem);
+
+                    // Build workshop item embed, and set up author and game data embeds here for scoping reasons
+                    try
+                    {
+                        workshopJsonItem = JsonConvert.DeserializeObject<RootWorkshop>(resultContentItem);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultContentItem);
+
+                        if (retryCount <= 3)
+                        {
+                            Console.WriteLine("Retrying in 2 seconds...");
+                            await Task.Delay(2000);
+                            retryCount++;
+                            continue;
+                        }
+
+                        //Something happened getting the response from Steam. We got a response but it wasn't valid?
+                        Console.WriteLine(e);
+                        Console.WriteLine("Aborting workshop embed...");
+                        return;
+                    }
+
+                    break;
+                }
+
+                // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us
+                if (workshopJsonItem.response.publishedfiledetails[0].result != 1 ||
+                    !workshopJsonItem.response.publishedfiledetails[0].filename.ToLower().Contains(".bsp")) { // assuming 1 == map submission ??
+                    return;
+                }
+
+                // Download the bsp
+                string fileName = workshopJsonItem.response.publishedfiledetails[0].filename.Split(new string[] { "mymaps/", ".bsp" }, StringSplitOptions.None).Skip(1).FirstOrDefault();
+                string fileNameBsp = workshopJsonItem.response.publishedfiledetails[0].filename.Split(new string[] { "mymaps/" }, StringSplitOptions.None).LastOrDefault();
+                string fileLocationZippedBsp = string.Concat(fileLocation, "\\Zipped BSPs\\", fileNameBsp);
+                string fileLocationBsp = string.Concat(fileLocation, "\\BSPs\\", fileNameBsp);
+                string fileLocationOverviewDds = string.Concat(fileLocation, "\\Overviews\\", fileName, "_radar.dds");
+                string fileLocationOverviewTxt = string.Concat(fileLocation, "\\Overviews\\", fileName, ".txt");
+
+                // create folders if needed
+                if (!Directory.Exists(fileLocation))
+                    Directory.CreateDirectory(fileLocation);
+                if (!Directory.Exists(string.Concat(fileLocation, "\\Zipped BSPs\\")))
+                    Directory.CreateDirectory(string.Concat(fileLocation, "\\Zipped BSPs\\"));
+                if (!Directory.Exists(string.Concat(fileLocation, "\\BSPs\\")))
+                    Directory.CreateDirectory(string.Concat(fileLocation, "\\BSPs\\"));
+                if (!Directory.Exists(string.Concat(fileLocation, "\\Overviews\\")))
+                    Directory.CreateDirectory(string.Concat(fileLocation, "\\Overviews\\"));
+
+                if (!File.Exists(fileLocationBsp))
+                {
+                    string downloadUrl = workshopJsonItem.response.publishedfiledetails[0].file_url;
+
+                    using (var client = new WebClient())
+                    {
+                        // download zip file
+                        client.Headers.Add("User-Agent: Other");
+                        try
+                        {
+                            client.DownloadFile(downloadUrl, fileLocationZippedBsp);
+                        }
+                        catch (WebException e)
+                        {
+                            Console.WriteLine("Error downloading demo.");
+
+                            if (File.Exists(fileLocationZippedBsp))
+                            {
+                                File.Delete(fileLocationZippedBsp);
+                            }
+
+                            client.Dispose();
+
+                            Thread.Sleep(1000);
+                        }
+
+                        client.Dispose();
+                    }
+                    // unzip bsp file
+                    ZipFile.ExtractToDirectory(fileLocationZippedBsp, string.Concat(fileLocation, "\\BSPs\\"));
+
+                    // delete the zipped bsp file
+                    File.Delete(fileLocationZippedBsp);
+                }
+
+                // grab overview files from bsp
+                if (!File.Exists(fileLocationOverviewDds) || !File.Exists(fileLocationOverviewTxt))
+                {
+                    GrabOverviewFilesFromBsp(fileLocationBsp);
+                }
+            }
+        }
+
+        public void GrabOverviewFilesFromBsp(string fileLocationBsp)
+        {
+
+
+
+
+
+
+                                    /* SQUIDSKI OVERVIEW CODE HERE */
+
+
+
+
+
         }
 
         public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message, DataService _dataService,

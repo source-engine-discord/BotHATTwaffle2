@@ -6,7 +6,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Renci.SshNet;
+using BotHATTwaffle2.Services.Steam;
 
 namespace BotHATTwaffle2.src.Util
 {
@@ -30,6 +33,16 @@ namespace BotHATTwaffle2.src.Util
         private static bool CanParse()
         {
             return File.Exists(exeFolderName + fileName);
+        }
+
+        private static string GetWorkshopIdFromJasonFile(FileInfo jasonFile)
+        {
+            using (StreamReader reader = new StreamReader(jasonFile.FullName))
+            {
+                string jason = reader.ReadToEnd();
+                var jasonObject = (JObject)JsonConvert.DeserializeObject(jason);
+                return jasonObject["mapInfo"]["WorkshopID"].Value<string>();
+            }
         }
 
         public static FileInfo ParseDemo(string path)
@@ -85,7 +98,7 @@ namespace BotHATTwaffle2.src.Util
             return jasonFile;
         }
 
-        public static List<FileInfo> ParseFaceItHubDemos(string path)
+        public static async Task<List<FileInfo>> ParseFaceItHubDemos(string path)
         {
             mainFolderName = string.Concat(Path.GetTempPath(), @"DemoGrabber\");
 
@@ -122,7 +135,7 @@ namespace BotHATTwaffle2.src.Util
             List<FileInfo> jasonFiles = localDirectoryInfo.EnumerateFiles()
                 .Where(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            List<FileInfo> failedUploads = new List<FileInfo>();
+            /*List<FileInfo> failedUploads = new List<FileInfo>();
             foreach (var file in jasonFiles)
             {
                 var uploadResult = UploadDemo(file).Result;
@@ -140,13 +153,22 @@ namespace BotHATTwaffle2.src.Util
                 var failedUploadsString = string.Join("\n", failedUploads);
                 _ = _log.LogMessage($"Failed to upload some demos: Aborting. {failedUploadsString}", alert: true,
                     color: LOG_COLOR);
-            }
+            }*/
 
             //Delete all files in the directory.
-            foreach (var file in localDirectoryInfo.EnumerateFiles())
+            /*foreach (var file in localDirectoryInfo.EnumerateFiles())
             {
                 _ = _log.LogMessage($"Deleting: {file.FullName}", false, color: LOG_COLOR);
                 file.Delete();
+            }*/
+
+            // grab BSPs to be able to get overviews for the heatmaps
+            var ws = new Workshop();
+            foreach (var jasonFile in jasonFiles)
+            {
+                string workshopId = GetWorkshopIdFromJasonFile(jasonFile);
+
+                await ws.DownloadWorkshopBsp(_dataService, jasonFile.DirectoryName, workshopId);
             }
 
             return jasonFiles;
