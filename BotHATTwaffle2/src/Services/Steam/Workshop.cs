@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -13,6 +14,11 @@ using BotHATTwaffle2.Util;
 using Discord;
 using Discord.WebSocket;
 using Newtonsoft.Json;
+using bsp_pakfile;
+using ICSharpCode.SharpZipLib.Zip;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+using System.Drawing;
 
 namespace BotHATTwaffle2.Services.Steam
 {
@@ -46,6 +52,8 @@ namespace BotHATTwaffle2.Services.Steam
         public async Task DownloadWorkshopBsp(DataService _dataService, string fileLocation, string workshopId)
         {
             //var apiKey = _dataService.RSettings.ProgramSettings.SteamworksAPI;
+
+            //TODO: JIM, REWRITE THIS. WE DO NOT NEED TO CALL THE API TWICE WHEN WE ALREADY HAVE THIS INFO
 
             // Send the POST request for item info
             using (var clientItem = new HttpClient())
@@ -122,11 +130,12 @@ namespace BotHATTwaffle2.Services.Steam
                 }
 
                 // Download the bsp
+                Console.WriteLine("Downloading BSPs");
                 string fileName = workshopJsonItem.response.publishedfiledetails[0].filename.Split(new string[] { "mymaps/", ".bsp" }, StringSplitOptions.None).Skip(1).FirstOrDefault();
                 string fileNameBsp = workshopJsonItem.response.publishedfiledetails[0].filename.Split(new string[] { "mymaps/" }, StringSplitOptions.None).LastOrDefault();
                 string fileLocationZippedBsp = string.Concat(fileLocation, "\\Zipped BSPs\\", fileNameBsp);
                 string fileLocationBsp = string.Concat(fileLocation, "\\BSPs\\", fileNameBsp);
-                string fileLocationOverviewDds = string.Concat(fileLocation, "\\Overviews\\", fileName, "_radar.dds");
+                string fileLocationOverviewPng = string.Concat(fileLocation, "\\Overviews\\", fileName, "_radar.png");
                 string fileLocationOverviewTxt = string.Concat(fileLocation, "\\Overviews\\", fileName, ".txt");
 
                 // create folders if needed
@@ -162,40 +171,101 @@ namespace BotHATTwaffle2.Services.Steam
 
                             client.Dispose();
 
-                            Thread.Sleep(1000);
+                            await Task.Delay(1000);
                         }
 
                         client.Dispose();
                     }
                     // unzip bsp file
-                    ZipFile.ExtractToDirectory(fileLocationZippedBsp, string.Concat(fileLocation, "\\BSPs\\"));
+                    System.IO.Compression.ZipFile.ExtractToDirectory(fileLocationZippedBsp, string.Concat(fileLocation, "\\BSPs\\"));
 
                     // delete the zipped bsp file
                     File.Delete(fileLocationZippedBsp);
                 }
 
                 // grab overview files from bsp
-                if (!File.Exists(fileLocationOverviewDds) || !File.Exists(fileLocationOverviewTxt))
+                if (!File.Exists(fileLocationOverviewPng) || !File.Exists(fileLocationOverviewTxt))
                 {
-                    GrabOverviewFilesFromBsp(fileLocationBsp);
+                    GrabOverviewFilesFromBsp(fileLocation, fileLocationBsp, fileLocationOverviewPng, fileLocationOverviewTxt);
                 }
             }
         }
 
-        public void GrabOverviewFilesFromBsp(string fileLocationBsp)
+        public void GrabOverviewFilesFromBsp(string fileLocation, string fileLocationBsp, string fileLocationOveriewPng, string fileLocationOverviewTxt)
         {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
+            // Parse BSP
+            SourceBSP bsp = new SourceBSP(fileLocationBsp);
 
+            // Getting ready to read the pakfile
+            byte[] ret;
+            using (MemoryStream MS = new MemoryStream(bsp.PAKFILE))
+            using (ICSharpCode.SharpZipLib.Zip.ZipFile zip = new ICSharpCode.SharpZipLib.Zip.ZipFile(MS))
+            {
+                foreach (ZipEntry entry in zip)
+                {
+                    if (!entry.IsFile) continue; // Ignore Directories
 
+                    string name = entry.Name.Replace(" / ", "\\");
+                    // Just reading the entire resource folder
+                    if (!name.StartsWith("resource")) continue;
+                    // File to byte array
+                    using (Stream stream = zip.GetInputStream(entry))
+                    {
+                        ret = new byte[stream.Length];
+                        using (MemoryStream ms = new MemoryStream(ret))
+                            stream.CopyTo(ms);
+                    }
 
+                    string savePath = Path.Combine(fileLocation, @"\TemporaryRadar\");
+                    File.WriteAllBytes(savePath, ret); // Write byte array to file
 
+                }
+            }
+            ret = null;
 
-                                    /* SQUIDSKI OVERVIEW CODE HERE */
+            sw.Stop();
+            Console.WriteLine($"BSP parsed and unpacked in {sw.ElapsedMilliseconds} ms");
 
+            // Convert Image files to PNG
+            var ext = new List<string> { ".dds" };
+            var listOfDdsFiles = Directory.GetFiles(Path.Combine(fileLocation, @"\TemporaryRadar\resource\overviews\"), "*.*", SearchOption.AllDirectories)
+                .Where(s => ext.Contains(Path.GetExtension(s)));
 
-
-
-
+            // Iterate over every DDS File
+            foreach (var radarImagePath in listOfDdsFiles)
+            {
+                using (var imageFile = Pfim.Pfim.FromFile(radarImagePath))
+                {
+                    PixelFormat format;
+                    Console.WriteLine($"Radar image format found to be: {imageFile.Format}");
+                    switch(imageFile.Format)
+                    {
+                        case Pfim.ImageFormat.Rgb24:
+                            format = PixelFormat.Format24bppRgb;
+                            break;
+                        default:
+                            throw new NotImplementedException("The given DDS format specifics are not implemented.");
+                    }
+                    var handle = GCHandle.Alloc(imageFile.Data, GCHandleType.Pinned);
+                    try
+                    {
+                        var data = Marshal.UnsafeAddrOfPinnedArrayElement(imageFile.Data, 0);
+                        var bitmap = new Bitmap(imageFile.Width, imageFile.Height, imageFile.Stride, format, data);
+                        bitmap.Save(Path.ChangeExtension(radarImagePath, ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                    finally
+                    {
+                        handle.Free();
+                    }
+                }
+            }
+            // TODO: Copy all the image files in \\TemporaryRadar\\Resource\\Overviews to \\Overviews\\
+            // TODO: Delete \\TemporaryRadar\\
+            // TODO: Make sure this method actually works. I couldn't test because of Jim's awful code
+            Console.WriteLine("Successfully converted all radars to .PNG and moved TXT file");
         }
 
         public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message, DataService _dataService,
@@ -346,7 +416,7 @@ namespace BotHATTwaffle2.Services.Steam
                     .WithTitle($"Creator: {workshopJsonAuthor.response.players[0].personaname}")
                     .WithUrl(workshopJsonAuthor.response.players[0].profileurl)
                     .WithImageUrl(workshopJsonItem.response.publishedfiledetails[0].preview_url)
-                    .WithColor(new Color(71, 126, 159));
+                    .WithColor(new Discord.Color(71, 126, 159));
 
                 var gameId = workshopJsonGameData.applist.apps.SingleOrDefault(x =>
                     x.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id);
