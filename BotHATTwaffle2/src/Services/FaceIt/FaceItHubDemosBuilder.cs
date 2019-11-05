@@ -166,7 +166,7 @@ namespace BotHATTwaffle2.src.Services.FaceIt
         /// <returns></returns>
         private FaceItHubEndpointsResponsesInfo CallHubApiEndpoint(string hubApiEndpoint)
         {
-            FaceItHubEndpointsResponsesInfo faceItHubEndpointsResponsesInfo = new FaceItHubEndpointsResponsesInfo();
+            FaceItHubEndpointsResponsesInfo faceItHubEndpointsResponsesInfo;
 
             List<string> fileNames = new List<string>();
             IDictionary<string, string> demoMapnames = new Dictionary<string, string>();
@@ -233,10 +233,10 @@ namespace BotHATTwaffle2.src.Services.FaceIt
 
                         for (int matchNumber = 0; matchNumber < maxtoCheck; matchNumber++)
                         {
-                            var jsonItemsFirstMatch = jsonItems.ElementAt(matchNumber);
+                            var jsonItemsCurrentGame = jsonItems.ElementAt(matchNumber);
 
-                            var serialisedDemoMapname = (jsonItemsFirstMatch["voting"] != null && jsonItemsFirstMatch["voting"]["map"] != null && jsonItemsFirstMatch["voting"]["map"]["pick"] != null) // No idea what map it is if there is no voting stage
-                                                        ? jsonItemsFirstMatch["voting"]["map"]["pick"]
+                            var serialisedDemoMapname = (jsonItemsCurrentGame["voting"] != null && jsonItemsCurrentGame["voting"]["map"] != null && jsonItemsCurrentGame["voting"]["map"]["pick"] != null) // No idea what map it is if there is no voting stage
+                                                        ? jsonItemsCurrentGame["voting"]["map"]["pick"]
                                                         : "Unknown";
                             var demoMapname = (serialisedDemoMapname != null && serialisedDemoMapname.FirstOrDefault() != null)
                                                 ? serialisedDemoMapname.FirstOrDefault().ToString()
@@ -245,10 +245,10 @@ namespace BotHATTwaffle2.src.Services.FaceIt
                                                     : null
                                                 );
 
-                            var serialisedDemoMatchStatus = jsonItemsFirstMatch["status"];
+                            var serialisedDemoMatchStatus = jsonItemsCurrentGame["status"];
                             var matchStatus = (serialisedDemoMatchStatus != null) ? serialisedDemoMatchStatus.ToString() : null;
 
-                            var serialisedMatchFinishedAt = jsonItemsFirstMatch["finished_at"];
+                            var serialisedMatchFinishedAt = jsonItemsCurrentGame["finished_at"];
                             var matchFinishedAtString = (serialisedMatchFinishedAt != null) ? serialisedMatchFinishedAt.ToString() : null;
                             int.TryParse(matchFinishedAtString, out int matchFinishedAt);
 
@@ -265,10 +265,11 @@ namespace BotHATTwaffle2.src.Services.FaceIt
                             // if the match finished, grab the demoUrl
                             else if (matchStatus != null && matchStatus.ToUpper() == "FINISHED")
                             {
-                                var serialisedDemoUrl = jsonItemsFirstMatch["demo_url"];
+                                var serialisedDemoUrl = jsonItemsCurrentGame["demo_url"];
                                 var demoUrl = (serialisedDemoUrl != null && serialisedDemoUrl.FirstOrDefault() != null) ? serialisedDemoUrl.FirstOrDefault().ToString() : null;
 
-                                string fileName = demoUrl.Split('/').Last().Replace(".dem.gz", string.Empty);
+                                var serialisedMatchId = jsonItemsCurrentGame["match_id"];
+                                var fileName = (serialisedMatchId != null) ? serialisedMatchId.ToString() : null;
 
                                 // if a game has ended since the api was last called, the last demo from the previous call will have been returned again, so skip it
                                 if (!string.IsNullOrWhiteSpace(fileName) && !fileNames.Contains(fileName))

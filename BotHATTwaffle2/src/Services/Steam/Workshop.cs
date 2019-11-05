@@ -146,7 +146,7 @@ namespace BotHATTwaffle2.Services.Steam
                 if (!Directory.Exists(string.Concat(fileLocation, "\\Overviews\\")))
                     Directory.CreateDirectory(string.Concat(fileLocation, "\\Overviews\\"));
 
-                if (!File.Exists(fileLocationBsp))
+                if (!File.Exists(fileLocationBsp) && (!File.Exists(fileLocationOverviewPng) || !File.Exists(fileLocationOverviewTxt)))
                 {
                     string downloadUrl = workshopJsonItem.response.publishedfiledetails[0].file_url;
 
