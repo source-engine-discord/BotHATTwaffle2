@@ -1,24 +1,22 @@
-﻿using System;
+﻿using BotHATTwaffle2.Models.JSON.Steam;
+using BotHATTwaffle2.Util;
+using bsp_pakfile;
+using Discord;
+using Discord.WebSocket;
+using ICSharpCode.SharpZipLib.Zip;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using BotHATTwaffle2.Models.JSON.Steam;
-using BotHATTwaffle2.Util;
-using Discord;
-using Discord.WebSocket;
-using Newtonsoft.Json;
-using bsp_pakfile;
-using ICSharpCode.SharpZipLib.Zip;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Drawing;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace BotHATTwaffle2.Services.Steam
 {
@@ -53,7 +51,7 @@ namespace BotHATTwaffle2.Services.Steam
         {
             //var apiKey = _dataService.RSettings.ProgramSettings.SteamworksAPI;
 
-            //TODO: JIM, REWRITE THIS. WE DO NOT NEED TO CALL THE API TWICE WHEN WE ALREADY HAVE THIS INFO
+            //TODO: JIM, REWRITE THIS. WE DO NOT NEED TO WRITE THE API CALL AGAIN. PUT IT IN A SINGULAR METHOD
 
             // Send the POST request for item info
             using (var clientItem = new HttpClient())
@@ -186,17 +184,20 @@ namespace BotHATTwaffle2.Services.Steam
                 // grab overview files from bsp
                 if (!File.Exists(fileLocationOverviewPng) || !File.Exists(fileLocationOverviewTxt))
                 {
-                    GrabOverviewFilesFromBsp(fileLocation, fileLocationBsp, fileLocationOverviewPng, fileLocationOverviewTxt);
+                    GrabOverviewFilesFromBsp(fileLocation, fileLocationBsp);
                 }
             }
         }
 
-        public void GrabOverviewFilesFromBsp(string fileLocation, string fileLocationBsp, string fileLocationOveriewPng, string fileLocationOverviewTxt)
+        public void GrabOverviewFilesFromBsp(string fileLocation, string fileLocationBsp)
         {
+            // TODO: This method will most definitely fail if a .BSP is grabbed that doesn't have anything packed under the resource folder. Not exactly sure how to check that right now.
+
+            // This is just for checking how long it takes to extract the radar stuff from the BSP. You can remove this if you want
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            // Parse BSP
+            // Parse BSP using our BSP model
             SourceBSP bsp = new SourceBSP(fileLocationBsp);
 
             // Getting ready to read the pakfile
@@ -204,67 +205,77 @@ namespace BotHATTwaffle2.Services.Steam
             using (MemoryStream MS = new MemoryStream(bsp.PAKFILE))
             using (ICSharpCode.SharpZipLib.Zip.ZipFile zip = new ICSharpCode.SharpZipLib.Zip.ZipFile(MS))
             {
+                // Iterate over everything in the pakfile lump
                 foreach (ZipEntry entry in zip)
                 {
-                    if (!entry.IsFile) continue; // Ignore Directories
+                    if (!entry.IsFile) continue;
+                    string name = entry.Name;
 
-                    string name = entry.Name.Replace(" / ", "\\");
-                    // Just reading the entire resource folder
+                    // We're just gonna grab everything packed until the resource folder
                     if (!name.StartsWith("resource")) continue;
-                    // File to byte array
+                    
+                    // We've found a file we're looking for, so we're gonna convert it to a memory stream and send that directly to a file
                     using (Stream stream = zip.GetInputStream(entry))
                     {
                         ret = new byte[stream.Length];
                         using (MemoryStream ms = new MemoryStream(ret))
                             stream.CopyTo(ms);
                     }
+                    // Changing the relative path so it goes into the Overviews folder we want
+                    var nameArray = name.Split("/");
+                    name = string.Concat("\\Overviews\\", nameArray[nameArray.Length - 1]);
 
-                    string savePath = Path.Combine(fileLocation, @"\TemporaryRadar\");
+                    // Save our overview files into the Overviews folder
+                    string savePath = string.Concat(fileLocation, name);
                     File.WriteAllBytes(savePath, ret); // Write byte array to file
 
                 }
             }
             ret = null;
 
+            // Also part of the stopwatch/timing function. Can remove if you want later.
             sw.Stop();
             Console.WriteLine($"BSP parsed and unpacked in {sw.ElapsedMilliseconds} ms");
 
-            // Convert Image files to PNG
+            // Get a list of every DDS file that we need to convert
             var ext = new List<string> { ".dds" };
-            var listOfDdsFiles = Directory.GetFiles(Path.Combine(fileLocation, @"\TemporaryRadar\resource\overviews\"), "*.*", SearchOption.AllDirectories)
+            var listOfDdsFiles = Directory.GetFiles(string.Concat(fileLocation, "\\Overviews\\"), "*.*", SearchOption.AllDirectories)
                 .Where(s => ext.Contains(Path.GetExtension(s)));
 
-            // Iterate over every DDS File
+            // Iterate over every DDS File to convert to PNG
             foreach (var radarImagePath in listOfDdsFiles)
             {
+                // All this code here is just converting from DDS -> PNG
                 using (var imageFile = Pfim.Pfim.FromFile(radarImagePath))
                 {
                     PixelFormat format;
                     Console.WriteLine($"Radar image format found to be: {imageFile.Format}");
                     switch(imageFile.Format)
                     {
+                        // I haven't seen radars anything other than RGB24 so, let's just hope there's not one like that
                         case Pfim.ImageFormat.Rgb24:
                             format = PixelFormat.Format24bppRgb;
                             break;
                         default:
                             throw new NotImplementedException("The given DDS format specifics are not implemented.");
                     }
+                    // Need to tell the garbage collector that wer're still using the image data
                     var handle = GCHandle.Alloc(imageFile.Data, GCHandleType.Pinned);
                     try
                     {
+                        // Not sure what exactly will happen if this fails. So let's hope it doesn't
                         var data = Marshal.UnsafeAddrOfPinnedArrayElement(imageFile.Data, 0);
                         var bitmap = new Bitmap(imageFile.Width, imageFile.Height, imageFile.Stride, format, data);
                         bitmap.Save(Path.ChangeExtension(radarImagePath, ".png"), System.Drawing.Imaging.ImageFormat.Png);
                     }
                     finally
                     {
+                        // We no longer need the image data, so we're going to tell the garbage collector it can get rid of it, as well as just deleting the .dds
                         handle.Free();
+                        File.Delete(radarImagePath);
                     }
                 }
             }
-            // TODO: Copy all the image files in \\TemporaryRadar\\Resource\\Overviews to \\Overviews\\
-            // TODO: Delete \\TemporaryRadar\\
-            // TODO: Make sure this method actually works. I couldn't test because of Jim's awful code
             Console.WriteLine("Successfully converted all radars to .PNG and moved TXT file");
         }
 
