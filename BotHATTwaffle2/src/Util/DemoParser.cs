@@ -19,9 +19,9 @@ namespace BotHATTwaffle2.src.Util
         private static LogHandler _log;
         private static DataService _dataService;
         private static string mainFolderName = @"IDemO\"; // Changes to `string.Concat(Path.GetTempPath(), @"DemoGrabber\")` for bulk faceit demo parsing in ParseFaceItHubDemos()
-        //private static string exeFolderName = @"IDemO\";
+        //private static string exeFolderName = @"IDemO\"; // NEEDS TO BE THIS WHEN RUNNING ON IDO
         private static string exeFolderName = @"F:\GitHub Files\CSGODemoCSV\TopStatsWaffle\bin\Release\";
-        private static string outputFolderName = "matches";                                                                                         // CHANGES TO "parsed" IN IDemO VERSION 1.1.0
+        private static string outputFolderName = "parsed";
         private static string fileName = "CSGODemoCSV.exe";
 
         public static void SetHandlers(LogHandler log, DataService data)
@@ -106,7 +106,7 @@ namespace BotHATTwaffle2.src.Util
                 return null;
 
             //Start the process
-            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName, $"-folders \"{path}\" -recursive -nochickens");
+            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName, $"-folders \"{path}\" -output \"{outputFolderName}\" -recursive -nochickens -samefilename -samefolderstructure");
             processStartInfo.WorkingDirectory = mainFolderName;
             var demoProcess = Process.Start(processStartInfo);
 

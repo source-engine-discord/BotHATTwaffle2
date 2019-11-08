@@ -349,6 +349,7 @@ namespace BotHATTwaffle2.src.Services.FaceIt
                     string fileLocation = string.Concat(localPath, hubName, @"\", faceItHubEndpointsResponsesInfo.DemoMapnames[fileName], @"\");
                     string fileLocationGz = string.Concat(fileLocation, fileName, ".gz");
                     string fileLocationDem = string.Concat(fileLocation, fileName, ".dem");
+                    string fileLocationOldJson = string.Concat(fileLocation, "parsed\\", faceItHubEndpointsResponsesInfo.DemoMapnames[fileName], "_", fileName, ".json");
 
                     // create folders if needed
                     if (!Directory.Exists(fileLocation))
@@ -356,7 +357,7 @@ namespace BotHATTwaffle2.src.Services.FaceIt
                         Directory.CreateDirectory(fileLocation);
                     }
 
-                    if (!File.Exists(fileLocationDem))
+                    if (!File.Exists(fileLocationOldJson))
                     {
                         using (var client = new WebClient())
                         {
