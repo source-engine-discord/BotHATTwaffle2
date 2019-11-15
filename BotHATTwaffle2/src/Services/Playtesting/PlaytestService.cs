@@ -268,7 +268,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                             .Select(line => line.Substring(line.IndexOf(':') + 1).Trim()).ToImmutableArray();
                         var mod = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
 
-                        embed.AddField(item.Summary,
+                        embed.AddField($"{item.Summary} - {description.ElementAtOrDefault(3)}",
                             $"`Scheduled`\nStart Time: `{item.Start.DateTime:ddd, MMM d, HH:mm}`\nEnd Time: `{item.End.DateTime:ddd, MMM d, HH:mm}`\nModerator: {mod.Mention}",
                             true);
                     }

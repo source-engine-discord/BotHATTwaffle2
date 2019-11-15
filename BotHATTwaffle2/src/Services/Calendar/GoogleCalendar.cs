@@ -43,6 +43,7 @@ namespace BotHATTwaffle2.Services.Calendar
             Console.WriteLine("Done!");
 
             _previousPlaytestEvent = DatabaseUtil.GetPreviousTest();
+
         }
 
         /// <summary>
@@ -109,7 +110,8 @@ namespace BotHATTwaffle2.Services.Calendar
             }
 
             //Prevent the previous playtest event from counting as another playtest.
-            tempPlaytestEvents.RemoveAll(x => x.Title.Equals(_previousPlaytestEvent.Title));
+            if(_previousPlaytestEvent != null)
+                tempPlaytestEvents.RemoveAll(x => x.Title.Equals(_previousPlaytestEvent.Title));
 
             if (tempPlaytestEvents.Count == 0)
             {
@@ -136,7 +138,8 @@ namespace BotHATTwaffle2.Services.Calendar
             if (tempNextCsgoTest == null)
             {
                 //Delete the old message, we have no test to display.
-                await _activeCsgoPlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeCsgoPlaytestEvent
+                if (_activeCsgoPlaytestEvent != null)
+                    await _activeCsgoPlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeCsgoPlaytestEvent
                     .AnnouncementMessage);
                 //Make the active test null
                 _activeCsgoPlaytestEvent = null;
@@ -171,7 +174,8 @@ namespace BotHATTwaffle2.Services.Calendar
             if (tempNextTf2Test == null)
             {
                 //Delete the old message, we have no test to display.
-                await _activeTf2PlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeTf2PlaytestEvent
+                if(_activeTf2PlaytestEvent != null)
+                    await _activeTf2PlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeTf2PlaytestEvent
                     .AnnouncementMessage);
                 //Make the active test null
                 _activeTf2PlaytestEvent = null;

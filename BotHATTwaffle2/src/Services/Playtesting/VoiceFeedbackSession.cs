@@ -70,6 +70,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     //Do nothing, somehow we failed to unmute.
                 }
+                //Holy rate limit batman
+                await Task.Delay(500);
             }
 
             _disposed = true;

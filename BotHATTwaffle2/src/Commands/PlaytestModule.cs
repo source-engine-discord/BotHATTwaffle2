@@ -127,7 +127,7 @@ namespace BotHATTwaffle2.Commands
                         return;
                     }
 
-                    await _log.LogMessage($"`{Context.User}` has started listening to user feedback", color: LOG_COLOR);
+                    await _log.LogMessage($"`{Context.User}` has started feedback queue session", color: LOG_COLOR);
                     _scheduleHandler.DisablePlayingUpdate();
                     break;
                 case "e":
