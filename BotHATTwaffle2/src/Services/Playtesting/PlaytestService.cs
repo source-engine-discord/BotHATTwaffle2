@@ -337,6 +337,19 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
+        /// WTF is this method name. God you suck.
+        /// </summary>
+        /// <returns></returns>
+        private void AllowReservationsStopCount()
+        {
+            //Stop asking server for player counts
+            _dataService.SetIncludePlayerCount(false);
+            _dataService.SetPlayerCount("0");
+            //We posted a new announcement, meaning we can allow reservations again.
+            _reservationService.AllowReservations();
+        }
+
+        /// <summary>
         ///     Posts a new playtest announcement
         /// </summary>
         /// <returns></returns>
@@ -345,12 +358,15 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Posting new announcement for {testEvent.Title}", false, color: LOG_COLOR);
 
-            //Stop asking server for player counts
-            _dataService.SetIncludePlayerCount(false);
-            _dataService.SetPlayerCount("0");
-            //We posted a new announcement, meaning we can allow reservations again.
-            _reservationService.AllowReservations();
+            //Delay allowing reservations. This is because >p post creates a new announcement.
+            //As a result people would normally be able to reserve as soon as a test is over.
+            JobManager.AddJob(AllowReservationsStopCount, s => s
+                .WithName($"[AllowReservationsStopCount]").ToRunOnceIn(30).Minutes());
 
+            _ = _log.LogMessage("AllowReservationsStopCount scheduled for:" +
+                                $"\n{JobManager.GetSchedule($"[AllowReservationsStopCount]").NextRun}", false,
+                color: LOG_COLOR);
+            
             try
             {
                 //Make the announcement and store to a variable
@@ -474,9 +490,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             JobManager.RemoveJob($"[Playtest20Minute_{game}]");
             JobManager.RemoveJob($"[PlaytestStarting_{game}]");
             JobManager.RemoveJob($"[QueryPlayerCount_{game}]");
-
-            //Stop getting server listen messages.
-            _logReceiverService.StopLogReceiver();
         }
 
         public void ScheduleAllPlaytestAnnouncements()
@@ -558,8 +571,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = _log.LogMessage($"Running playtesting starting in X minutes task for {playtestEvent.Title}", true,
                 color: LOG_COLOR);
 
-            await _reservationService.DisableReservations();
-
             await playtestEvent.PlaytestStartingInTask(_rconService, _logReceiverService, _announcementMessage);
         }
 
@@ -571,6 +582,10 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             _ = _log.LogMessage($"Running playtesting starting in 20 minutes task for {playtestEvent.Title}", true,
                 color: LOG_COLOR);
+
+            await _reservationService.DisableReservations();
+            JobManager.RemoveJob($"[AllowReservationsStopCount]");
+
             await playtestEvent.PlaytestTwentyMinuteTask(_rconService, _logReceiverService);
         }
 
@@ -583,6 +598,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = _log.LogMessage("Running playtesting starting in 15 minutes task...", true, color: LOG_COLOR);
 
             await _reservationService.DisableReservations();
+            JobManager.RemoveJob($"[AllowReservationsStopCount]");
 
             await playtestEvent.PlaytestFifteenMinuteTask(_rconService, _logReceiverService);
         }
@@ -596,6 +612,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = _log.LogMessage("Running playtesting starting now task...", false, color: LOG_COLOR);
 
             await _reservationService.DisableReservations();
+            JobManager.RemoveJob($"[AllowReservationsStopCount]");
 
             await playtestEvent.PlaytestStartingTask(_rconService, _logReceiverService, _announcementMessage);
         }

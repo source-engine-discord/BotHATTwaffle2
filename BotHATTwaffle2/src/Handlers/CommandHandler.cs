@@ -59,6 +59,10 @@ namespace BotHATTwaffle2.Handlers
 
             _dataService.MessageCount++;
 
+            //Ignore users who are inside interactive sessions
+            if (_dataService.IgnoreListenList.Contains(message.Author))
+                return;
+
             // Create a number to track where the prefix ends and the command begins
             var argPos = 0;
 
@@ -165,10 +169,6 @@ namespace BotHATTwaffle2.Handlers
         /// <returns></returns>
         internal async void Listen(SocketMessage message)
         {
-            //Ignore users who are inside interactive sessions
-            if (_dataService.IgnoreListenList.Contains(message.Author))
-                return;
-
             //Process webhooks
             if (message.Channel == _dataService.WebhookChannel && message.Author.IsWebhook)
             {

@@ -12,11 +12,12 @@ namespace BotHATTwaffle2.src.Services.Calendar
             Requested
         }
 
-        public Playtest(int testType, string testName, DateTime startTime)
+        public Playtest(int testType, string testName, DateTime startTime, string game)
         {
             TestType = testType;
             TestName = testName;
             StartTime = startTime;
+            Game = game;
         }
 
         public Playtest(Event googleCalendarEvent)
@@ -24,6 +25,7 @@ namespace BotHATTwaffle2.src.Services.Calendar
             TestType = (int) TypeOfTest.Scheduled;
             TestName = googleCalendarEvent.Summary;
             StartTime = googleCalendarEvent.Start.DateTime.Value;
+            Game = TestName.Substring(0, TestName.IndexOf(' '));
         }
 
         public Playtest(PlaytestRequest playtestRequest)
@@ -31,11 +33,13 @@ namespace BotHATTwaffle2.src.Services.Calendar
             TestType = (int) TypeOfTest.Requested;
             TestName = playtestRequest.MapName;
             StartTime = playtestRequest.TestDate;
+            Game = playtestRequest.Game;
         }
 
         public int TestType { get; }
         public string TestName { get; }
         public DateTime StartTime { get; }
+        public string Game { get; }
 
         public override string ToString()
         {

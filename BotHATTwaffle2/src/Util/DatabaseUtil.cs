@@ -21,6 +21,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_PTREQUESTS = "playtestRequests";
         private const string COLLECTION_COMP = "compPw";
         private const string COLLECTION_USERS_STEAMID = "usersSteamID";
+        private const string COLLECTION_PREVIOUS_TEST = "previousTest";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -29,6 +30,75 @@ namespace BotHATTwaffle2.Util
         {
             _dataService = data;
             _log = log;
+        }
+
+        /// <summary>
+        ///     Gets the stored CompPw from the DB.
+        /// </summary>
+        /// <returns>Found CompPw or null</returns>
+        public static PreviousTest GetPreviousTest()
+        {
+            PreviousTest found = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<PreviousTest>(COLLECTION_PREVIOUS_TEST);
+
+                    found = col.FindOne(Query.EQ("_id", 1));
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting PreviousTest\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return found;
+            }
+
+            return found;
+        }
+
+        /// <summary>
+        ///     Stores a competitive playtest password
+        /// </summary>
+        /// <param name="playtestEvent">Playtest event to store info</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool StorePreviousTest(PreviousTest previousTest)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<PreviousTest>(COLLECTION_PREVIOUS_TEST);
+
+                    var found = col.FindOne(Query.EQ("_id", 1));
+
+                    //If not null, we need to remove the old record first.
+                    if (found != null)
+                    {
+                        if (_dataService.RSettings.ProgramSettings.Debug)
+                            _ = _log.LogMessage("Old PreviousTest found, deleting", false, color: LOG_COLOR);
+
+                        col.Delete(1);
+                    }
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Adding new record for previous test... {previousTest.Title}",
+                            false, color: LOG_COLOR);
+
+                    //Insert new entry with ID of 1, and our values.
+                    col.Insert(previousTest);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened storing PreviousTest\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -103,7 +173,6 @@ namespace BotHATTwaffle2.Util
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
-
             return true;
         }
 

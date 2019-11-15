@@ -177,7 +177,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     }
                     else
                     {
-                        shortenedEventSummary = playtestEvent.TestName;
+                        shortenedEventSummary = $"{playtestEvent.Game}|{playtestEvent.TestName}";
                         playtestTitleColor = playtestRequestTitleColor;
                     }
 

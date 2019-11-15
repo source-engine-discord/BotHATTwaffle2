@@ -636,6 +636,11 @@ namespace BotHATTwaffle2.Commands
                     var stopReply = await _rconService.RconCommand(testInfo.ServerAddress,
                         $"tv_stoprecord;say {testInfo.DemoName} stopped recording!");
 
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"Command sent to {testInfo.ServerAddress}", _dataService.Guild.IconUrl)
+                        .WithDescription($"```Stopping Demo Recording and fetching from server...```")
+                        .WithColor(new Color(55, 165, 55)).Build());
+
                     //Download demo, don't wait.
                     _ = Task.Run(() => { _ = DownloadHandler.DownloadPlaytestDemo(testInfo); });
 
@@ -876,7 +881,9 @@ namespace BotHATTwaffle2.Commands
         [Remarks("Type `>playtester` or `>pt [Unsubscribe]` to remove all subscriptions (Does not remove competitive)." +
                  "\nType `>playtester [Subscribe]` to add all subscriptions." +
                  "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription." +
-                 "\nType `>playtester [Comp]` to remove the competitive tester. You cannot re-add it yourself if removed.")]
+                 "\nType `>playtester [Community]` to toggle community tester." +
+                 "\nType `>playtester [Comp]` to remove the competitive tester. You cannot re-add it yourself if removed." +
+                 "\nType `>playtester [Show]` to see your subscriptions.")]
         public async Task PlaytesterAsync([Optional] string game)
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
@@ -886,6 +893,7 @@ namespace BotHATTwaffle2.Commands
             var description = "";
 
             int csgoStatus =-1;
+            int communityStatus =-1;
             int tf2Status = -1;
             int compStatus = -1;
 
@@ -915,6 +923,11 @@ namespace BotHATTwaffle2.Commands
                     tf2Status = await ToggleRole(_dataService.TF2PlayTesterRole);
                     break;
 
+                case "community":
+                    description += "**Toggled Community Subscription!**\n";
+                    communityStatus = await ToggleRole(_dataService.CommunityTesterRole);
+                    break;
+
                 case "comp":
                     if (user.Roles.Any(x => x.Id == _dataService.CommunityTesterRole.Id))
                     {
@@ -928,10 +941,17 @@ namespace BotHATTwaffle2.Commands
                         compStatus = 0;
                     }
                     break;
-
+                
                 case "csgo":
                     description += "**Toggled CSGO Subscription!**\n";
                     csgoStatus = await ToggleRole(_dataService.CSGOPlayTesterRole);
+                    break;
+
+                case "show":
+                    embed.AddField("Playtester stats:",$"CSGO: `{_dataService.CSGOPlayTesterRole.Members.Count()}` Members" +
+                                                       $"\nTF2: `{_dataService.TF2PlayTesterRole.Members.Count()}` Members" +
+                                                       $"\nCommunity: `{_dataService.CommunityTesterRole.Members.Count()}` Members" +
+                                                       $"\nCompetitive: `{_dataService.CompetitiveTesterRole.Members.Count()}` Members");
                     break;
 
                 default:
@@ -951,9 +971,13 @@ namespace BotHATTwaffle2.Commands
             
             if (compStatus == -1)
                 compStatus = user.Roles.Any(x => x.Id == _dataService.CompetitiveTesterRole.Id) ? 1 : 0;
+
+            if (communityStatus == -1)
+                communityStatus = user.Roles.Any(x => x.Id == _dataService.CommunityTesterRole.Id) ? 1 : 0;
             
             description += $"CSGO Playtesting: `{(csgoStatus == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
                            $"TF2 Playtesting: `{(tf2Status == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
+                           $"Community Playtesting: `{ (communityStatus == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
                            $"Competitive Playtesting: `{(compStatus == 1 ? "Subscribed" : "Unsubscribed")}`";
             embed.WithFooter("Type >help playtester for more information");
             embed.WithDescription(description);
