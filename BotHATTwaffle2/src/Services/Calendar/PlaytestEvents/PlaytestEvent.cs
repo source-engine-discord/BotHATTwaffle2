@@ -119,6 +119,12 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Workshop URL
             WorkshopLink = GeneralUtil.ValidateUri(description.ElementAtOrDefault(2));
 
+            if (ImageGallery == null || WorkshopLink == null)
+            {
+                _ = _log.LogMessage("Issue with Imgur Album or Workshop link when parsing test event.", alert:true);
+                return;
+            }
+
             //Game mode
             SetGameMode(description.ElementAtOrDefault(3));
 

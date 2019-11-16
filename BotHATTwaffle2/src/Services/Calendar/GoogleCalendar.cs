@@ -41,9 +41,6 @@ namespace BotHATTwaffle2.Services.Calendar
                 ApplicationName = "BotHATTwaffle 2"
             });
             Console.WriteLine("Done!");
-
-            _previousPlaytestEvent = DatabaseUtil.GetPreviousTest();
-
         }
 
         /// <summary>
@@ -73,8 +70,17 @@ namespace BotHATTwaffle2.Services.Calendar
 
         public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent)
         {
-            _previousPlaytestEvent = new PreviousTest(playtestEvent.Title);
+            _previousPlaytestEvent = new PreviousTest
+            {
+                Id = 1,
+                Title = playtestEvent.Title
+            };
             DatabaseUtil.StorePreviousTest(_previousPlaytestEvent);
+        }
+
+        public void BootStorePreviousPlaytestEvent()
+        {
+            _previousPlaytestEvent = DatabaseUtil.GetPreviousTest();
         }
 
         public async Task UpdateTestEventCache()

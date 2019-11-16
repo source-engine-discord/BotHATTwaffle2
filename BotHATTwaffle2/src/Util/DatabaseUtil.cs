@@ -47,6 +47,8 @@ namespace BotHATTwaffle2.Util
                     var col = db.GetCollection<PreviousTest>(COLLECTION_PREVIOUS_TEST);
 
                     found = col.FindOne(Query.EQ("_id", 1));
+
+                    _ = _log.LogMessage($"Previous playtest event of {found.Title}");
                 }
             }
             catch (Exception e)

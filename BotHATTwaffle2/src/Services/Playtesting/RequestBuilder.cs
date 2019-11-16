@@ -795,6 +795,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return true;
 
                 case "imgur":
+                    if (GeneralUtil.ValidateUri(data) == null)
+                    {
+                        await Display("Invalid URL! Be sure to include `https://`\n" +
+                                      $"You provided `{data}`\n" + _wizardText[5]);
+                        return false;
+                    }
+
                     if (GeneralUtil.GetImgurAlbum(data) == null)
                     {
                         await Display("Invalid Imgur Album!\n" +
@@ -806,6 +813,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                     return true;
 
                 case "workshop":
+                    if (GeneralUtil.ValidateUri(data) == null)
+                    {
+                        await Display("Invalid URL! Be sure to include `https://`\n" +
+                                      $"You provided `{data}`\n" + _wizardText[5]);
+                        return false;
+                    }
+
                     if (GeneralUtil.ValidateWorkshopURL(data))
                     {
                         _testRequest.WorkshopURL = data;

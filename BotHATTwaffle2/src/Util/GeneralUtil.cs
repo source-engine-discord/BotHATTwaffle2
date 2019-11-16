@@ -78,8 +78,6 @@ namespace BotHATTwaffle2.Util
             {
                 if (Uri.IsWellFormedUriString(input, UriKind.Absolute))
                     return new Uri(input, UriKind.Absolute);
-
-                throw new UriFormatException($"Unable to create URI for input {input}");
             }
             catch (UriFormatException e)
             {
