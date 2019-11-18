@@ -55,7 +55,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<LogReceiverService>()
                 .AddSingleton<VoiceChannelHandler>()
                 .AddSingleton<IHelpService, HelpService>()
-                .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(5)))
+                .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(10)))
                 .BuildServiceProvider();
 
             _dataService = _services.GetRequiredService<DataService>();

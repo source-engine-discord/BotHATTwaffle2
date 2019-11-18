@@ -135,6 +135,8 @@ namespace BotHATTwaffle2.Services.SRCDS
                     }
                 });
 
+                _ = _logHandler.LogMessage($"Starting in game feedback in file: {feedbackLogName}");
+
                 return true;
             }
 

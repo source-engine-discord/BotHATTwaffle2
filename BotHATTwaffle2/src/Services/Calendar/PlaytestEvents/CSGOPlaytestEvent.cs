@@ -269,8 +269,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             //Start the log listener for users to give feedback before the test starts.
             var gameMode = IsCasual ? "casual" : "comp";
-            logReceiverService.EnableFeedback($"{StartDateTime:MM_dd_yyyy}" +
-                                              $"_{CleanedTitle.Substring(0, CleanedTitle.IndexOf(' '))}_{gameMode}");
+            logReceiverService.EnableFeedback(GetFeedbackFileName());
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Setting up test server for {CleanedTitle}")

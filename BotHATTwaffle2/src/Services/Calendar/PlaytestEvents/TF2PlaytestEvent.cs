@@ -49,7 +49,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             await base.PlaytestCommandStart(replyInContext, rconService);
 
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
-                $"exec {_dataService.RSettings.General.TF2Config}");
+                $"exec {_dataService.RSettings.General.TF2Config}; mp_restartgame 3");
+
             await Task.Delay(3000);
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                 $"tv_record {PlaytestCommandInfo.DemoName}; say Recording {PlaytestCommandInfo.DemoName}");

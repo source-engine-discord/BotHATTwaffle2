@@ -119,6 +119,12 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Workshop URL
             WorkshopLink = GeneralUtil.ValidateUri(description.ElementAtOrDefault(2));
 
+            if (ImageGallery == null || WorkshopLink == null)
+            {
+                _ = _log.LogMessage("Issue with Imgur Album or Workshop link when parsing test event.", alert:true);
+                return;
+            }
+
             //Game mode
             SetGameMode(description.ElementAtOrDefault(3));
 
@@ -209,7 +215,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             logReceiverService.StartLogReceiver(PlaytestCommandInfo.ServerAddress);
 
             //Start feedback capture
-            logReceiverService.EnableFeedback(PlaytestCommandInfo.DemoName);
+            logReceiverService.EnableFeedback(GetFeedbackFileName());
 
             //Write to the DB so we can restore this info next boot
             DatabaseUtil.StorePlaytestCommandInfo(PlaytestCommandInfo);
@@ -361,16 +367,6 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Ensure server is awake and RCON connection is established. Run other things while waking server
             _ = rconService.WakeRconServer(ServerLocation);
 
-            //Setup the log receiver for this test.
-            _ = Task.Run(async () =>
-            {
-                logReceiverService.StopLogReceiver();
-
-                //Log receiver takes time to stop before it can be restarted.
-                await Task.Delay(15000);
-                logReceiverService.StartLogReceiver(ServerLocation);
-            });
-
             //Start asking the server for player counts.
             _dataService.SetIncludePlayerCount(true);
             //Start asking for player counts
@@ -400,10 +396,14 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 return;
             }
 
+            string unsubInfo = Game.ToString();
+            if(!IsCasual)
+                unsubInfo = "comp";
+
             await TesterRole.ModifyAsync(x => { x.Mentionable = true; });
             await TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
                                                   $"There is a playtest starting in {countdownString}." +
-                                                  $"\nType `>playtester {Game.ToString()}` to stop getting {Game.ToString()} playtest notifications.",
+                                                  $"\nType `>playtester {unsubInfo}` to stop getting {unsubInfo} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
             await TesterRole.ModifyAsync(x => { x.Mentionable = false; });
 
@@ -432,7 +432,6 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             await rconService.WakeRconServer(ServerLocation);
 
             await _log.LogMessage("Running playtesting starting in 20 minutes task...", true, color: LOG_COLOR);
-            logReceiverService.StartLogReceiver(ServerLocation);
         }
 
         public virtual async Task PlaytestFifteenMinuteTask(RconService rconService,
@@ -446,7 +445,15 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Ensure server is awake and RCON connection is established. Run other things while waking server
             _ = rconService.WakeRconServer(ServerLocation);
 
-            logReceiverService.StartLogReceiver(ServerLocation);
+            //Setup the log receiver for this test.
+            _ = Task.Run(async () =>
+            {
+                logReceiverService.StopLogReceiver();
+
+                //Log receiver takes time to stop before it can be restarted.
+                await Task.Delay(15000);
+                logReceiverService.StartLogReceiver(ServerLocation);
+            });
         }
 
         public virtual async Task PlaytestStartingTask(RconService rconService, LogReceiverService logReceiverService,
@@ -475,14 +482,22 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 return;
             }
 
-            await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
+            string unsubInfo = Game.ToString();
+            if (!IsCasual)
+                unsubInfo = "comp";
 
+            await TesterRole.ModifyAsync(x => { x.Mentionable = true; });
             await TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
-                                                                   "There is a playtest starting __now__!" +
-                                                                   $"\nType `>playtester {Game.ToString()}` to stop getting {Game.ToString()} playtest notifications.",
+                                                  "There is a playtest starting __now__!" +
+                                                  $"\nType `>playtester {unsubInfo}` to stop getting {unsubInfo} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
+            await TesterRole.ModifyAsync(x => { x.Mentionable = false; });
+        }
 
-            await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
+        public string GetFeedbackFileName()
+        {
+            var gameMode = IsCasual ? "casual" : "comp";
+            return $"{StartDateTime:MM_dd_yyyy}_{CleanedTitle.Substring(0, CleanedTitle.IndexOf(' '))}_{gameMode}";
         }
 
         public override string ToString()

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
+using BotHATTwaffle2.Util;
 using Discord.WebSocket;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Calendar.v3;
@@ -24,7 +25,7 @@ namespace BotHATTwaffle2.Services.Calendar
 
         private static CsgoPlaytestEvent _activeCsgoPlaytestEvent;
         private static Tf2PlaytestEvent _activeTf2PlaytestEvent;
-        private static PlaytestEvent _previousPlaytestEvent;
+        private static PreviousTest _previousPlaytestEvent;
         private readonly CalendarService _calendar;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
@@ -67,7 +68,20 @@ namespace BotHATTwaffle2.Services.Calendar
             }
         }
 
-        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent) => _previousPlaytestEvent = playtestEvent;
+        public void SetPreviousPlaytestEvent(PlaytestEvent playtestEvent)
+        {
+            _previousPlaytestEvent = new PreviousTest
+            {
+                Id = 1,
+                Title = playtestEvent.Title
+            };
+            DatabaseUtil.StorePreviousTest(_previousPlaytestEvent);
+        }
+
+        public void BootStorePreviousPlaytestEvent()
+        {
+            _previousPlaytestEvent = DatabaseUtil.GetPreviousTest();
+        }
 
         public async Task UpdateTestEventCache()
         {
@@ -102,7 +116,8 @@ namespace BotHATTwaffle2.Services.Calendar
             }
 
             //Prevent the previous playtest event from counting as another playtest.
-            tempPlaytestEvents.RemoveAll(x => x.Equals(_previousPlaytestEvent));
+            if(_previousPlaytestEvent != null)
+                tempPlaytestEvents.RemoveAll(x => x.Title.Equals(_previousPlaytestEvent.Title));
 
             if (tempPlaytestEvents.Count == 0)
             {
@@ -128,6 +143,10 @@ namespace BotHATTwaffle2.Services.Calendar
 
             if (tempNextCsgoTest == null)
             {
+                //Delete the old message, we have no test to display.
+                if (_activeCsgoPlaytestEvent != null)
+                    await _activeCsgoPlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeCsgoPlaytestEvent
+                    .AnnouncementMessage);
                 //Make the active test null
                 _activeCsgoPlaytestEvent = null;
             }
@@ -160,6 +179,10 @@ namespace BotHATTwaffle2.Services.Calendar
 
             if (tempNextTf2Test == null)
             {
+                //Delete the old message, we have no test to display.
+                if(_activeTf2PlaytestEvent != null)
+                    await _activeTf2PlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeTf2PlaytestEvent
+                    .AnnouncementMessage);
                 //Make the active test null
                 _activeTf2PlaytestEvent = null;
             }
@@ -306,8 +329,11 @@ namespace BotHATTwaffle2.Services.Calendar
         /// <returns>Valid playtest event. Null if no tests found. Null if test is invalid.</returns>
         public PlaytestEvent GetNextPlaytestEvent()
         {
-            var playtest = _playtestEvents.FirstOrDefault();
+            var playtest = _playtestEvents?.FirstOrDefault();
 
+            if (playtest == null)
+                return null;
+            
             if (playtest.Equals(_activeCsgoPlaytestEvent))
                 return _activeCsgoPlaytestEvent;
 

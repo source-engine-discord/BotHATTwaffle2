@@ -59,6 +59,9 @@ namespace BotHATTwaffle2.Handlers
         /// </summary>
         public void AddRequiredJobs()
         {
+            //Read in the last playtest event from the DB
+            _calendar.BootStorePreviousPlaytestEvent();
+
             _ = _log.LogMessage("Adding required scheduled jobs...", false, color: LOG_COLOR);
 
             //Ask Google API for new tests every 60 seconds.

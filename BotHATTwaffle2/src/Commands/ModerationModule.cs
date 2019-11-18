@@ -159,9 +159,10 @@ namespace BotHATTwaffle2.Commands
             var testEvent = _calendar.GetNextPlaytestEvent();
 
             if (!_logReceiverService.EnableLog)
-                _logReceiverService.StartLogReceiver(testEvent.PlaytestCommandInfo.ServerAddress);
+                _logReceiverService.StartLogReceiver(testEvent.ServerLocation);
 
-            var result = _logReceiverService.EnableFeedback(testEvent.PlaytestCommandInfo.DemoName);
+            //Should build the name inside the test event and just get that back instead of saving it each time.
+            var result = _logReceiverService.EnableFeedback(testEvent.GetFeedbackFileName());
 
             if (result)
                 await ReplyAsync(embed: new EmbedBuilder()
@@ -797,7 +798,7 @@ namespace BotHATTwaffle2.Commands
                 else
                 {
                     targetServer = "No playtest server found";
-                    if (testEvent.IsValid)
+                    if (testEvent != null && testEvent.IsValid)
                     {
                         //There is a playtest event, get the server ID from the test event
                         var serverAddress = testEvent.ServerLocation;
@@ -927,42 +928,66 @@ namespace BotHATTwaffle2.Commands
                 await delayed.DeleteAsync();
         }
 
-        [Command("ClearReservation")]
-        [Alias("cr")]
-        [Summary("Clears a server reservation.")]
-        [Remarks("Clears all server reservations manually. Can be used if users are abusing the reservation system.\n" +
-                 "If a server code is provided, just that server reservation will be removed.")]
+        [Command("Reservation")]
+        [Alias("EditReservation","er")]
+        [Summary("Edits server reservations.")]
+        [Remarks("`>er` Clears all reservations." +
+                 "\n`>er [ServerId]` clears a specific reservation." +
+                 "\n`>er [on/enable]` allows server reservations." +
+                 "\n`>er [off/disable]` disables server reservations.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task ClearReservationAsync([Summary("ID of test server to clear")] [Optional]
-            string serverId)
+        public async Task ClearReservationAsync([Summary("ID of test server to clear")] [Optional][Remainder]
+            string command)
         {
-            if (serverId != null)
+            if (command == null)
+                command = "clear";
+            switch (command.ToLower())
             {
-                var reservation = DatabaseUtil.GetServerReservation(serverId);
+                case "off":
+                case "disable":
+                    await _reservationService.DisableReservations();
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Server reservations disabled", _dataService.Guild.IconUrl)
+                        .WithColor(new Color(165, 55, 55)).Build());
+                    break;
+                case "on":
+                case "enable":
+                    _reservationService.AllowReservations();
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor("Allowing server reservations", _dataService.Guild.IconUrl)
+                        .WithColor(new Color(55, 165, 55)).Build());
+                    break;
 
-                if (reservation != null)
-                {
-                    await ReplyAsync(embed: _reservationService.ReleaseServer(reservation.UserId,
-                        "A moderator has cleared your reservation."));
+                default:
+                    if (command != "clear")
+                    {
+                        var reservation = DatabaseUtil.GetServerReservation(command);
+
+                        if (reservation != null)
+                        {
+                            await ReplyAsync(embed: _reservationService.ReleaseServer(reservation.UserId,
+                                "A moderator has cleared your reservation."));
+
+                            await ReplyAsync(embed: new EmbedBuilder()
+                                .WithAuthor($"{DatabaseUtil.GetTestServer(command).Address} has been released.",
+                                    _dataService.Guild.IconUrl)
+                                .WithColor(new Color(55, 165, 55)).Build());
+                            return;
+                        }
+
+                        await ReplyAsync(embed: new EmbedBuilder()
+                            .WithAuthor("No server reservation found to release", _dataService.Guild.IconUrl)
+                            .WithColor(new Color(165, 55, 55)).Build());
+                    }
 
                     await ReplyAsync(embed: new EmbedBuilder()
-                        .WithAuthor($"{DatabaseUtil.GetTestServer(serverId).Address} has been released.",
-                            _dataService.Guild.IconUrl)
-                        .WithColor(new Color(55, 165, 55)).Build());
-                    return;
-                }
+                        .WithAuthor("Clearing all reservations", _dataService.Guild.IconUrl)
+                        .WithColor(new Color(165, 55, 55)).Build());
 
-                await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor("No server reservation found to release", _dataService.Guild.IconUrl)
-                    .WithColor(new Color(165, 55, 55)).Build());
+                    await _reservationService.ClearAllServerReservations();
+                    break;
             }
-
-            await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor("Clearing all reservations", _dataService.Guild.IconUrl)
-                .WithColor(new Color(165, 55, 55)).Build());
-
-            await _reservationService.ClearAllServerReservations();
         }
 
         [Command("TestServer")]
