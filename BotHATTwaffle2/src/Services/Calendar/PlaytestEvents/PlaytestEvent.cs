@@ -215,7 +215,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             logReceiverService.StartLogReceiver(PlaytestCommandInfo.ServerAddress);
 
             //Start feedback capture
-            logReceiverService.EnableFeedback(PlaytestCommandInfo.DemoName);
+            logReceiverService.EnableFeedback(GetFeedbackFileName());
 
             //Write to the DB so we can restore this info next boot
             DatabaseUtil.StorePlaytestCommandInfo(PlaytestCommandInfo);
@@ -492,6 +492,12 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                                                   $"\nType `>playtester {unsubInfo}` to stop getting {unsubInfo} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
             await TesterRole.ModifyAsync(x => { x.Mentionable = false; });
+        }
+
+        public string GetFeedbackFileName()
+        {
+            var gameMode = IsCasual ? "casual" : "comp";
+            return $"{StartDateTime:MM_dd_yyyy}_{CleanedTitle.Substring(0, CleanedTitle.IndexOf(' '))}_{gameMode}";
         }
 
         public override string ToString()

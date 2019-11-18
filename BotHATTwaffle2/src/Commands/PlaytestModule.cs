@@ -394,7 +394,7 @@ namespace BotHATTwaffle2.Commands
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Cannot reserve servers at this time")
                     .WithDescription(
-                        "Servers cannot be reserved 1 hour before the test, lasting until the test event is over.")
+                        "Servers cannot be reserved 20 minutes before a playtest, lasting until shortly after the test event is over.")
                     .WithColor(new Color(255, 100, 0))
                     .WithThumbnailUrl(_dataService.Guild.IconUrl)
                     .Build());

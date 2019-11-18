@@ -159,9 +159,10 @@ namespace BotHATTwaffle2.Commands
             var testEvent = _calendar.GetNextPlaytestEvent();
 
             if (!_logReceiverService.EnableLog)
-                _logReceiverService.StartLogReceiver(testEvent.PlaytestCommandInfo.ServerAddress);
+                _logReceiverService.StartLogReceiver(testEvent.ServerLocation);
 
-            var result = _logReceiverService.EnableFeedback(testEvent.PlaytestCommandInfo.DemoName);
+            //Should build the name inside the test event and just get that back instead of saving it each time.
+            var result = _logReceiverService.EnableFeedback(testEvent.GetFeedbackFileName());
 
             if (result)
                 await ReplyAsync(embed: new EmbedBuilder()
