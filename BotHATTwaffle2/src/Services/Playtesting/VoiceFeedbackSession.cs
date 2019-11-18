@@ -305,8 +305,8 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var message = $"script ScriptPrintMessageCenterAll(\"{_activeUser.Username}'s " +
                           $"Time Left: <font color=\\\"#B5F2A2\\\">{_timeLeft:mm\\:ss} ⏰</font>" +
-                          "\\nType <font color=\\\"#B5F2A2\\\">>done</font> in Discord when finished\\nOr you may disconnect from voice." +
-                          "\\nType <font color=\\\"#B5F2A2\\\">>q</font> in Discord to enter the queue";
+                          "\\nType <font color=\\\"#B5F2A2\\\">>done</font> in Discord when finished" +
+                          " | Type <font color=\\\"#B5F2A2\\\">>q</font> in Discord to enter the queue";
 
             if (_userQueue.Count > 1)
             {
