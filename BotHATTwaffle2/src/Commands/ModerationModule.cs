@@ -11,6 +11,7 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
+using BotHATTwaffle2.Services.FaceIt;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
@@ -52,15 +53,15 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-//        [Command("Test")]
-//        [Summary("Used to debug. This should not go live")]
-//        [RequireUserPermission(GuildPermission.KickMembers)]
-//        public async Task TestAsync()
-//        {
-//            JobManager.AddJob(
-//                async () => await _rconService.GetPlayCountFromServer("can"),
-//                s => s.WithName("[QueryPlayerCount]").ToRunEvery(10).Seconds());
-//        }
+        [Command("Test")]
+        [Summary("Used to debug. This should not go live")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task TestAsync()
+        {
+            var fapi = new FaceItAPI(_dataService, _log);
+            await fapi.GetOneDay();
+
+        }
 
         [Command("MatchMaking", RunMode = RunMode.Async)]
         [Alias("mm")]

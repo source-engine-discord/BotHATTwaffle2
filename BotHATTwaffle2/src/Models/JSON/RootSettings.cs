@@ -1,4 +1,7 @@
-﻿namespace BotHATTwaffle2
+﻿using System.Collections.Generic;
+using BotHATTwaffle2.Models.JSON;
+
+namespace BotHATTwaffle2
 {
     public class RootSettings
     {
@@ -7,5 +10,6 @@
         public Lists Lists { get; set; }
         public AutoReplies AutoReplies { get; set; }
         public UserRoles UserRoles { get; set; }
+        public List<FaceItHub> FaceItHubs { get; set; } 
     }
 }

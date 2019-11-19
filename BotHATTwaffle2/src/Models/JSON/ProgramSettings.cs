@@ -16,5 +16,7 @@
         public string DemoFtpPassword { get; set; }
         public string DemoFtpPath { get; set; }
         public string DemoFtpServer { get; set; }
+        public string FaceitAPIKey { get; set; }
+        public string FaceItDemoPath { get; set; }
     }
 }
