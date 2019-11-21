@@ -22,6 +22,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_COMP = "compPw";
         private const string COLLECTION_USERS_STEAMID = "usersSteamID";
         private const string COLLECTION_PREVIOUS_TEST = "previousTest";
+        private const string COLLECTION_FACEIT_HUB_SEASON = "faceitHubSeason";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -100,6 +101,7 @@ namespace BotHATTwaffle2.Util
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
             return true;
         }
 
@@ -175,6 +177,76 @@ namespace BotHATTwaffle2.Util
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
+
+            return true;
+        }
+
+        public static IEnumerable<FaceItHubSeason> GetHubTypes()
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<FaceItHubSeason>(COLLECTION_FACEIT_HUB_SEASON);
+                    return col.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting FaceItHubSeason\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return null;
+            }
+        }
+
+        public static bool StoreHubTypes(FaceItHubSeason faceItHubSeason)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<FaceItHubSeason>(COLLECTION_FACEIT_HUB_SEASON);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Storing FaceItHub tag...", false, color: LOG_COLOR);
+
+                    col.Insert(faceItHubSeason);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened storing faceItHubSeason\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool DeleteHubType(int id)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<FaceItHubSeason>(COLLECTION_FACEIT_HUB_SEASON);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Deleting FaceItHub Season for ID {id}", false, color: LOG_COLOR);
+
+                    col.Delete(id);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened deleting faceItHubSeason\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
             return true;
         }
 

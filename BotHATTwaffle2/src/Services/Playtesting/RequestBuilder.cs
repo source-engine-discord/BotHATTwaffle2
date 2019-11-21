@@ -271,13 +271,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                 _testRequest.CreatorsDiscord.ForEach(x => mentions += $"{_dataService.GetSocketGuildUser(x).Mention} ");
 
                 if (_testRequest.Game.Equals("csgo", StringComparison.OrdinalIgnoreCase))
-                {
                     mentionChannel = _dataService.CSGOTestingChannel;
-                }
                 else if (_testRequest.Game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
-                {
                     mentionChannel = _dataService.TF2TestingChannel;
-                }
 
                 await mentionChannel.SendMessageAsync(
                     $"{mentions.Trim()} your playtest has been scheduled for `{_testRequest.TestDate}` (CT Timezone)");

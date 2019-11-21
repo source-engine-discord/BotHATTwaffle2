@@ -70,11 +70,25 @@ namespace BotHATTwaffle2.Services
         public static bool IncludePlayerCount { get; set; }
         public static string PlayerCount { get; set; }
 
-        public bool GetIncludePlayerCount() => IncludePlayerCount;
-        public string GetPlayerCount() => PlayerCount;
+        public bool GetIncludePlayerCount()
+        {
+            return IncludePlayerCount;
+        }
 
-        public void SetPlayerCount(string playerCount) => PlayerCount = playerCount;
-        public void SetIncludePlayerCount(bool includeCount) => IncludePlayerCount = includeCount;
+        public string GetPlayerCount()
+        {
+            return PlayerCount;
+        }
+
+        public void SetPlayerCount(string playerCount)
+        {
+            PlayerCount = playerCount;
+        }
+
+        public void SetIncludePlayerCount(bool includeCount)
+        {
+            IncludePlayerCount = includeCount;
+        }
 
         public async Task DeserializeConfig()
         {

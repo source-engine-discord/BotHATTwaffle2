@@ -11,7 +11,6 @@ using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
-using BotHATTwaffle2.Services.FaceIt;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
 using BotHATTwaffle2.Util;
@@ -53,15 +52,12 @@ namespace BotHATTwaffle2.Commands
             _logReceiverService = logReceiverService;
         }
 
-        [Command("Test")]
-        [Summary("Used to debug. This should not go live")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task TestAsync()
-        {
-            var fapi = new FaceItAPI(_dataService, _log);
-            await fapi.GetOneDay();
-
-        }
+//        [Command("Test")]
+//        [Summary("Used to debug. This should not go live")]
+//        [RequireUserPermission(GuildPermission.KickMembers)]
+//        public async Task TestAsync(int v1, int v2)
+//        {
+//        }
 
         [Command("MatchMaking", RunMode = RunMode.Async)]
         [Alias("mm")]
@@ -930,7 +926,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("Reservation")]
-        [Alias("EditReservation","er")]
+        [Alias("EditReservation", "er")]
         [Summary("Edits server reservations.")]
         [Remarks("`>er` Clears all reservations." +
                  "\n`>er [ServerId]` clears a specific reservation." +
@@ -938,7 +934,7 @@ namespace BotHATTwaffle2.Commands
                  "\n`>er [off/disable]` disables server reservations.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task ClearReservationAsync([Summary("ID of test server to clear")] [Optional][Remainder]
+        public async Task ClearReservationAsync([Summary("ID of test server to clear")] [Optional] [Remainder]
             string command)
         {
             if (command == null)

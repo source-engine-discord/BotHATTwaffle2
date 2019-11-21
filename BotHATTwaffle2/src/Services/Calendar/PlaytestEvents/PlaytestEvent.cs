@@ -121,7 +121,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             if (ImageGallery == null || WorkshopLink == null)
             {
-                _ = _log.LogMessage("Issue with Imgur Album or Workshop link when parsing test event.", alert:true);
+                _ = _log.LogMessage("Issue with Imgur Album or Workshop link when parsing test event.", alert: true);
                 return;
             }
 
@@ -396,8 +396,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 return;
             }
 
-            string unsubInfo = Game.ToString();
-            if(!IsCasual)
+            var unsubInfo = Game.ToString();
+            if (!IsCasual)
                 unsubInfo = "comp";
 
             await TesterRole.ModifyAsync(x => { x.Mentionable = true; });
@@ -482,7 +482,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 return;
             }
 
-            string unsubInfo = Game.ToString();
+            var unsubInfo = Game.ToString();
             if (!IsCasual)
                 unsubInfo = "comp";
 

@@ -10,6 +10,6 @@ namespace BotHATTwaffle2
         public Lists Lists { get; set; }
         public AutoReplies AutoReplies { get; set; }
         public UserRoles UserRoles { get; set; }
-        public List<FaceItHub> FaceItHubs { get; set; } 
+        public List<FaceItHub> FaceItHubs { get; set; }
     }
 }

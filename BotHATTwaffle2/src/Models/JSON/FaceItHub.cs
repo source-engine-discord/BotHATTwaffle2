@@ -4,5 +4,6 @@
     {
         public string HubName { get; set; }
         public string HubGuid { get; set; }
+        public string HubType { get; set; }
     }
 }

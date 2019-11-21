@@ -5,8 +5,6 @@ namespace BotHATTwaffle2.src.Models.FaceIt
 {
     public class FaceItHubDemosRequest
     {
-        public FaceItHubDemosRequest() {}
-
         public DateTime DateFrom { get; set; }
         public DateTime DateTo { get; set; }
         public string Gamemode { get; set; }

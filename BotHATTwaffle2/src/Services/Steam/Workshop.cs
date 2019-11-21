@@ -1,11 +1,4 @@
-﻿using BotHATTwaffle2.Models.JSON.Steam;
-using BotHATTwaffle2.Util;
-using bsp_pakfile;
-using Discord;
-using Discord.WebSocket;
-using ICSharpCode.SharpZipLib.Zip;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -17,6 +10,16 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Models.JSON.Steam;
+using BotHATTwaffle2.Util;
+using bsp_pakfile;
+using Discord;
+using Discord.WebSocket;
+using ICSharpCode.SharpZipLib.Zip;
+using Newtonsoft.Json;
+using Color = Discord.Color;
+using ImageFormat = Pfim.ImageFormat;
+using ZipFile = System.IO.Compression.ZipFile;
 
 namespace BotHATTwaffle2.Services.Steam
 {
@@ -123,18 +126,20 @@ namespace BotHATTwaffle2.Services.Steam
 
                 // If the file is a screenshot, artwork, video, or guide we don't need to embed it because Discord will do it for us
                 if (workshopJsonItem.response.publishedfiledetails[0].result != 1 ||
-                    !workshopJsonItem.response.publishedfiledetails[0].filename.ToLower().Contains(".bsp")) { // assuming 1 == map submission ??
+                    !workshopJsonItem.response.publishedfiledetails[0].filename.ToLower().Contains(".bsp")
+                ) // assuming 1 == map submission ??
                     return;
-                }
 
                 // Download the bsp
                 Console.WriteLine("Downloading BSPs");
-                string fileName = workshopJsonItem.response.publishedfiledetails[0].filename.Split(new string[] { "mymaps/", ".bsp" }, StringSplitOptions.None).Skip(1).FirstOrDefault();
-                string fileNameBsp = workshopJsonItem.response.publishedfiledetails[0].filename.Split(new string[] { "mymaps/" }, StringSplitOptions.None).LastOrDefault();
-                string fileLocationZippedBsp = string.Concat(fileLocation, "\\Zipped BSPs\\", fileNameBsp);
-                string fileLocationBsp = string.Concat(fileLocation, "\\BSPs\\", fileNameBsp);
-                string fileLocationOverviewPng = string.Concat(fileLocation, "\\Overviews\\", fileName, "_radar.png");
-                string fileLocationOverviewTxt = string.Concat(fileLocation, "\\Overviews\\", fileName, ".txt");
+                var fileName = workshopJsonItem.response.publishedfiledetails[0].filename
+                    .Split(new[] {"mymaps/", ".bsp"}, StringSplitOptions.None).Skip(1).FirstOrDefault();
+                var fileNameBsp = workshopJsonItem.response.publishedfiledetails[0].filename
+                    .Split(new[] {"mymaps/"}, StringSplitOptions.None).LastOrDefault();
+                var fileLocationZippedBsp = string.Concat(fileLocation, "\\Zipped BSPs\\", fileNameBsp);
+                var fileLocationBsp = string.Concat(fileLocation, "\\BSPs\\", fileNameBsp);
+                var fileLocationOverviewPng = string.Concat(fileLocation, "\\Overviews\\", fileName, "_radar.png");
+                var fileLocationOverviewTxt = string.Concat(fileLocation, "\\Overviews\\", fileName, ".txt");
 
                 // create folders if needed
                 if (!Directory.Exists(fileLocation))
@@ -146,9 +151,10 @@ namespace BotHATTwaffle2.Services.Steam
                 if (!Directory.Exists(string.Concat(fileLocation, "\\Overviews\\")))
                     Directory.CreateDirectory(string.Concat(fileLocation, "\\Overviews\\"));
 
-                if (!File.Exists(fileLocationBsp) && (!File.Exists(fileLocationOverviewPng) || !File.Exists(fileLocationOverviewTxt)))
+                if (!File.Exists(fileLocationBsp) &&
+                    (!File.Exists(fileLocationOverviewPng) || !File.Exists(fileLocationOverviewTxt)))
                 {
-                    string downloadUrl = workshopJsonItem.response.publishedfiledetails[0].file_url;
+                    var downloadUrl = workshopJsonItem.response.publishedfiledetails[0].file_url;
 
                     using (var client = new WebClient())
                     {
@@ -162,10 +168,7 @@ namespace BotHATTwaffle2.Services.Steam
                         {
                             Console.WriteLine("Error downloading demo.");
 
-                            if (File.Exists(fileLocationZippedBsp))
-                            {
-                                File.Delete(fileLocationZippedBsp);
-                            }
+                            if (File.Exists(fileLocationZippedBsp)) File.Delete(fileLocationZippedBsp);
 
                             client.Dispose();
 
@@ -174,8 +177,9 @@ namespace BotHATTwaffle2.Services.Steam
 
                         client.Dispose();
                     }
+
                     // unzip bsp file
-                    System.IO.Compression.ZipFile.ExtractToDirectory(fileLocationZippedBsp, string.Concat(fileLocation, "\\BSPs\\"));
+                    ZipFile.ExtractToDirectory(fileLocationZippedBsp, string.Concat(fileLocation, "\\BSPs\\"));
 
                     // delete the zipped bsp file
                     File.Delete(fileLocationZippedBsp);
@@ -183,9 +187,7 @@ namespace BotHATTwaffle2.Services.Steam
 
                 // grab overview files from bsp
                 if (!File.Exists(fileLocationOverviewPng) || !File.Exists(fileLocationOverviewTxt))
-                {
                     GrabOverviewFilesFromBsp(fileLocation, fileLocationBsp);
-                }
             }
         }
 
@@ -194,43 +196,46 @@ namespace BotHATTwaffle2.Services.Steam
             // TODO: This method will most definitely fail if a .BSP is grabbed that doesn't have anything packed under the resource folder. Not exactly sure how to check that right now.
 
             // This is just for checking how long it takes to extract the radar stuff from the BSP. You can remove this if you want
-            Stopwatch sw = new Stopwatch();
+            var sw = new Stopwatch();
             sw.Start();
 
             // Parse BSP using our BSP model
-            SourceBSP bsp = new SourceBSP(fileLocationBsp);
+            var bsp = new SourceBSP(fileLocationBsp);
 
             // Getting ready to read the pakfile
             byte[] ret;
-            using (MemoryStream MS = new MemoryStream(bsp.PAKFILE))
-            using (ICSharpCode.SharpZipLib.Zip.ZipFile zip = new ICSharpCode.SharpZipLib.Zip.ZipFile(MS))
+            using (var MS = new MemoryStream(bsp.PAKFILE))
+            using (var zip = new ICSharpCode.SharpZipLib.Zip.ZipFile(MS))
             {
                 // Iterate over everything in the pakfile lump
                 foreach (ZipEntry entry in zip)
                 {
                     if (!entry.IsFile) continue;
-                    string name = entry.Name;
+                    var name = entry.Name;
 
                     // We're just gonna grab everything packed until the resource folder
                     if (!name.StartsWith("resource")) continue;
-                    
+
                     // We've found a file we're looking for, so we're gonna convert it to a memory stream and send that directly to a file
-                    using (Stream stream = zip.GetInputStream(entry))
+                    using (var stream = zip.GetInputStream(entry))
                     {
                         ret = new byte[stream.Length];
-                        using (MemoryStream ms = new MemoryStream(ret))
+                        using (var ms = new MemoryStream(ret))
+                        {
                             stream.CopyTo(ms);
+                        }
                     }
+
                     // Changing the relative path so it goes into the Overviews folder we want
                     var nameArray = name.Split("/");
                     name = string.Concat("\\Overviews\\", nameArray[nameArray.Length - 1]);
 
                     // Save our overview files into the Overviews folder
-                    string savePath = string.Concat(fileLocation, name);
+                    var savePath = string.Concat(fileLocation, name);
                     File.WriteAllBytes(savePath, ret); // Write byte array to file
-
                 }
             }
+
             ret = null;
 
             // Also part of the stopwatch/timing function. Can remove if you want later.
@@ -238,27 +243,28 @@ namespace BotHATTwaffle2.Services.Steam
             Console.WriteLine($"BSP parsed and unpacked in {sw.ElapsedMilliseconds} ms");
 
             // Get a list of every DDS file that we need to convert
-            var ext = new List<string> { ".dds" };
-            var listOfDdsFiles = Directory.GetFiles(string.Concat(fileLocation, "\\Overviews\\"), "*.*", SearchOption.AllDirectories)
+            var ext = new List<string> {".dds"};
+            var listOfDdsFiles = Directory.GetFiles(string.Concat(fileLocation, "\\Overviews\\"), "*.*",
+                    SearchOption.AllDirectories)
                 .Where(s => ext.Contains(Path.GetExtension(s)));
 
             // Iterate over every DDS File to convert to PNG
             foreach (var radarImagePath in listOfDdsFiles)
-            {
                 // All this code here is just converting from DDS -> PNG
                 using (var imageFile = Pfim.Pfim.FromFile(radarImagePath))
                 {
                     PixelFormat format;
                     Console.WriteLine($"Radar image format found to be: {imageFile.Format}");
-                    switch(imageFile.Format)
+                    switch (imageFile.Format)
                     {
                         // I haven't seen radars anything other than RGB24 so, let's just hope there's not one like that
-                        case Pfim.ImageFormat.Rgb24:
+                        case ImageFormat.Rgb24:
                             format = PixelFormat.Format24bppRgb;
                             break;
                         default:
                             throw new NotImplementedException("The given DDS format specifics are not implemented.");
                     }
+
                     // Need to tell the garbage collector that wer're still using the image data
                     var handle = GCHandle.Alloc(imageFile.Data, GCHandleType.Pinned);
                     try
@@ -266,7 +272,8 @@ namespace BotHATTwaffle2.Services.Steam
                         // Not sure what exactly will happen if this fails. So let's hope it doesn't
                         var data = Marshal.UnsafeAddrOfPinnedArrayElement(imageFile.Data, 0);
                         var bitmap = new Bitmap(imageFile.Width, imageFile.Height, imageFile.Stride, format, data);
-                        bitmap.Save(Path.ChangeExtension(radarImagePath, ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                        bitmap.Save(Path.ChangeExtension(radarImagePath, ".png"),
+                            System.Drawing.Imaging.ImageFormat.Png);
                     }
                     finally
                     {
@@ -275,7 +282,7 @@ namespace BotHATTwaffle2.Services.Steam
                         File.Delete(radarImagePath);
                     }
                 }
-            }
+
             Console.WriteLine("Successfully converted all radars to .PNG and moved TXT file");
         }
 
@@ -427,7 +434,7 @@ namespace BotHATTwaffle2.Services.Steam
                     .WithTitle($"Creator: {workshopJsonAuthor.response.players[0].personaname}")
                     .WithUrl(workshopJsonAuthor.response.players[0].profileurl)
                     .WithImageUrl(workshopJsonItem.response.publishedfiledetails[0].preview_url)
-                    .WithColor(new Discord.Color(71, 126, 159));
+                    .WithColor(new Color(71, 126, 159));
 
                 var gameId = workshopJsonGameData.applist.apps.SingleOrDefault(x =>
                     x.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id);

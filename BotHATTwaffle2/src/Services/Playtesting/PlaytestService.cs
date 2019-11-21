@@ -98,6 +98,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 _ = _log.LogMessage($"Something happened when ending a feedback session\n{e}");
             }
+
             return true;
         }
 
@@ -122,7 +123,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Delay setting previous test event to prevent playtest channel from getting out of order.
             _ = Task.Run(async () =>
             {
-                await Task.Delay((5 * 60) * 1000);
+                await Task.Delay(5 * 60 * 1000);
                 _calendar.SetPreviousPlaytestEvent(testEvent);
             });
 
@@ -134,7 +135,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             var testEvent = _calendar.GetNextPlaytestEvent();
 
             await testEvent.PlaytestCommandStart(replyInContext, _rconService);
-            
+
             return testEvent.PlaytestCommandInfo;
         }
 
@@ -344,7 +345,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// WTF is this method name. God you suck.
+        ///     WTF is this method name. God you suck.
         /// </summary>
         /// <returns></returns>
         private void AllowReservationsStopCount()
@@ -368,12 +369,12 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Delay allowing reservations. This is because >p post creates a new announcement.
             //As a result people would normally be able to reserve as soon as a test is over.
             JobManager.AddJob(AllowReservationsStopCount, s => s
-                .WithName($"[AllowReservationsStopCount]").ToRunOnceIn(30).Minutes());
+                .WithName("[AllowReservationsStopCount]").ToRunOnceIn(30).Minutes());
 
             _ = _log.LogMessage("AllowReservationsStopCount scheduled for:" +
-                                $"\n{JobManager.GetSchedule($"[AllowReservationsStopCount]").NextRun}", false,
+                                $"\n{JobManager.GetSchedule("[AllowReservationsStopCount]").NextRun}", false,
                 color: LOG_COLOR);
-            
+
             try
             {
                 //Make the announcement and store to a variable
@@ -591,7 +592,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 color: LOG_COLOR);
 
             await _reservationService.DisableReservations();
-            JobManager.RemoveJob($"[AllowReservationsStopCount]");
+            JobManager.RemoveJob("[AllowReservationsStopCount]");
 
             await playtestEvent.PlaytestTwentyMinuteTask(_rconService, _logReceiverService);
         }
@@ -605,7 +606,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = _log.LogMessage("Running playtesting starting in 15 minutes task...", true, color: LOG_COLOR);
 
             await _reservationService.DisableReservations();
-            JobManager.RemoveJob($"[AllowReservationsStopCount]");
+            JobManager.RemoveJob("[AllowReservationsStopCount]");
 
             await playtestEvent.PlaytestFifteenMinuteTask(_rconService, _logReceiverService);
         }
@@ -619,7 +620,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = _log.LogMessage("Running playtesting starting now task...", false, color: LOG_COLOR);
 
             await _reservationService.DisableReservations();
-            JobManager.RemoveJob($"[AllowReservationsStopCount]");
+            JobManager.RemoveJob("[AllowReservationsStopCount]");
 
             await playtestEvent.PlaytestStartingTask(_rconService, _logReceiverService, _announcementMessage);
         }

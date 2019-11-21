@@ -18,11 +18,11 @@ namespace BotHATTwaffle2.Services.SRCDS
         private static string _lastKnownPath;
         private readonly DataService _dataService;
         private readonly LogHandler _logHandler;
+        private readonly string _publicIpAddress;
         private readonly RconService _rconService;
         private bool _enableFeedback;
         private string _path;
         private PlaytestService _playtestService;
-        private readonly string _publicIpAddress;
         public Server ActiveServer;
         public bool EnableLog;
 

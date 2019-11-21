@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -534,11 +533,13 @@ namespace BotHATTwaffle2.Commands
             else if (server.Game.Equals("tf2", StringComparison.OrdinalIgnoreCase))
                 testingChannel = _dataService.TF2TestingChannel;
 
-            if(testingChannel == null)
+            if (testingChannel == null)
             {
-                await ReplyAsync("The game server's marked game isn't valid. This should never happen. I alerted an admin.");
+                await ReplyAsync(
+                    "The game server's marked game isn't valid. This should never happen. I alerted an admin.");
                 await _log.LogMessage(
-                    "Force announce was run, but the game for the server is not CSGO or TF2. This should never happen.",alert:true);
+                    "Force announce was run, but the game for the server is not CSGO or TF2. This should never happen.",
+                    alert: true);
                 return;
             }
 
@@ -552,8 +553,8 @@ namespace BotHATTwaffle2.Commands
                 if (embed != null)
                 {
                     await testingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                           $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
-                                                                           "\nType `>roleme Community Tester` to get this role.",
+                                                          $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                                          "\nType `>roleme Community Tester` to get this role.",
                         embed: embed.Build());
                 }
                 else //Workshop builder returned bad / no data. Don't send an embed.
@@ -569,7 +570,7 @@ namespace BotHATTwaffle2.Commands
             {
                 //No embed
                 await testingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                                       $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
+                                                      $"needs players to help test `{result[0]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`");
             }
 
             if (!reservation.Announced)
@@ -638,7 +639,7 @@ namespace BotHATTwaffle2.Commands
 
                     await ReplyAsync(embed: new EmbedBuilder()
                         .WithAuthor($"Command sent to {testInfo.ServerAddress}", _dataService.Guild.IconUrl)
-                        .WithDescription($"```Stopping Demo Recording and fetching from server...```")
+                        .WithDescription("```Stopping Demo Recording and fetching from server...```")
                         .WithColor(new Color(55, 165, 55)).Build());
 
                     //Download demo, don't wait.
@@ -878,12 +879,13 @@ namespace BotHATTwaffle2.Commands
         [Command("Playtester")]
         [Alias("pt")]
         [Summary("Changes what playtest notifications your get.")]
-        [Remarks("Type `>playtester` or `>pt [Unsubscribe]` to remove all subscriptions (Does not remove competitive)." +
-                 "\nType `>playtester [Subscribe]` to add all subscriptions." +
-                 "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription." +
-                 "\nType `>playtester [Community]` to toggle community tester." +
-                 "\nType `>playtester [Comp]` to remove the competitive tester. You cannot re-add it yourself if removed." +
-                 "\nType `>playtester [Show]` to see your subscriptions.")]
+        [Remarks(
+            "Type `>playtester` or `>pt [Unsubscribe]` to remove all subscriptions (Does not remove competitive)." +
+            "\nType `>playtester [Subscribe]` to add all subscriptions." +
+            "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription." +
+            "\nType `>playtester [Community]` to toggle community tester." +
+            "\nType `>playtester [Comp]` to remove the competitive tester. You cannot re-add it yourself if removed." +
+            "\nType `>playtester [Show]` to see your subscriptions.")]
         public async Task PlaytesterAsync([Optional] string game)
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
@@ -892,10 +894,10 @@ namespace BotHATTwaffle2.Commands
                 .WithColor(55, 55, 165);
             var description = "";
 
-            int csgoStatus =-1;
-            int communityStatus =-1;
-            int tf2Status = -1;
-            int compStatus = -1;
+            var csgoStatus = -1;
+            var communityStatus = -1;
+            var tf2Status = -1;
+            var compStatus = -1;
 
             if (string.IsNullOrWhiteSpace(game))
                 game = "unsubscribe";
@@ -940,18 +942,20 @@ namespace BotHATTwaffle2.Commands
                         description += "**You need to have Competitive Playtester to remove it.**\n";
                         compStatus = 0;
                     }
+
                     break;
-                
+
                 case "csgo":
                     description += "**Toggled CSGO Subscription!**\n";
                     csgoStatus = await ToggleRole(_dataService.CSGOPlayTesterRole);
                     break;
 
                 case "show":
-                    embed.AddField("Playtester stats:",$"CSGO: `{_dataService.CSGOPlayTesterRole.Members.Count()}` Members" +
-                                                       $"\nTF2: `{_dataService.TF2PlayTesterRole.Members.Count()}` Members" +
-                                                       $"\nCommunity: `{_dataService.CommunityTesterRole.Members.Count()}` Members" +
-                                                       $"\nCompetitive: `{_dataService.CompetitiveTesterRole.Members.Count()}` Members");
+                    embed.AddField("Playtester stats:",
+                        $"CSGO: `{_dataService.CSGOPlayTesterRole.Members.Count()}` Members" +
+                        $"\nTF2: `{_dataService.TF2PlayTesterRole.Members.Count()}` Members" +
+                        $"\nCommunity: `{_dataService.CommunityTesterRole.Members.Count()}` Members" +
+                        $"\nCompetitive: `{_dataService.CompetitiveTesterRole.Members.Count()}` Members");
                     break;
 
                 default:
@@ -965,19 +969,19 @@ namespace BotHATTwaffle2.Commands
 
             if (csgoStatus == -1)
                 csgoStatus = user.Roles.Any(x => x.Id == _dataService.CSGOPlayTesterRole.Id) ? 1 : 0;
-            
+
             if (tf2Status == -1)
                 tf2Status = user.Roles.Any(x => x.Id == _dataService.TF2PlayTesterRole.Id) ? 1 : 0;
-            
+
             if (compStatus == -1)
                 compStatus = user.Roles.Any(x => x.Id == _dataService.CompetitiveTesterRole.Id) ? 1 : 0;
 
             if (communityStatus == -1)
                 communityStatus = user.Roles.Any(x => x.Id == _dataService.CommunityTesterRole.Id) ? 1 : 0;
-            
+
             description += $"CSGO Playtesting: `{(csgoStatus == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
                            $"TF2 Playtesting: `{(tf2Status == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
-                           $"Community Playtesting: `{ (communityStatus == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
+                           $"Community Playtesting: `{(communityStatus == 1 ? "Subscribed" : "Unsubscribed")}`\n" +
                            $"Competitive Playtesting: `{(compStatus == 1 ? "Subscribed" : "Unsubscribed")}`";
             embed.WithFooter("Type >help playtester for more information");
             embed.WithDescription(description);

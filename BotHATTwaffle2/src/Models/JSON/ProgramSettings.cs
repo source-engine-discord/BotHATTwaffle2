@@ -18,5 +18,6 @@
         public string DemoFtpServer { get; set; }
         public string FaceitAPIKey { get; set; }
         public string FaceItDemoPath { get; set; }
+        public string FaceItDemoFtpPath { get; set; }
     }
 }

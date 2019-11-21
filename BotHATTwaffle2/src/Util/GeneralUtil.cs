@@ -58,7 +58,7 @@ namespace BotHATTwaffle2.Util
                 return steamId;
             var match = template.Match(steamId);
             var parts = match.Groups;
-            int y = 0;
+            var y = 0;
             var z = double.Parse(parts[3].Value);
 
             if (z % 2 != 0)

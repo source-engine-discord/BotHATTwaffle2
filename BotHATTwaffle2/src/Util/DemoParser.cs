@@ -6,10 +6,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
+using BotHATTwaffle2.Services.Steam;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Renci.SshNet;
-using BotHATTwaffle2.Services.Steam;
 
 namespace BotHATTwaffle2.src.Util
 {
@@ -18,11 +18,16 @@ namespace BotHATTwaffle2.src.Util
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkRed;
         private static LogHandler _log;
         private static DataService _dataService;
-        private static string mainFolderName = @"IDemO\"; // Changes to `string.Concat(Path.GetTempPath(), @"DemoGrabber\")` for bulk faceit demo parsing in ParseFaceItHubDemos()
-        //private static string exeFolderName = @"IDemO\"; // NEEDS TO BE THIS WHEN RUNNING ON IDO
-        private static string exeFolderName = @"F:\GitHub Files\CSGODemoCSV\TopStatsWaffle\bin\Release\";
-        private static string outputFolderName = "parsed";
-        private static string fileName = "CSGODemoCSV.exe";
+
+        private static string
+            mainFolderName =
+                @"IDemO\"; // Changes to `string.Concat(Path.GetTempPath(), @"DemoGrabber\")` for bulk faceit demo parsing in ParseFaceItHubDemos()
+
+        private static readonly string exeFolderName = @"IDemO\"; // NEEDS TO BE THIS WHEN RUNNING ON IDO
+
+        //private static string exeFolderName = @"F:\GitHub Files\CSGODemoCSV\TopStatsWaffle\bin\Release\";
+        private static readonly string outputFolderName = "parsed";
+        private static readonly string fileName = "IDemO.exe";
 
         public static void SetHandlers(LogHandler log, DataService data)
         {
@@ -37,18 +42,31 @@ namespace BotHATTwaffle2.src.Util
 
         private static string GetWorkshopIdFromJasonFile(FileInfo jasonFile)
         {
-            using (StreamReader reader = new StreamReader(jasonFile.FullName))
+            using (var reader = new StreamReader(jasonFile.FullName))
             {
-                string jason = reader.ReadToEnd();
-                var jasonObject = (JObject)JsonConvert.DeserializeObject(jason);
+                var jason = reader.ReadToEnd();
+                var jasonObject = (JObject) JsonConvert.DeserializeObject(jason);
                 return jasonObject["mapInfo"]["WorkshopID"].Value<string>();
             }
         }
 
+        public static async Task ParseFaceitDemos(string sourcePath, string destinationPath)
+        {
+            //Start the process
+            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName,
+                $"-folders \"{sourcePath}\" -output \"{destinationPath}\" -nochickens -samefilename -lowoutputmode");
+            processStartInfo.WorkingDirectory = "IDemO";
+
+            await ProcessAsyncHelper.RunAsync(processStartInfo, 5 * 60 * 1000);
+        }
+
+        /// <summary>
+        ///     TODO Remove this crap
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public static FileInfo ParseDemo(string path)
         {
-            mainFolderName = @"IDemO\";
-
             if (!CanParse())
                 return null;
 
@@ -74,7 +92,8 @@ namespace BotHATTwaffle2.src.Util
             if (localDirectoryInfo
                     .EnumerateFiles().Count(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)) != 1)
             {
-                _ = _log.LogMessage($"There is not exactly 1 JSON file in `{outputFolderName}` directory. Aborting.", alert: true,
+                _ = _log.LogMessage($"There is not exactly 1 JSON file in `{outputFolderName}` directory. Aborting.",
+                    alert: true,
                     color: LOG_COLOR);
                 return null;
             }
@@ -106,7 +125,8 @@ namespace BotHATTwaffle2.src.Util
                 return null;
 
             //Start the process
-            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName, $"-folders \"{path}\" -output \"{outputFolderName}\" -recursive -nochickens -samefilename -samefolderstructure");
+            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName,
+                $"-folders \"{path}\" -output \"{outputFolderName}\" -recursive -nochickens -samefilename -samefolderstructure");
             processStartInfo.WorkingDirectory = mainFolderName;
             var demoProcess = Process.Start(processStartInfo);
 
@@ -127,12 +147,13 @@ namespace BotHATTwaffle2.src.Util
             if (localDirectoryInfo
                     .EnumerateFiles().Count(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)) == 0)
             {
-                _ = _log.LogMessage($"There are no JSON files in `{outputFolderName}` directory. Aborting.", alert: true,
+                _ = _log.LogMessage($"There are no JSON files in `{outputFolderName}` directory. Aborting.",
+                    alert: true,
                     color: LOG_COLOR);
                 return null;
             }
 
-            List<FileInfo> jasonFiles = localDirectoryInfo.EnumerateFiles()
+            var jasonFiles = localDirectoryInfo.EnumerateFiles()
                 .Where(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)).ToList();
 
             /*List<FileInfo> failedUploads = new List<FileInfo>();
@@ -166,13 +187,65 @@ namespace BotHATTwaffle2.src.Util
             var ws = new Workshop();
             foreach (var jasonFile in jasonFiles)
             {
-                string workshopId = GetWorkshopIdFromJasonFile(jasonFile);
+                var workshopId = GetWorkshopIdFromJasonFile(jasonFile);
 
                 await ws.DownloadWorkshopBsp(_dataService, jasonFile.DirectoryName, workshopId);
             }
 
             return jasonFiles;
         }
+
+        public static async Task<bool> UploadFaceitDemo(Dictionary<FileInfo, string> uploadDictionary)
+        {
+            using (var client = new SftpClient(_dataService.RSettings.ProgramSettings.DemoFtpServer,
+                _dataService.RSettings.ProgramSettings.DemoFtpUser,
+                _dataService.RSettings.ProgramSettings.DemoFtpPassword))
+            {
+                try
+                {
+                    client.Connect();
+                }
+                catch (Exception e)
+                {
+                    await _log.LogMessage(
+                        $"Failed to connect to SFTP server. {_dataService.RSettings.ProgramSettings.DemoFtpServer}" +
+                        $"\n {e.Message}", alert: true, color: LOG_COLOR);
+                    return false;
+                }
+
+                foreach (var upload in uploadDictionary)
+                    try
+                    {
+                        var dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
+
+                        if (!dirListing.Any(x => x.Name.Equals(upload.Value)))
+                        {
+                            client.CreateDirectory(
+                                $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}");
+                            dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
+                        }
+
+                        using (var fileStream = File.OpenRead(upload.Key.FullName))
+                        {
+                            client.UploadFile(fileStream,
+                                $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}/{upload.Key.Name}",
+                                true);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        await _log.LogMessage(
+                            $"Failed uploading {upload.Key.FullName}\n{e.Message}", color: LOG_COLOR);
+                        return false;
+                    }
+
+                client.Disconnect();
+            }
+
+            _ = _log.LogMessage("Uploaded FaceIt Demos!", false, color: LOG_COLOR);
+            return true;
+        }
+
 
         private static async Task<bool> UploadDemo(FileInfo file)
         {

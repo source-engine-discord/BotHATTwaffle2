@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Calendar;
+using BotHATTwaffle2.Services.FaceIt;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
 using Discord.WebSocket;
@@ -111,6 +112,10 @@ namespace BotHATTwaffle2.Handlers
 
             //Update playerbase
             JobManager.AddJob(async () => await UpdatePlayerbase(), s => s
+                .WithName("[PlayingUpdate]").ToRunEvery(1).Days().At(0, 00));
+
+            //Daily Faceit Demo Fetching
+            JobManager.AddJob(async () => await DailyDemoRequests(), s => s
                 .WithName("[PlayingUpdate]").ToRunEvery(1).Days().At(0, 00));
 
             //Re-add joined users so they get welcome message and playtester role.
@@ -255,6 +260,14 @@ namespace BotHATTwaffle2.Handlers
 
             await _log.LogMessage($"Got the following response when updating playerbase: `{response}`",
                 color: LOG_COLOR);
+        }
+
+        private async Task DailyDemoRequests()
+        {
+            await _log.LogMessage("Starting nightly demo grab from FaceIt!", false, color: LOG_COLOR);
+            var fapi = new FaceItApi(_dataService, _log);
+            var reply = await fapi.GetDemos(DateTime.Now.AddDays(-5), DateTime.Now);
+            await _log.LogMessage($"Demos downloaded from FaceIt!!\n{reply}");
         }
 
         public void DisablePlayingUpdate()
