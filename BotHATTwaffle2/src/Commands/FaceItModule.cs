@@ -59,7 +59,7 @@ namespace BotHATTwaffle2.Commands
                     .WithAuthor("Added new FACEIT Hub tags")
                     .WithColor(55, 165, 55);
 
-                var result = DatabaseUtil.StoreHubTypes(new FaceItHubSeason
+                var result = DatabaseUtil.InsertHubTag(new FaceItHubTag
                 {
                     TagName = tagName,
                     Type = type,
@@ -84,7 +84,7 @@ namespace BotHATTwaffle2.Commands
                     .WithColor(55, 165, 55)
                     .WithAuthor($"Deleted FACEIT Hub tag #{id}");
 
-                if (!DatabaseUtil.DeleteHubType(id))
+                if (!DatabaseUtil.DeleteHubTag(id))
                 {
                     embed.WithColor(165, 55, 55);
                     embed.WithAuthor($"Failure deleting FACEIT Hub tag #{id}");
@@ -102,7 +102,7 @@ namespace BotHATTwaffle2.Commands
                     .WithColor(55, 55, 165);
 
                 // Get all items, sort by date, and reverse so it is newest first
-                var result = DatabaseUtil.GetHubTypes().OrderByDescending(x => x.EndDate);
+                var result = DatabaseUtil.GetHubTags().OrderByDescending(x => x.EndDate);
                 embed.WithAuthor("Current FACEIT Hub tags - sorted most recent first");
                 var counter = 0;
 

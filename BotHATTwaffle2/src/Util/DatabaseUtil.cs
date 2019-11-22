@@ -181,43 +181,43 @@ namespace BotHATTwaffle2.Util
             return true;
         }
 
-        public static IEnumerable<FaceItHubSeason> GetHubTypes()
+        public static IEnumerable<FaceItHubTag> GetHubTags()
         {
             try
             {
                 using (var db = new LiteDatabase(DBPATH))
                 {
                     //Grab our collection
-                    var col = db.GetCollection<FaceItHubSeason>(COLLECTION_FACEIT_HUB_SEASON);
+                    var col = db.GetCollection<FaceItHubTag>(COLLECTION_FACEIT_HUB_SEASON);
                     return col.FindAll();
                 }
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage("Something happened getting FaceItHubSeason\n" +
+                _ = _log.LogMessage("An error occurred while getting FACEIT Hub tags\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return null;
             }
         }
 
-        public static bool StoreHubTypes(FaceItHubSeason faceItHubSeason)
+        public static bool InsertHubTag(FaceItHubTag tag)
         {
             try
             {
                 using (var db = new LiteDatabase(DBPATH))
                 {
                     //Grab our collection
-                    var col = db.GetCollection<FaceItHubSeason>(COLLECTION_FACEIT_HUB_SEASON);
+                    var col = db.GetCollection<FaceItHubTag>(COLLECTION_FACEIT_HUB_SEASON);
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage("Storing FaceItHub tag...", false, color: LOG_COLOR);
+                        _ = _log.LogMessage("Storing FACEIT Hub tag...", false, color: LOG_COLOR);
 
-                    col.Insert(faceItHubSeason);
+                    col.Insert(tag);
                 }
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage("Something happened storing faceItHubSeason\n" +
+                _ = _log.LogMessage("An error occurred while inserting a FACEIT Hub tag\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
@@ -225,24 +225,24 @@ namespace BotHATTwaffle2.Util
             return true;
         }
 
-        public static bool DeleteHubType(int id)
+        public static bool DeleteHubTag(int id)
         {
             try
             {
                 using (var db = new LiteDatabase(DBPATH))
                 {
                     //Grab our collection
-                    var col = db.GetCollection<FaceItHubSeason>(COLLECTION_FACEIT_HUB_SEASON);
+                    var col = db.GetCollection<FaceItHubTag>(COLLECTION_FACEIT_HUB_SEASON);
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Deleting FaceItHub Season for ID {id}", false, color: LOG_COLOR);
+                        _ = _log.LogMessage($"Deleting FACEIT Hub tag for ID {id}", false, color: LOG_COLOR);
 
                     return col.Delete(id);
                 }
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage("Something happened deleting faceItHubSeason\n" +
+                _ = _log.LogMessage("An error occurred while deleting a FACEIT Hub tag\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
