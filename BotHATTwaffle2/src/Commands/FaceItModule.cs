@@ -2,11 +2,13 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.FaceIt;
 using BotHATTwaffle2.Util;
+
 using Discord;
 using Discord.Commands;
 
@@ -35,7 +37,7 @@ namespace BotHATTwaffle2.Commands
                 .WithAuthor("Getting Faceit Demos!");
 
             var message = await ReplyAsync(embed:embed.Build());
-            
+
             if (!DateTime.TryParse(startTime, out var startDateTime)) await ReplyAsync("Failed");
 
             if (!DateTime.TryParse(endTime, out var endDateTime)) await ReplyAsync("Failed");
