@@ -28,23 +28,18 @@ namespace BotHATTwaffle2.Commands
 
         [Command("GetDemos", RunMode = RunMode.Async)]
         [RequireUserPermission(GuildPermission.BanMembers)]
-        [Summary("Invokes a fetch of games from all FaceIT hubs")]
-        [Remarks("`>FaceIt GetDemos [startTime] [endTime]`" +
-                 "\nExample: `>FaceIt GetDemos \"11/20/2019\" \"12/20/2019\"`")]
-        public async Task GetDemosAsync([Optional] string startTime, [Optional] string endTime)
+        [Summary("Invokes a fetch of games from all FACEIT hubs")]
+        [Remarks("Example: `>FaceIt GetDemos 11/20/2019 12/20/2019`")]
+        public async Task GetDemosAsync(DateTime startTime, DateTime endTime)
         {
             var embed = new EmbedBuilder()
                 .WithColor(55, 55, 165)
-                .WithAuthor("Getting Faceit Demos!");
+                .WithAuthor("Getting FACEIT Demos!");
 
-            var message = await ReplyAsync(embed:embed.Build());
-
-            if (!DateTime.TryParse(startTime, out var startDateTime)) await ReplyAsync("Failed");
-
-            if (!DateTime.TryParse(endTime, out var endDateTime)) await ReplyAsync("Failed");
+            var message = await ReplyAsync(embed: embed.Build());
 
             var faceItAPI = new FaceItApi(_dataService, _log);
-            var result = await faceItAPI.GetDemos(startDateTime, endDateTime);
+            var result = await faceItAPI.GetDemos(startTime, endTime);
 
             embed.WithAuthor("Complete!");
             embed.WithDescription(result);
@@ -59,46 +54,24 @@ namespace BotHATTwaffle2.Commands
             [RequireUserPermission(GuildPermission.BanMembers)]
             [Summary("Add a new FACEIT hub tag.")]
             [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well.")]
-            public async Task AddAsync(string type, string tagName, string startTime, string endTime) {
+            public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime) {
                 var embed = new EmbedBuilder()
+                    .WithAuthor("Added new hub tags!")
                     .WithColor(55, 55, 165);
-
-                if (type == null || tagName == null || startTime == null || endTime == null)
-                {
-                    embed.WithAuthor("All parameters are required when adding a new hub tag!");
-                    embed.WithColor(165, 55, 55);
-                    return;
-                }
-
-                if (!DateTime.TryParse(startTime, out var startDateTime))
-                {
-                    embed.WithAuthor("Failure parsing startDateTime");
-                    embed.WithColor(165, 55, 55);
-                }
-
-                if (!DateTime.TryParse(endTime, out var endDateTime))
-                {
-                    embed.WithAuthor("Failure parsing endDateTime");
-                    embed.WithColor(165, 55, 55);
-                }
 
                 var result = DatabaseUtil.StoreHubTypes(new FaceItHubSeason
                 {
                     TagName = tagName,
                     Type = type,
-                    StartDate = startDateTime,
-                    EndDate = endDateTime
+                    StartDate = startTime,
+                    EndDate = endTime
                 });
 
-                if (result)
+                if (!result)
                 {
-                    embed.WithAuthor("Added new hub tags!");
-                    embed.WithColor(55, 55, 165);
-                    return;
+                    embed.WithAuthor("Failure adding hub tags!");
+                    embed.WithColor(165, 55, 55);
                 }
-
-                embed.WithAuthor("Failure adding hub tags!");
-                embed.WithColor(165, 55, 55);
 
                 await ReplyAsync(embed: embed.Build());
             }
@@ -106,27 +79,20 @@ namespace BotHATTwaffle2.Commands
             [Command("Delete")]
             [RequireUserPermission(GuildPermission.BanMembers)]
             [Summary("Delete a FACEIT hub tag.")]
-            public async Task DeleteAsync(string type) {
+            public async Task DeleteAsync(int id) {
                 var embed = new EmbedBuilder()
                     .WithColor(55, 55, 165);
 
                 var wasDeleted = false;
-                if (type != null && int.TryParse(type, out var id))
+                if (DatabaseUtil.DeleteHubType(id))
                 {
-                    if (DatabaseUtil.DeleteHubType(id))
-                    {
-                        embed.WithColor(165, 55, 55);
-                        embed.WithDescription($"Deleted Hub tag with ID {id}");
-                        wasDeleted = true;
-                    }
-                    else
-                    {
-                        embed.WithDescription($"Failed deleting hub tag with ID `{id}`. Are you sure it exists?");
-                    }
+                    embed.WithColor(165, 55, 55);
+                    embed.WithDescription($"Deleted Hub tag with ID {id}");
+                    wasDeleted = true;
                 }
                 else
                 {
-                    embed.WithDescription("Unable to parse int from command. See >help HubTags");
+                    embed.WithDescription($"Failed deleting hub tag with ID `{id}`. Are you sure it exists?");
                 }
 
                 embed.WithAuthor($"Result of tag deletion {wasDeleted}");
