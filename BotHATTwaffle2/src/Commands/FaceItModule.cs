@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -108,8 +108,8 @@ namespace BotHATTwaffle2.Commands
                     .WithColor(55, 55, 165);
 
                 // Get all items, sort by date, and reverse so it is newest first
-                var result = DatabaseUtil.GetHubTypes().OrderBy(x => x.EndDate).Reverse();
-                embed.WithAuthor("Current Faceit Hub Tags - Sorted most recent first");
+                var result = DatabaseUtil.GetHubTypes().OrderByDescending(x => x.EndDate);
+                embed.WithAuthor("Current FACEIT Hub Tags - Sorted most recent first");
                 var counter = 0;
 
                 foreach (var r in result)
