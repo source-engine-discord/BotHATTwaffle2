@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace BotHATTwaffle2
+namespace BotHATTwaffle2.Models.JSON
 {
     public class Lists
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace BotHATTwaffle2.src.Models.FaceIt
+namespace BotHATTwaffle2.Models.FaceIt
 {
     public class FaceItHubDemosRequest
     {

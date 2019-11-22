@@ -1,4 +1,4 @@
-﻿namespace BotHATTwaffle2
+﻿namespace BotHATTwaffle2.Models.JSON
 {
     public class General
     {

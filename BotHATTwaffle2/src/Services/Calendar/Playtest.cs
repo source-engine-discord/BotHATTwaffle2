@@ -1,8 +1,10 @@
 ﻿using System;
+
 using BotHATTwaffle2.Models.LiteDB;
+
 using Google.Apis.Calendar.v3.Data;
 
-namespace BotHATTwaffle2.src.Services.Calendar
+namespace BotHATTwaffle2.Services.Calendar
 {
     public class Playtest
     {

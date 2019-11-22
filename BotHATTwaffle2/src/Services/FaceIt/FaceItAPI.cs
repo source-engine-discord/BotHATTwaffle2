@@ -10,7 +10,6 @@ using BotHATTwaffle2.Models.FaceIt;
 using BotHATTwaffle2.Models.JSON;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Steam;
-using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Newtonsoft.Json.Linq;
 
@@ -104,7 +103,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                 await _log.LogMessage($"Response: " + reply,false, color: LOG_COLOR);
             }
-            
+
         }
 
         private string GetReport()
@@ -584,7 +583,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             //Await all results to finish - then we can handle them.
             var remainingTasks = await Task.WhenAll(demoTasks);
 
-            //Put all tasks left in the list into the processed list. 
+            //Put all tasks left in the list into the processed list.
             processedDemos.AddRange(remainingTasks);
 
             //Remove all demos that we should be skipping

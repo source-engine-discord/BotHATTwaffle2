@@ -3,14 +3,17 @@ using System.IO;
 using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
+
+using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.Util;
+
 using FluentFTP;
+
 using Renci.SshNet;
 using Renci.SshNet.Sftp;
 
-namespace BotHATTwaffle2.Handlers
+namespace BotHATTwaffle2.Util
 {
     internal class DownloadHandler
     {

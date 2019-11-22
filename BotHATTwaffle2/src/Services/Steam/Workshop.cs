@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.JSON.Steam;
 using BotHATTwaffle2.Util;
-using bsp_pakfile;
+
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Zip;
