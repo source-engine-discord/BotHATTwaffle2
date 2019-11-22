@@ -112,11 +112,11 @@ namespace BotHATTwaffle2.Handlers
 
             //Update playerbase
             JobManager.AddJob(async () => await UpdatePlayerbase(), s => s
-                .WithName("[PlayingUpdate]").ToRunEvery(1).Days().At(0, 00));
+                .WithName("[PlayerbaseUpdate]").ToRunEvery(1).Days().At(0, 00));
 
             //Daily Faceit Demo Fetching
             JobManager.AddJob(async () => await DailyDemoRequests(), s => s
-                .WithName("[FaceItUpdate]").ToRunEvery(1).Days().At(0, 00));
+                .WithName("[FaceitDemoRequest]").ToRunEvery(1).Days().At(0, 00));
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
