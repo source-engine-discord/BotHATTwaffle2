@@ -34,14 +34,14 @@ namespace BotHATTwaffle2.Commands
         {
             var embed = new EmbedBuilder()
                 .WithColor(55, 55, 165)
-                .WithAuthor("Getting FACEIT Demos!");
+                .WithAuthor("Getting FACEIT Demos");
 
             var message = await ReplyAsync(embed: embed.Build());
 
             var faceItAPI = new FaceItApi(_dataService, _log);
             var result = await faceItAPI.GetDemos(startTime, endTime);
 
-            embed.WithAuthor("Complete!");
+            embed.WithAuthor("Retrieved FACEIT Demos");
             embed.WithDescription(result);
             embed.WithColor(55, 165, 55);
 
@@ -52,12 +52,12 @@ namespace BotHATTwaffle2.Commands
         class FaceItTagsModule : ModuleBase<SocketCommandContext> {
             [Command("Add")]
             [RequireUserPermission(GuildPermission.BanMembers)]
-            [Summary("Add a new FACEIT hub tag.")]
+            [Summary("Add a new FACEIT Hub tag.")]
             [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well.")]
             public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime) {
                 var embed = new EmbedBuilder()
-                    .WithAuthor("Added new hub tags!")
-                    .WithColor(55, 55, 165);
+                    .WithAuthor("Added new FACEIT Hub tags")
+                    .WithColor(55, 165, 55);
 
                 var result = DatabaseUtil.StoreHubTypes(new FaceItHubSeason
                 {
@@ -69,7 +69,7 @@ namespace BotHATTwaffle2.Commands
 
                 if (!result)
                 {
-                    embed.WithAuthor("Failure adding hub tags!");
+                    embed.WithAuthor("Failure adding FACEIT Hub tags");
                     embed.WithColor(165, 55, 55);
                 }
 
@@ -78,38 +78,32 @@ namespace BotHATTwaffle2.Commands
 
             [Command("Delete")]
             [RequireUserPermission(GuildPermission.BanMembers)]
-            [Summary("Delete a FACEIT hub tag.")]
+            [Summary("Delete a FACEIT Hub tag.")]
             public async Task DeleteAsync(int id) {
                 var embed = new EmbedBuilder()
-                    .WithColor(55, 55, 165);
+                    .WithColor(55, 165, 55)
+                    .WithAuthor($"Deleted FACEIT Hub tag #{id}");
 
-                var wasDeleted = false;
-                if (DatabaseUtil.DeleteHubType(id))
+                if (!DatabaseUtil.DeleteHubType(id))
                 {
                     embed.WithColor(165, 55, 55);
-                    embed.WithDescription($"Deleted Hub tag with ID {id}");
-                    wasDeleted = true;
+                    embed.WithAuthor($"Failure deleting FACEIT Hub tag #{id}");
+                    embed.WithDescription("Are you sure that tag exists?");
                 }
-                else
-                {
-                    embed.WithDescription($"Failed deleting hub tag with ID `{id}`. Are you sure it exists?");
-                }
-
-                embed.WithAuthor($"Result of tag deletion {wasDeleted}");
 
                 await ReplyAsync(embed: embed.Build());
             }
 
             [Command("Show")]
             [RequireUserPermission(GuildPermission.BanMembers)]
-            [Summary("Show all current FACEIT hub tags sorted by date.")]
+            [Summary("Show all current FACEIT Hub tags sorted by date.")]
             public async Task ShowAsync() {
                 var embed = new EmbedBuilder()
                     .WithColor(55, 55, 165);
 
                 // Get all items, sort by date, and reverse so it is newest first
                 var result = DatabaseUtil.GetHubTypes().OrderByDescending(x => x.EndDate);
-                embed.WithAuthor("Current FACEIT Hub Tags - Sorted most recent first");
+                embed.WithAuthor("Current FACEIT Hub tags - sorted most recent first");
                 var counter = 0;
 
                 foreach (var r in result)
