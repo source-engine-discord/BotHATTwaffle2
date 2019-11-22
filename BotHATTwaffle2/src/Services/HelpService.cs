@@ -22,8 +22,8 @@ namespace BotHATTwaffle2.Services
         public void AddModuleField(ModuleInfo module, ref EmbedBuilder embed)
         {
             var commands = new StringBuilder();
-
             var addedCommands = new List<string>();
+            var prefix = GetPrefix(module);
 
             // Sorts commands alphabetically and builds the help strings.
             foreach (var cmd in module.Commands.OrderBy(c => c.Name))
@@ -32,13 +32,16 @@ namespace BotHATTwaffle2.Services
                 if (addedCommands.Contains(cmd.Name))
                     continue;
 
-                commands.AppendLine($"`{cmd.Name}`");
+                commands.AppendLine($"`{prefix}{cmd.Name}`");
                 addedCommands.Add(cmd.Name);
             }
 
+            if (commands.Length == 0)
+                return;
+
             // Adds a field for the module if any commands for it were found. Removes 'Module' from the module's name.
-            if (commands.Length != 0)
-                embed.AddField(module.Name.Replace("Module", string.Empty), commands.ToString(), true);
+            var name = module.IsSubmodule ? prefix : module.Name.Replace("Module", string.Empty);
+            embed.AddField(name, commands.ToString(), true);
         }
 
         /// <inheritdoc />
@@ -103,6 +106,24 @@ namespace BotHATTwaffle2.Services
                     permissions.Add(attr.ChannelPermission?.ToString() ?? attr.GuildPermission.ToString());
 
             return string.Join("\n", permissions.OrderBy(p => p));
+        }
+
+        /// <inheritdoc />
+        public string GetPrefix(ModuleInfo module)
+        {
+            if (string.IsNullOrEmpty(module.Group))
+                return "";
+
+            var prefixBuilder = new StringBuilder();
+            var parent = module;
+
+            while (parent != null)
+            {
+                prefixBuilder.Insert(0, $"{parent.Group} ");
+                parent = parent.Parent;
+            }
+
+            return prefixBuilder.ToString();
         }
 
         /// <inheritdoc />
