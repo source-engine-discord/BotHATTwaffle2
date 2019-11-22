@@ -22,7 +22,7 @@ namespace BotHATTwaffle2.Services
         public void AddModuleField(ModuleInfo module, ref EmbedBuilder embed)
         {
             var commands = new StringBuilder();
-            var addedCommands = new List<string>();
+            var addedCommands = new HashSet<string>();
             var prefix = GetPrefix(module);
 
             // Sorts commands alphabetically and builds the help strings.
