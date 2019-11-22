@@ -181,6 +181,10 @@ namespace BotHATTwaffle2.Util
             return true;
         }
 
+        /// <summary>
+        ///     Get the currently stored FACEIT Hub tags.
+        /// </summary>
+        /// <returns>A collection of the retrieved tags.</returns>
         public static IEnumerable<FaceItHubTag> GetHubTags()
         {
             try
@@ -200,6 +204,11 @@ namespace BotHATTwaffle2.Util
             }
         }
 
+        /// <summary>
+        ///     Insert a new FACEIT Hub tag.
+        /// </summary>
+        /// <param name="tag">The tag to add.</param>
+        /// <returns>true if successfully added; otherwise, false.</returns>
         public static bool InsertHubTag(FaceItHubTag tag)
         {
             try
@@ -225,6 +234,11 @@ namespace BotHATTwaffle2.Util
             return true;
         }
 
+        /// <summary>
+        ///     Delete a FACEIT Hub tag.
+        /// </summary>
+        /// <param name="id">The id of the tag to delete.</param>
+        /// <returns>true if successfully deleted; otherwise, false.</returns>
         public static bool DeleteHubTag(int id)
         {
             try
