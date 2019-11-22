@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.Helpers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
 
@@ -73,7 +72,7 @@ namespace BotHATTwaffle2.Util
             processStartInfo.WorkingDirectory = "IDemO";
 
             //Start demo parser with a 10m timeout
-            await ProcessAsyncHelper.RunAsync(processStartInfo, 10 * 60 * 1000);
+            await AsyncProcessRunner.RunAsync(processStartInfo, 10 * 60 * 1000);
         }
 
         /// <summary>

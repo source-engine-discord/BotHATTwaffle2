@@ -3,13 +3,13 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BotHATTwaffle2.Helpers {
+namespace BotHATTwaffle2.Util {
     /// <summary>
     ///     Process helper with asynchronous interface
     ///     - Based on https://gist.github.com/georg-jung/3a8703946075d56423e418ea76212745
     ///     - And on https://stackoverflow.com/questions/470256/process-waitforexit-asynchronously
     /// </summary>
-    public static class ProcessAsyncHelper
+    public static class AsyncProcessRunner
     {
         /// <summary>
         ///     Run a process asynchronously
