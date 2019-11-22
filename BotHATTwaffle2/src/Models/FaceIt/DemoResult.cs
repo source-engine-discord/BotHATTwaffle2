@@ -17,7 +17,6 @@ namespace BotHATTwaffle2.Models.FaceIt
             DemoDate = demoDate;
             MapName = mapName;
         }
-
         public bool DownloadFailed { get; set; }
         public bool UnzipFailed { get; set; }
         public string Filename { get; }

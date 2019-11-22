@@ -13,6 +13,7 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
+using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -55,8 +56,15 @@ namespace BotHATTwaffle2.Commands
 //        [Command("Test")]
 //        [Summary("Used to debug. This should not go live")]
 //        [RequireUserPermission(GuildPermission.KickMembers)]
-//        public async Task TestAsync(int v1, int v2)
+//        public async Task TestAsync()
 //        {
+//            var sapi = new SteamAPI(_dataService,_log);
+//            var r = await sapi.GetWorkshopMapRadarFiles(@"C:\support\test", "1811247004");
+//
+//            foreach (var fileInfo in r)
+//            {
+//                await ReplyAsync(fileInfo.FullName);
+//            }
 //        }
 
         [Command("MatchMaking", RunMode = RunMode.Async)]

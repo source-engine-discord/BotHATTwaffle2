@@ -168,9 +168,9 @@ namespace BotHATTwaffle2.Commands
 
             await ReplyAsync(string.Empty, false, embed.Build());
             await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` used `RoleMe`:\n" +
-                                  $"**Added:**\n{string.Join("\n", rolesAdded.Select(r => r.Name))}\n\n" +
-                                  $"**Removed:**\n{string.Join("\n", rolesRemoved.Select(r => r.Name))}\n\n" +
-                                  $"**Invalid:**\n{string.Join("\n", rolesInvalid)}");
+                                  $"**Added:**\n{string.Join(" | ", rolesAdded.Select(r => r.Name))}" +
+                                  $"**Removed:**\n{string.Join(" | ", rolesRemoved.Select(r => r.Name))}" +
+                                  $"**Invalid:**\n{string.Join(" | ", rolesInvalid)}");
         }
 
         [Command("Link")]

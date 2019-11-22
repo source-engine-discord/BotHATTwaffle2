@@ -40,7 +40,12 @@ namespace BotHATTwaffle2.src.Util
             return File.Exists(exeFolderName + fileName);
         }
 
-        private static string GetWorkshopIdFromJasonFile(FileInfo jasonFile)
+        /// <summary>
+        /// Gets the Workshop ID as a string from a parsed Jason file.
+        /// </summary>
+        /// <param name="jasonFile">Jason file to get workshop ID from</param>
+        /// <returns></returns>
+        public static string GetWorkshopIdFromJasonFile(FileInfo jasonFile)
         {
             using (var reader = new StreamReader(jasonFile.FullName))
             {
@@ -50,6 +55,12 @@ namespace BotHATTwaffle2.src.Util
             }
         }
 
+        /// <summary>
+        /// Parses FaceIt Demos in bulk.
+        /// </summary>
+        /// <param name="sourcePath"></param>
+        /// <param name="destinationPath"></param>
+        /// <returns></returns>
         public static async Task ParseFaceitDemos(string sourcePath, string destinationPath)
         {
             //Start the process
@@ -57,11 +68,12 @@ namespace BotHATTwaffle2.src.Util
                 $"-folders \"{sourcePath}\" -output \"{destinationPath}\" -nochickens -samefilename -lowoutputmode");
             processStartInfo.WorkingDirectory = "IDemO";
 
-            await ProcessAsyncHelper.RunAsync(processStartInfo, 5 * 60 * 1000);
+            //Start demo parser with a 10m timeout
+            await ProcessAsyncHelper.RunAsync(processStartInfo, 10 * 60 * 1000);
         }
 
         /// <summary>
-        ///     TODO Remove this crap
+        /// Parses single demos from scheduled playtesting events
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
@@ -117,85 +129,12 @@ namespace BotHATTwaffle2.src.Util
             return jasonFile;
         }
 
-        public static async Task<List<FileInfo>> ParseFaceItHubDemos(string path)
-        {
-            mainFolderName = string.Concat(Path.GetTempPath(), @"DemoGrabber\");
-
-            if (!CanParse())
-                return null;
-
-            //Start the process
-            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName,
-                $"-folders \"{path}\" -output \"{outputFolderName}\" -recursive -nochickens -samefilename -samefolderstructure");
-            processStartInfo.WorkingDirectory = mainFolderName;
-            var demoProcess = Process.Start(processStartInfo);
-
-            //Unable to start for some reason. Bail.
-            if (demoProcess == null)
-            {
-                _ = _log.LogMessage("Failed to find process to parse demo. Aborting Demo parse.", alert: true,
-                    color: LOG_COLOR);
-                return null;
-            }
-
-            demoProcess.WaitForExit();
-            demoProcess.Close();
-
-            //Get all the json files in the directory.
-            var localDirectoryInfo = new DirectoryInfo(mainFolderName + outputFolderName);
-
-            if (localDirectoryInfo
-                    .EnumerateFiles().Count(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)) == 0)
-            {
-                _ = _log.LogMessage($"There are no JSON files in `{outputFolderName}` directory. Aborting.",
-                    alert: true,
-                    color: LOG_COLOR);
-                return null;
-            }
-
-            var jasonFiles = localDirectoryInfo.EnumerateFiles()
-                .Where(x => x.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)).ToList();
-
-            /*List<FileInfo> failedUploads = new List<FileInfo>();
-            foreach (var file in jasonFiles)
-            {
-                var uploadResult = UploadDemo(file).Result;
-
-                //Stored list of demos that failed to upload
-                if (!uploadResult)
-                {
-                    failedUploads.Add(file);
-                }
-            }
-
-            //Failed to upload any, abort.
-            if (failedUploads.Count() > 0)
-            {
-                var failedUploadsString = string.Join("\n", failedUploads);
-                _ = _log.LogMessage($"Failed to upload some demos: Aborting. {failedUploadsString}", alert: true,
-                    color: LOG_COLOR);
-            }*/
-
-            //Delete all files in the directory.
-            /*foreach (var file in localDirectoryInfo.EnumerateFiles())
-            {
-                _ = _log.LogMessage($"Deleting: {file.FullName}", false, color: LOG_COLOR);
-                file.Delete();
-            }*/
-
-            // grab BSPs to be able to get overviews for the heatmaps
-            var ws = new Workshop();
-            foreach (var jasonFile in jasonFiles)
-            {
-                var workshopId = GetWorkshopIdFromJasonFile(jasonFile);
-
-                await ws.DownloadWorkshopBsp(_dataService, jasonFile.DirectoryName, workshopId);
-            }
-
-            return jasonFiles;
-        }
-
-        public static async Task<bool> UploadFaceitDemo(Dictionary<FileInfo, string> uploadDictionary)
+        /// <summary>
+        /// Uploads many FaceIt demos in a single session
+        /// </summary>
+        /// <param name="uploadDictionary"></param>
+        /// <returns></returns>
+        public static async Task<bool> UploadFaceitDemosAndRadars(Dictionary<FileInfo, string> uploadDictionary)
         {
             using (var client = new SftpClient(_dataService.RSettings.ProgramSettings.DemoFtpServer,
                 _dataService.RSettings.ProgramSettings.DemoFtpUser,
@@ -246,7 +185,11 @@ namespace BotHATTwaffle2.src.Util
             return true;
         }
 
-
+        /// <summary>
+        /// Uploads a single demo, used for scheduled playtesting events.
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
         private static async Task<bool> UploadDemo(FileInfo file)
         {
             using (var client = new SftpClient(_dataService.RSettings.ProgramSettings.DemoFtpServer,

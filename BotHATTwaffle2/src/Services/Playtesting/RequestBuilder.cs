@@ -90,7 +90,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Make the test object
             _testRequest = new PlaytestRequest();
             _isDms = context.IsPrivate;
-            _workshop = new Workshop();
+            _workshop = new Workshop(_dataService, _log);
             _otherRequests = null;
             _scheduledTests = null;
         }
@@ -281,8 +281,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _log.LogMessage($"{_context.User} has scheduled a playtest!\n{_testRequest}", color: LOG_COLOR);
 
                 //Workshop embed.
-                var ws = new Workshop();
-                var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message, _dataService,
+                var ws = new Workshop(_dataService, _log);
+                var wbEmbed = await ws.HandleWorkshopEmbeds(_context.Message,
                     $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
 
@@ -412,7 +412,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 await mentionChannel.SendMessageAsync($"{mentions} has submitted a playtest request!",
                     embed:
-                    (await _workshop.HandleWorkshopEmbeds(_context.Message, _dataService,
+                    (await _workshop.HandleWorkshopEmbeds(_context.Message,
                         $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                         _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL)))
                     .Build());

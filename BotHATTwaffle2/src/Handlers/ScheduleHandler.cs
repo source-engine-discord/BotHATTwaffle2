@@ -116,7 +116,7 @@ namespace BotHATTwaffle2.Handlers
 
             //Daily Faceit Demo Fetching
             JobManager.AddJob(async () => await DailyDemoRequests(), s => s
-                .WithName("[PlayingUpdate]").ToRunEvery(1).Days().At(0, 00));
+                .WithName("[FaceItUpdate]").ToRunEvery(1).Days().At(0, 00));
 
             //Re-add joined users so they get welcome message and playtester role.
             //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
@@ -266,7 +266,10 @@ namespace BotHATTwaffle2.Handlers
         {
             await _log.LogMessage("Starting nightly demo grab from FaceIt!", false, color: LOG_COLOR);
             var fapi = new FaceItApi(_dataService, _log);
-            var reply = await fapi.GetDemos(DateTime.Now.AddDays(-5), DateTime.Now);
+
+            //Asking for the past 10 days, and we check what we already have.
+            //The faceit API is kinda garbage and does not always return recent games.
+            var reply = await fapi.GetDemos(DateTime.Now.AddDays(-10), DateTime.Now);
             await _log.LogMessage($"Demos downloaded from FaceIt!!\n{reply}");
         }
 

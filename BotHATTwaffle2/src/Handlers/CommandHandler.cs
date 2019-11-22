@@ -187,9 +187,8 @@ namespace BotHATTwaffle2.Handlers
                     "://steamcommunity.com/workshop/filedetails/", StringComparison.OrdinalIgnoreCase))
             {
                 // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
-                var workshop = new Workshop();
-                await workshop.SendWorkshopEmbed(message, _dataService);
-
+                var workshop = new Workshop(_dataService, _log);
+                await workshop.SendWorkshopEmbed(message);
                 return;
             }
 
@@ -229,10 +228,10 @@ namespace BotHATTwaffle2.Handlers
                 //Get the creator
                 var creator = _dataService.GetSocketUser(input[1]);
                 var creatorMention = creator != null ? creator.Mention : input[1];
-                var workshop = new Workshop();
+                var workshop = new Workshop(_dataService,_log);
                 await _dataService.CSGOTestingChannel.SendMessageAsync(
                     $"{creatorMention} has submitted a playtest request!", embed:
-                    (await workshop.HandleWorkshopEmbeds(message, _dataService,
+                    (await workshop.HandleWorkshopEmbeds(message,
                         $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                         input[4]))
                     .Build());

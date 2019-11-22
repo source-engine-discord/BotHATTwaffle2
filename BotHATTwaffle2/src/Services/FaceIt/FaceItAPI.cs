@@ -9,6 +9,7 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.FaceIt;
 using BotHATTwaffle2.Models.JSON;
 using BotHATTwaffle2.Models.LiteDB;
+using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Newtonsoft.Json.Linq;
@@ -25,6 +26,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         private const int ERROR_CALLING_API_COUNT_MAX = 20;
         private const string HUB_BASE_URL = @"https://open.faceit.com/data/v4/hubs/";
         private const int DOWNLOAD_AND_ZIP_RETRY_LIMIT = 20;
+        private const string UPDATE_BASE_URL = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&build=";
 
         private static bool _running;
 
@@ -36,6 +38,9 @@ namespace BotHATTwaffle2.Services.FaceIt
         private int _demosUnZipped;
         private int _demosUploaded;
         private long _downloadedData;
+        private string _updateResponses;
+
+        private List<string> _siteUpdateCalls = new List<string>();
 
         private DateTime _startTime;
 
@@ -66,12 +71,20 @@ namespace BotHATTwaffle2.Services.FaceIt
                 }
 
                 var dlResult = await DownloadHubDemos(hub.HubName, reply);
+
+                if (dlResult.Length == 0)
+                {
+                    await _log.LogMessage($"No items for {hub.HubName}. We likely already have them all.", false,
+                        color: LOG_COLOR);
+                    continue;
+                }
+
                 await ParseDemos(dlResult);
                 await UploadParsedFiles(dlResult, hub);
                 DeleteDemoFiles(dlResult);
-
-                //TODO: Call update URLs
             }
+
+            await UpdateWebsiteFiles();
 
             var report = GetReport();
             await _log.LogMessage(report);
@@ -79,19 +92,37 @@ namespace BotHATTwaffle2.Services.FaceIt
             return report;
         }
 
+        private async Task UpdateWebsiteFiles()
+        {
+            var web = new WebClient();
+            foreach (var tag in _siteUpdateCalls)
+            {
+                await _log.LogMessage($"Calling site update URL: " + UPDATE_BASE_URL + tag,false, color: LOG_COLOR);
+
+                var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
+                _updateResponses += $"{tag}: `{reply}`\n";
+
+                await _log.LogMessage($"Response: " + reply,false, color: LOG_COLOR);
+            }
+            
+        }
+
         private string GetReport()
         {
-            return $"Start Time: {_startTime} | Ran for {DateTime.Now.Subtract(_startTime).ToString()}" +
-                   $"\nDemos Downloaded: {_demosDownloaded}" +
-                   $"\nDemos Unzipped: {_demosUnZipped}" +
-                   $"\nDemos Uploaded: {_demosUploaded}" +
-                   $"\nData Downloaded: {Math.Round(_downloadedData / 1024f / 1024f, 2)}MB";
+            if (_updateResponses == null)
+                _updateResponses = "`No updates requested`";
+            return $"Start Time: `{_startTime}` | Ran for `{DateTime.Now.Subtract(_startTime).ToString()}`" +
+                   $"\nDemos Downloaded: `{_demosDownloaded}`" +
+                   $"\nDemos Unzipped: `{_demosUnZipped}`" +
+                   $"\nFiles Uploaded: `{_demosUploaded}`" +
+                   $"\nData Downloaded: `{Math.Round(_downloadedData / 1024f / 1024f, 2)}MB`" +
+                   $"\nUpdate Responses:\n{_updateResponses.Trim()}";
         }
 
         private async Task UploadParsedFiles(DemoResult[] demoResults, FaceItHub hub)
         {
             var hubSeasons = DatabaseUtil.GetHubTypes();
-            var uploaDictionary = new Dictionary<FileInfo, string>();
+            var uploadDictionary = new Dictionary<FileInfo, string>();
             foreach (var demo in demoResults)
             {
                 if (demo.Skip || demo.DownloadFailed || demo.UnzipFailed)
@@ -112,15 +143,15 @@ namespace BotHATTwaffle2.Services.FaceIt
                 {
                     tag = "UNKNOWN";
                     _ = _log.LogMessage(
-                        $"Hub seasons have no definitions in the database for date range `{demo.DemoDate}`!\n`{demo.Filename}`",
-                        color: LOG_COLOR);
+                        $"Hub seasons have no definitions in the database for date `{demo.DemoDate}`!\n`{demo.Filename}`",
+                        false,color: LOG_COLOR);
                 }
 
                 var dir = Path.GetDirectoryName(demo.JsonLocation);
                 FileInfo targetFile;
                 try
                 {
-                    targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)));
+                    targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)) ?? throw new InvalidOperationException());
                 }
                 catch (Exception e)
                 {
@@ -129,13 +160,52 @@ namespace BotHATTwaffle2.Services.FaceIt
                     continue;
                 }
 
-                uploaDictionary.Add(targetFile, $"{tag}_{demo.MapName}");
+                string uploadTags = $"{tag}_{demo.MapName}";
+                string radarDir = $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\Radars\\{tag}";
+
+                //Get the WS ID from the demos
+                Directory.CreateDirectory(radarDir);
+                var radarPng = Directory.GetFiles(radarDir, $"*{demo.MapName}*.png", SearchOption.AllDirectories);
+                var radarTxt = Directory.GetFiles(radarDir, $"*{demo.MapName}*.txt", SearchOption.AllDirectories);
+
+                //No radar or text file found. We need to get them and include in the upload.
+                if (radarTxt.Length == 0 || radarPng.Length == 0)
+                {
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        await _log.LogMessage($"Getting radar files for {targetFile}", false, color: LOG_COLOR);
+
+                    var wsId = DemoParser.GetWorkshopIdFromJasonFile(targetFile);
+
+                    var sapi = new SteamAPI(_dataService, _log);
+                    var radarFiles = await sapi.GetWorkshopMapRadarFiles(_tempPath, wsId);
+
+                    if(radarFiles != null)
+                        foreach (var radarFile in radarFiles)
+                        {
+                            if(File.Exists($"{radarDir}\\{radarFile.Name}"))
+                                File.Delete($"{radarDir}\\{radarFile.Name}");
+
+                            File.Move(radarFile.FullName, $"{radarDir}\\{radarFile.Name}");
+                            uploadDictionary.Add(new FileInfo($"{radarDir}\\{radarFile.Name}"),uploadTags);
+                        }
+                }
+                else
+                {
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        await _log.LogMessage($"Skipping radar files for {targetFile}", false, color: LOG_COLOR);
+                }
+
+                //Add the tag to be called later
+                if (!_siteUpdateCalls.Contains(uploadTags))
+                    _siteUpdateCalls.Add(uploadTags);
+
+                uploadDictionary.Add(targetFile, uploadTags);
             }
 
-            var uploadeResult = await DemoParser.UploadFaceitDemo(uploaDictionary);
+            var uploadResult = await DemoParser.UploadFaceitDemosAndRadars(uploadDictionary);
 
-            if (uploadeResult)
-                _demosUploaded += uploaDictionary.Count;
+            if (uploadResult)
+                _demosUploaded += uploadDictionary.Count;
         }
 
         private void DeleteDemoFiles(DemoResult[] demoResult)
@@ -275,7 +345,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 catch (WebException e)
                 {
                     await _log.LogMessage(
-                        $"Error calling Faceit API for {faceItHub.HubGuid}, will retry. Reason was:\n{e}", alert: true,
+                        $"Error calling Faceit API for {faceItHub.HubGuid}, will retry. Reason was:\n{e}", alert: false,
                         color: LOG_COLOR);
 
                     //Give the API a delay
@@ -312,10 +382,10 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             Directory.CreateDirectory(Path.GetDirectoryName(localPath));
 
-            await _log.LogMessage($"Downloading: {remotePath}", false, color: LOG_COLOR);
-
             if (string.IsNullOrEmpty(remotePath) || string.IsNullOrEmpty(localPath))
                 return false;
+
+            await _log.LogMessage($"Downloading: {remotePath}", false, color: LOG_COLOR);
 
             using (var client = new WebClient())
             {
@@ -394,6 +464,13 @@ namespace BotHATTwaffle2.Services.FaceIt
                     demoResult.Skip = true;
                     return demoResult;
                 }
+            }
+
+            //Skip unknown maps
+            if (demoResult.MapName.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            {
+                demoResult.Skip = true;
+                return demoResult;
             }
 
             for (var i = 0; i < DOWNLOAD_AND_ZIP_RETRY_LIMIT; i++)
@@ -510,7 +587,9 @@ namespace BotHATTwaffle2.Services.FaceIt
             //Put all tasks left in the list into the processed list. 
             processedDemos.AddRange(remainingTasks);
 
-            await _log.LogMessage($"Done downloading demos for {hubName}", false, color: LOG_COLOR);
+            //Remove all demos that we should be skipping
+            processedDemos.RemoveAll(x => x.Skip);
+            await _log.LogMessage($"Done downloading demos for {hubName}. Total of {processedDemos.Count}.", false, color: LOG_COLOR);
 
             return processedDemos.ToArray();
         }

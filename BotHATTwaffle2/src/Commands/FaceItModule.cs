@@ -10,7 +10,7 @@ using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Commands;
 
-namespace BotHATTwaffle2.src.Commands
+namespace BotHATTwaffle2.Commands
 {
     public class FaceItModule : ModuleBase<SocketCommandContext>
     {
@@ -24,7 +24,7 @@ namespace BotHATTwaffle2.src.Commands
         }
 
         [Command("GetHubFiles", RunMode = RunMode.Async)]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.BanMembers)]
         [Summary("Invokes a fetch of games from all FaceIT hubs")]
         [Remarks("`>GetHubFiles [startTime] [endTime]`" +
                  "\nExample: `>GetHubFiles \"11/20/2019\" \"12/20/2019\"`")]
@@ -51,7 +51,7 @@ namespace BotHATTwaffle2.src.Commands
         }
 
         [Command("HubTags")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.BanMembers)]
         [Summary("Manages tags for FaceIt hub demo handing")]
         [Remarks("Dates should **NOT** overlap. Make sure the ending date it 23:59 as well." +
                  "\n`>HubTags show` will display all current tags, sorted by date." +
