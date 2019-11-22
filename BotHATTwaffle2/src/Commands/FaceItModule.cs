@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 using BotHATTwaffle2.Handlers;
@@ -49,7 +48,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Group("Tags")]
-        class FaceItTagsModule : ModuleBase<SocketCommandContext> {
+        public class FaceItTagsModule : ModuleBase<SocketCommandContext> {
             [Command("Add")]
             [RequireUserPermission(GuildPermission.BanMembers)]
             [Summary("Add a new FACEIT Hub tag.")]
