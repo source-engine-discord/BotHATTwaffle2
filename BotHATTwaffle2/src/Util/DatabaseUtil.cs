@@ -237,7 +237,7 @@ namespace BotHATTwaffle2.Util
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         _ = _log.LogMessage($"Deleting FaceItHub Season for ID {id}", false, color: LOG_COLOR);
 
-                    col.Delete(id);
+                    return col.Delete(id);
                 }
             }
             catch (Exception e)
@@ -246,8 +246,6 @@ namespace BotHATTwaffle2.Util
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }
-
-            return true;
         }
 
         /// <summary>
