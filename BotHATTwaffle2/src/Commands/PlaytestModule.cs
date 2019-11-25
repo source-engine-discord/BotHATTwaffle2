@@ -880,12 +880,12 @@ namespace BotHATTwaffle2.Commands
         [Alias("pt")]
         [Summary("Changes what playtest notifications your get.")]
         [Remarks(
-            "Type `>playtester` or `>pt [Unsubscribe]` to remove all subscriptions (Does not remove competitive)." +
-            "\nType `>playtester [Subscribe]` to add all subscriptions." +
-            "\nType `>playtester [CSGO/TF2]` to toggle the specific game subscription." +
-            "\nType `>playtester [Community]` to toggle community tester." +
-            "\nType `>playtester [Comp]` to remove the competitive tester. You cannot re-add it yourself if removed." +
-            "\nType `>playtester [Show]` to see your subscriptions.")]
+            "Type `>playtester` or `>pt Unsubscribe` to remove all subscriptions (Does not remove competitive)." +
+            "\nType `>playtester Subscribe` to add all subscriptions." +
+            "\nType `>playtester CSGO/TF2` to toggle the specific game subscription." +
+            "\nType `>playtester Community` to toggle community tester." +
+            "\nType `>playtester Comp` to remove the competitive tester. You cannot re-add it yourself if removed." +
+            "\nType `>playtester Show` to see your subscriptions.")]
         public async Task PlaytesterAsync([Optional] string game)
         {
             var user = _dataService.GetSocketGuildUser(Context.User.Id);
