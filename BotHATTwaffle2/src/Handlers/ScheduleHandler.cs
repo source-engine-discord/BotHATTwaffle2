@@ -267,10 +267,9 @@ namespace BotHATTwaffle2.Handlers
             await _log.LogMessage("Starting nightly demo grab from FaceIt!", false, color: LOG_COLOR);
             var fapi = new FaceItApi(_dataService, _log);
 
-            //Asking for the past 10 days, and we check what we already have.
+            //Asking for the past 7 days, and we check what we already have.
             //The faceit API is kinda garbage and does not always return recent games.
-            var reply = await fapi.GetDemos(DateTime.Now.AddDays(-10), DateTime.Now);
-            await _log.LogMessage($"Demos downloaded from FaceIt!!\n{reply}");
+            await fapi.GetDemos(DateTime.Now.AddDays(-7), DateTime.Now);
         }
 
         public void DisablePlayingUpdate()

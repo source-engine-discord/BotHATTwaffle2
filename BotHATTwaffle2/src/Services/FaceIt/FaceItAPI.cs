@@ -345,7 +345,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 catch (WebException e)
                 {
                     await _log.LogMessage(
-                        $"Error calling Faceit API for {faceItHub.HubGuid}, will retry. Reason was:\n{e}", alert: false,
+                        $"Error calling Faceit API for `{faceItHub.HubName}` but will retry.\nEndpoint: `{apiEndpoint}`. Reason was:\n`{e}`", alert: false,
                         color: LOG_COLOR);
 
                     //Give the API a delay

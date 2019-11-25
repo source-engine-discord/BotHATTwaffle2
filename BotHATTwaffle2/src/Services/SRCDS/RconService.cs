@@ -157,7 +157,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             });
 
             //Ultimate timeout, should hopefully never be here.
-            if (await Task.WhenAny(t, Task.Delay(10 * 1000)) != t)
+            if (await Task.WhenAny(t, Task.Delay(5 * 1000)) != t)
             {
                 try
                 {

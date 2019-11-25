@@ -43,9 +43,15 @@ namespace BotHATTwaffle2.Services.Steam
                 @"\b((https?|ftp|file)://|(www|ftp)\.)(steamcommunity)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]",
                 RegexOptions.IgnoreCase);
             var workshopLink = regMatch.ToString();
-            
-            //Get the initial response from the workshop API
-            var workshopId = GeneralUtil.GetWorkshopIdFromFqdn(workshopLink);
+
+            string workshopId;
+
+            //Use correct WS id depending on input values
+            if (inputId == null)
+                workshopId = GeneralUtil.GetWorkshopIdFromFqdn(workshopLink);
+            else
+                workshopId = inputId;
+
             var steamApi = new SteamAPI(_dataService, _log);
             var workshopJsonItem = await steamApi.GetWorkshopItem(workshopId);
 
