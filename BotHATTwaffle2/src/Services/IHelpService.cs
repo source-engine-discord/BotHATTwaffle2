@@ -39,6 +39,13 @@ namespace BotHATTwaffle2.Services
         string GetPermissions(IEnumerable<PreconditionAttribute> preconditions);
 
         /// <summary>
+        ///     Returns the fully-qualified group prefix for a module.
+        /// </summary>
+        /// <param name="module">The module for which to get the prefix.</param>
+        /// <returns>The module's fully-qualified prefix.</returns>
+        string GetPrefix(ModuleInfo module);
+
+        /// <summary>
         ///     Retrieves the names of the required roles from a command's preconditions.
         /// </summary>
         /// <param name="preconditions">The command's preconditions.</param>

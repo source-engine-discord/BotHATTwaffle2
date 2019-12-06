@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
 using BotHATTwaffle2.Models.LiteDB;
-using BotHATTwaffle2.src.Services.Calendar;
+
 using Discord.Commands;
+
 using Google.Apis.Calendar.v3.Data;
+
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 
-namespace BotHATTwaffle2.Services.Playtesting
+namespace BotHATTwaffle2.Services.Calendar
 {
     public class CalendarBuilder
     {

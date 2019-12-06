@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
-using static bsp_pakfile.SourceBSPStructs;
 
-namespace bsp_pakfile
+using static BotHATTwaffle2.Models.BSP.SourceBSPStructs;
+
+namespace BotHATTwaffle2.Services.Steam
 {
     public class SourceBSP
     {

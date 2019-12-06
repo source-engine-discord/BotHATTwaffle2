@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
-using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Discord;
 using Google.Apis.Calendar.v3.Data;

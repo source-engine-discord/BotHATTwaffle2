@@ -4,14 +4,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 using Renci.SshNet;
 
-namespace BotHATTwaffle2.src.Util
+namespace BotHATTwaffle2.Util
 {
     internal class DemoParser
     {
@@ -69,7 +72,7 @@ namespace BotHATTwaffle2.src.Util
             processStartInfo.WorkingDirectory = "IDemO";
 
             //Start demo parser with a 10m timeout
-            await ProcessAsyncHelper.RunAsync(processStartInfo, 10 * 60 * 1000);
+            await AsyncProcessRunner.RunAsync(processStartInfo, 10 * 60 * 1000);
         }
 
         /// <summary>

@@ -10,7 +10,6 @@ using BotHATTwaffle2.Models.FaceIt;
 using BotHATTwaffle2.Models.JSON;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Steam;
-using BotHATTwaffle2.src.Util;
 using BotHATTwaffle2.Util;
 using Newtonsoft.Json.Linq;
 
@@ -104,7 +103,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                 await _log.LogMessage($"Response: " + reply,false, color: LOG_COLOR);
             }
-            
+
         }
 
         private string GetReport()
@@ -121,7 +120,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private async Task UploadParsedFiles(DemoResult[] demoResults, FaceItHub hub)
         {
-            var hubSeasons = DatabaseUtil.GetHubTypes();
+            var hubTags = DatabaseUtil.GetHubTags();
             var uploadDictionary = new Dictionary<FileInfo, string>();
             foreach (var demo in demoResults)
             {
@@ -132,14 +131,14 @@ namespace BotHATTwaffle2.Services.FaceIt
                     await _log.LogMessage("STARTING UPLOAD FOR " + demo.JsonLocation, false, color: LOG_COLOR);
 
                 //Get the hub with the desired date and season tags.
-                FaceItHubSeason targetSeason = null;
-                var hubTypeTags = hubSeasons.Where(x => x.Type.Equals(hub.HubType, StringComparison.OrdinalIgnoreCase));
-                targetSeason =
+                FaceItHubTag targetTag = null;
+                var hubTypeTags = hubTags.Where(x => x.Type.Equals(hub.HubType, StringComparison.OrdinalIgnoreCase));
+                targetTag =
                     hubTypeTags.FirstOrDefault(x => x.StartDate < demo.DemoDate && x.EndDate > demo.DemoDate);
 
-                var tag = targetSeason?.TagName;
+                var tag = targetTag?.TagName;
 
-                if (targetSeason == null)
+                if (targetTag == null)
                 {
                     tag = "UNKNOWN";
                     _ = _log.LogMessage(
@@ -584,7 +583,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             //Await all results to finish - then we can handle them.
             var remainingTasks = await Task.WhenAll(demoTasks);
 
-            //Put all tasks left in the list into the processed list. 
+            //Put all tasks left in the list into the processed list.
             processedDemos.AddRange(remainingTasks);
 
             //Remove all demos that we should be skipping

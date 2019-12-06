@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.JSON.Steam;
-using bsp_pakfile;
 using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json;
 using ImageFormat = Pfim.ImageFormat;
@@ -287,7 +286,7 @@ namespace BotHATTwaffle2.Services.Steam
 
             //Delete the BSP, we don't want it anymore
             File.Delete(bspFile.FullName);
-            
+
             var extractedFiles = Directory.GetFiles(destinationFileLocation, $"{Path.GetFileNameWithoutExtension(bspFile.Name)}*.*", SearchOption.AllDirectories);
             foreach (var f in extractedFiles)
             {

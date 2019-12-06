@@ -1,4 +1,4 @@
-﻿namespace bsp_pakfile
+﻿namespace BotHATTwaffle2.Models.BSP
 {
     public static class SourceBSPStructs
     {

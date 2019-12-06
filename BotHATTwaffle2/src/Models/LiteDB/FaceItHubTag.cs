@@ -2,7 +2,7 @@
 
 namespace BotHATTwaffle2.Models.LiteDB
 {
-    internal class FaceItHubSeason
+    internal class FaceItHubTag
     {
         public int Id { get; set; }
         public string TagName { get; set; }
