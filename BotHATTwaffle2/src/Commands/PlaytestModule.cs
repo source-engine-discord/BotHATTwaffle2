@@ -351,6 +351,7 @@ namespace BotHATTwaffle2.Commands
                 if (split.Length != 12)
                 {
                     await ReplyAsync("Invalid bulk playtest quest submission. Consult the help documents.");
+                    _dataService.IgnoreListenList.Remove(Context.User);
                     return;
                 }
 

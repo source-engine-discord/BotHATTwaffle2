@@ -116,6 +116,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             //Test over - stop asking for player counts.
             JobManager.RemoveJob("[QueryPlayerCount]");
 
+            //Delay allowing reservations. This is because >p post creates a new announcement.
+            //As a result people would normally be able to reserve as soon as a test is over.
+            JobManager.AddJob(AllowReservationsStopCount, s => s
+                .WithName("[AllowReservationsStopCount]").ToRunOnceIn(30).Minutes());
+
             var testEvent = _calendar.GetNextPlaytestEvent();
 
             await testEvent.PlaytestCommandPost(replyInContext, _logReceiverService, _rconService);
@@ -365,11 +370,6 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Posting new announcement for {testEvent.Title}", false, color: LOG_COLOR);
-
-            //Delay allowing reservations. This is because >p post creates a new announcement.
-            //As a result people would normally be able to reserve as soon as a test is over.
-            JobManager.AddJob(AllowReservationsStopCount, s => s
-                .WithName("[AllowReservationsStopCount]").ToRunOnceIn(30).Minutes());
 
             _ = _log.LogMessage("AllowReservationsStopCount scheduled for:" +
                                 $"\n{JobManager.GetSchedule("[AllowReservationsStopCount]").NextRun}", false,
