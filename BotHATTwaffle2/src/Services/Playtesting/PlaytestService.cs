@@ -371,10 +371,6 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"Posting new announcement for {testEvent.Title}", false, color: LOG_COLOR);
 
-            _ = _log.LogMessage("AllowReservationsStopCount scheduled for:" +
-                                $"\n{JobManager.GetSchedule("[AllowReservationsStopCount]").NextRun}", false,
-                color: LOG_COLOR);
-
             try
             {
                 //Make the announcement and store to a variable
