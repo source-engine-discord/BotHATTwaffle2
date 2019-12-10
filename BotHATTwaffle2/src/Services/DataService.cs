@@ -71,6 +71,17 @@ namespace BotHATTwaffle2.Services
         public static bool IncludePlayerCount { get; set; }
         public static string PlayerCount { get; set; }
 
+        private static bool _playtestStartAlert = true;
+
+        public bool GetStartAlertStatus() => _playtestStartAlert;
+
+        public bool ToggleStartAlert()
+        {
+            _playtestStartAlert = !_playtestStartAlert;
+            return _playtestStartAlert;
+        }
+
+        public void SetStartAlert(bool value) => _playtestStartAlert = value;
         public bool GetIncludePlayerCount()
         {
             return IncludePlayerCount;

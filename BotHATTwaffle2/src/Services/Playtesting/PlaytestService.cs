@@ -33,7 +33,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
         private int _failedToFetch;
-        public bool PlaytestStartAlert = true;
+        private static bool _playtestStartAlert = true;
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random,
             ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService,

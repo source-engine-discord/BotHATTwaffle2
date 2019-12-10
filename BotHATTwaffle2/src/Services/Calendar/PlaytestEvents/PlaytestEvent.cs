@@ -34,8 +34,6 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         //TODO: Set relevant permissions on variables
         public bool IsCasual;
 
-        public bool PlaytestAlert = true;
-
         public PlaytestEvent(DataService data, LogHandler log, Event playtestEvent)
         {
             _log = log;
@@ -390,9 +388,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 mentionRole = _dataService.CompetitiveTesterRole;
 
             //Skip the alert.
-            if (!PlaytestAlert)
+            if (!_dataService.GetStartAlertStatus())
             {
-                PlaytestAlert = true;
+                _dataService.SetStartAlert(true);
                 return;
             }
 
@@ -476,11 +474,12 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
 
             //Skip the alert.
-            if (!PlaytestAlert)
+            if (!_dataService.GetStartAlertStatus())
             {
-                PlaytestAlert = true;
+                _dataService.SetStartAlert(true);
                 return;
             }
+
 
             var unsubInfo = Game.ToString();
             if (!IsCasual)

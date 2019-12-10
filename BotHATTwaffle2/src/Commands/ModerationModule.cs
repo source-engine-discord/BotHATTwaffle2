@@ -1162,11 +1162,11 @@ namespace BotHATTwaffle2.Commands
         public async Task SkipAnnounceAsync()
         {
             //Toggle the announcement state
-            _playtestService.PlaytestStartAlert = !_playtestService.PlaytestStartAlert;
+            var status = _dataService.ToggleStartAlert();
 
             await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor($"Next Playtest Alert is: {_playtestService.PlaytestStartAlert}")
-                .WithColor(_playtestService.PlaytestStartAlert ? new Color(55, 165, 55) : new Color(165, 55, 55))
+                .WithAuthor($"Next Playtest Alert is: {status}")
+                .WithColor(status ? new Color(55, 165, 55) : new Color(165, 55, 55))
                 .Build());
         }
 
