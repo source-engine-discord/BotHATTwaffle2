@@ -3,13 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
-
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
-
 using FluentFTP;
-
 using Renci.SshNet;
 using Renci.SshNet.Sftp;
 

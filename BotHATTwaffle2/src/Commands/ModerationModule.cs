@@ -13,7 +13,6 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Services.SRCDS;
-using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
 using Discord.Addons.Interactive;
@@ -895,8 +894,9 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            if (Context.User.Id != _dataService.AlertUser.Id && (command.Contains("exit", StringComparison.OrdinalIgnoreCase) ||
-                command.Contains("quit", StringComparison.OrdinalIgnoreCase)))
+            if (Context.User.Id != _dataService.AlertUser.Id &&
+                (command.Contains("exit", StringComparison.OrdinalIgnoreCase) ||
+                 command.Contains("quit", StringComparison.OrdinalIgnoreCase)))
             {
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Quit and Exit not allowed!", _dataService.Guild.IconUrl)

@@ -19,10 +19,10 @@ namespace BotHATTwaffle2.Services.Steam
 {
     public class SteamAPI
     {
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
         private static RootWorkshop _workshopJsonGameData;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
-        private const ConsoleColor LOG_COLOR = ConsoleColor.Cyan;
 
         public SteamAPI(DataService dataService, LogHandler log)
         {
@@ -38,7 +38,7 @@ namespace BotHATTwaffle2.Services.Steam
             // So basically the only way to get game name from appid is to get a list of a user's owned games, then match our appid from the workshop item with their game (and yoink the name)
             using (var clientGame = new HttpClient())
             {
-                await _log.LogMessage("Getting games from SteamAPI", color:LOG_COLOR);
+                await _log.LogMessage("Getting games from SteamAPI", color: LOG_COLOR);
                 clientGame.BaseAddress = new Uri("https://api.steampowered.com/ISteamApps/GetAppList/v2/");
                 var responseGame = clientGame.GetAsync("").Result;
                 responseGame.EnsureSuccessStatusCode();
@@ -49,6 +49,7 @@ namespace BotHATTwaffle2.Services.Steam
 
                 _workshopJsonGameData = JsonConvert.DeserializeObject<RootWorkshop>(resultGame);
             }
+
             return _workshopJsonGameData;
         }
 
@@ -92,7 +93,7 @@ namespace BotHATTwaffle2.Services.Steam
                     if (resultContentItem == "{}") return null;
 
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"Response from Steam:\n{resultContentItem}",false, color: LOG_COLOR);
+                        await _log.LogMessage($"Response from Steam:\n{resultContentItem}", false, color: LOG_COLOR);
 
                     // Build workshop item embed, and set up author and game data embeds here for scoping reasons
                     try
@@ -120,6 +121,7 @@ namespace BotHATTwaffle2.Services.Steam
                     break;
                 }
             }
+
             return workshopJsonItem;
         }
 
@@ -139,11 +141,11 @@ namespace BotHATTwaffle2.Services.Steam
             // Download the bsp
             Console.WriteLine("Downloading BSPs");
             var fileName = workshopJsonItem.response.publishedfiledetails[0].filename
-                .Split(new[] { "mymaps/", ".bsp" }, StringSplitOptions.None).Skip(1).FirstOrDefault();
+                .Split(new[] {"mymaps/", ".bsp"}, StringSplitOptions.None).Skip(1).FirstOrDefault();
             var fileNameBsp = workshopJsonItem.response.publishedfiledetails[0].filename
-                .Split(new[] { "mymaps/" }, StringSplitOptions.None).LastOrDefault();
-            var fileLocationZippedBsp = string.Concat(destinationFileLocation,  fileNameBsp);
-            var fileLocationBsp = string.Concat(destinationFileLocation,@"\", fileNameBsp);
+                .Split(new[] {"mymaps/"}, StringSplitOptions.None).LastOrDefault();
+            var fileLocationZippedBsp = string.Concat(destinationFileLocation, fileNameBsp);
+            var fileLocationBsp = string.Concat(destinationFileLocation, @"\", fileNameBsp);
             var fileLocationOverviewPng = string.Concat(destinationFileLocation, fileName, "_radar.png");
             var fileLocationOverviewTxt = string.Concat(destinationFileLocation, fileName, ".txt");
 
@@ -190,7 +192,7 @@ namespace BotHATTwaffle2.Services.Steam
 
         public async Task<List<FileInfo>> GetWorkshopMapRadarFiles(string destinationFileLocation, string workshopId)
         {
-            List<FileInfo> radarFiles = new List<FileInfo>();
+            var radarFiles = new List<FileInfo>();
             var bspFile = await DownloadWorkshopMap(destinationFileLocation, workshopId);
 
             if (bspFile == null)
@@ -228,7 +230,7 @@ namespace BotHATTwaffle2.Services.Steam
                     name = nameArray[nameArray.Length - 1];
 
                     //Make sure that the path ends with a back slash
-                    string validatedSavePath = destinationFileLocation;
+                    var validatedSavePath = destinationFileLocation;
                     if (!validatedSavePath.EndsWith('\\'))
                         validatedSavePath += '\\';
 
@@ -240,7 +242,7 @@ namespace BotHATTwaffle2.Services.Steam
             }
 
             // Get a list of every DDS file that we need to convert
-            var ext = new List<string> { ".dds" };
+            var ext = new List<string> {".dds"};
             var listOfDdsFiles = Directory.GetFiles(destinationFileLocation, "*.*", SearchOption.AllDirectories)
                 .Where(s => ext.Contains(Path.GetExtension(s)));
 
@@ -287,12 +289,11 @@ namespace BotHATTwaffle2.Services.Steam
             //Delete the BSP, we don't want it anymore
             File.Delete(bspFile.FullName);
 
-            var extractedFiles = Directory.GetFiles(destinationFileLocation, $"{Path.GetFileNameWithoutExtension(bspFile.Name)}*.*", SearchOption.AllDirectories);
+            var extractedFiles = Directory.GetFiles(destinationFileLocation,
+                $"{Path.GetFileNameWithoutExtension(bspFile.Name)}*.*", SearchOption.AllDirectories);
             foreach (var f in extractedFiles)
-            {
-                if(f.EndsWith(".png") || f.EndsWith(".txt"))
+                if (f.EndsWith(".png") || f.EndsWith(".txt"))
                     radarFiles.Add(new FileInfo(f));
-            }
 
             return radarFiles;
         }
@@ -305,50 +306,51 @@ namespace BotHATTwaffle2.Services.Steam
             if (rootWorkshop.response.publishedfiledetails[0].filename
                 .Contains("/screenshots/".ToLower())) return null;
 
-            int retryCount = 0;
+            var retryCount = 0;
             while (true)
-            // Send the GET request for the author information
-            using (var clientAuthor = new HttpClient())
-            {
-                string resultAuthor = null;
-                try
+                // Send the GET request for the author information
+                using (var clientAuthor = new HttpClient())
                 {
-                    clientAuthor.BaseAddress =
-                        new Uri("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/");
-                    var responseAuthor = clientAuthor
-                        .GetAsync(
-                            $"?key={_dataService.RSettings.ProgramSettings.SteamworksAPI}&steamids={rootWorkshop.response.publishedfiledetails[0].creator}")
-                        .Result;
-                    responseAuthor.EnsureSuccessStatusCode();
-                    resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
-
-                    // Don't embed anything if getting the author fails for some reason
-                    if (resultAuthor == "{\"response\":{}}") return null;
-
-                    // If we get a good response though, we're gonna deserialize it
-
-                    workshopJsonAuthor = JsonConvert.DeserializeObject<RootWorkshop>(resultAuthor);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultAuthor);
-
-                    if (retryCount <= 3)
+                    string resultAuthor = null;
+                    try
                     {
-                        Console.WriteLine("Retrying in 2 seconds...");
-                        await Task.Delay(2000);
-                        retryCount++;
-                        continue;
+                        clientAuthor.BaseAddress =
+                            new Uri("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/");
+                        var responseAuthor = clientAuthor
+                            .GetAsync(
+                                $"?key={_dataService.RSettings.ProgramSettings.SteamworksAPI}&steamids={rootWorkshop.response.publishedfiledetails[0].creator}")
+                            .Result;
+                        responseAuthor.EnsureSuccessStatusCode();
+                        resultAuthor = responseAuthor.Content.ReadAsStringAsync().Result;
+
+                        // Don't embed anything if getting the author fails for some reason
+                        if (resultAuthor == "{\"response\":{}}") return null;
+
+                        // If we get a good response though, we're gonna deserialize it
+
+                        workshopJsonAuthor = JsonConvert.DeserializeObject<RootWorkshop>(resultAuthor);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error parsing JSON from STEAM. The response was:\n" + resultAuthor);
+
+                        if (retryCount <= 3)
+                        {
+                            Console.WriteLine("Retrying in 2 seconds...");
+                            await Task.Delay(2000);
+                            retryCount++;
+                            continue;
+                        }
+
+                        //Something happened getting the response from Steam. We got a response but it wasn't valid?
+                        Console.WriteLine(e);
+                        Console.WriteLine("Aborting workshop embed...");
+                        return null;
                     }
 
-                    //Something happened getting the response from Steam. We got a response but it wasn't valid?
-                    Console.WriteLine(e);
-                    Console.WriteLine("Aborting workshop embed...");
-                    return null;
+                    break;
                 }
 
-                break;
-            }
             return workshopJsonAuthor;
         }
     }

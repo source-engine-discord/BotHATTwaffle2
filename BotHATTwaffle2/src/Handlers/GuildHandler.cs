@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.SRCDS;
@@ -42,6 +43,8 @@ namespace BotHATTwaffle2.Handlers
             _schedule.AddRequiredJobs();
 
             await _logReceiverService.RestartLogAfterDisconnect();
+
+            await ResetTesterRoleMentions();
         }
 
         /// <summary>
@@ -94,6 +97,13 @@ namespace BotHATTwaffle2.Handlers
         {
             _ = _log.LogMessage("Guild ready!", false, color: LOG_COLOR);
             return Task.CompletedTask;
+        }
+
+        private async Task ResetTesterRoleMentions()
+        {
+            await _dataService.CSGOPlayTesterRole.ModifyAsync(x => { x.Mentionable = false; });
+            await _dataService.TF2PlayTesterRole.ModifyAsync(x => { x.Mentionable = false; });
+            await _dataService.CompetitiveTesterRole.ModifyAsync(x => { x.Mentionable = false; });
         }
     }
 }

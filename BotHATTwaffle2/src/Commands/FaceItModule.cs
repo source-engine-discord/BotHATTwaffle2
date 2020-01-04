@@ -1,13 +1,11 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.FaceIt;
 using BotHATTwaffle2.Util;
-
 using Discord;
 using Discord.Commands;
 
@@ -48,12 +46,14 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Group("Tags")]
-        public class FaceItTagsModule : ModuleBase<SocketCommandContext> {
+        public class FaceItTagsModule : ModuleBase<SocketCommandContext>
+        {
             [Command("Add")]
             [RequireUserPermission(GuildPermission.BanMembers)]
             [Summary("Add a new FACEIT Hub tag.")]
             [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well.")]
-            public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime) {
+            public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime)
+            {
                 var embed = new EmbedBuilder()
                     .WithAuthor("Added new FACEIT Hub tags")
                     .WithColor(55, 165, 55);
@@ -78,7 +78,8 @@ namespace BotHATTwaffle2.Commands
             [Command("Delete")]
             [RequireUserPermission(GuildPermission.BanMembers)]
             [Summary("Delete a FACEIT Hub tag.")]
-            public async Task DeleteAsync(int id) {
+            public async Task DeleteAsync(int id)
+            {
                 var embed = new EmbedBuilder()
                     .WithColor(55, 165, 55)
                     .WithAuthor($"Deleted FACEIT Hub tag #{id}");
@@ -96,7 +97,8 @@ namespace BotHATTwaffle2.Commands
             [Command("Show")]
             [RequireUserPermission(GuildPermission.BanMembers)]
             [Summary("Show all current FACEIT Hub tags sorted by date.")]
-            public async Task ShowAsync() {
+            public async Task ShowAsync()
+            {
                 var embed = new EmbedBuilder()
                     .WithColor(55, 55, 165);
 

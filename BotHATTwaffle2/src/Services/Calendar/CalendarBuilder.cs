@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using BotHATTwaffle2.Models.LiteDB;
-
 using Discord.Commands;
-
 using Google.Apis.Calendar.v3.Data;
-
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;

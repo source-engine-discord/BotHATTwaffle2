@@ -24,6 +24,8 @@ namespace BotHATTwaffle2.Services.Playtesting
         private static readonly Dictionary<PlaytestEvent.Games, DateTime> _knownTests =
             new Dictionary<PlaytestEvent.Games, DateTime>();
 
+        private static bool _playtestStartAlert = true;
+
         private readonly GoogleCalendar _calendar;
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
@@ -33,7 +35,6 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
         private int _failedToFetch;
-        private static bool _playtestStartAlert = true;
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random,
             ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService,
@@ -47,7 +48,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             _client = client;
 
             _rconService = rconService;
-            _announcementMessage = new AnnouncementMessage(_calendar, _dataService, random, _log);
+            _announcementMessage = new AnnouncementMessage(_dataService, random, _log);
 
 
             _logReceiverService.SetPlayTestService(this);
@@ -623,17 +624,30 @@ namespace BotHATTwaffle2.Services.Playtesting
 
         public async Task CallNormalTesters(int neededPlayers)
         {
+            SocketRole mentionRole = null;
             var testEvent = _calendar.GetNextPlaytestEvent();
 
-            await testEvent.TesterRole.ModifyAsync(x => { x.Mentionable = true; });
+            if (testEvent.Game == PlaytestEvent.Games.TF2)
+                mentionRole = _dataService.TF2PlayTesterRole;
+            else if (testEvent.Game == PlaytestEvent.Games.CSGO)
+                mentionRole = _dataService.CSGOPlayTesterRole;
+            else
+            {
+                await _log.LogMessage(
+                    "Something happened calling all testers. I didn't understand what game to call testers for." +
+                    $"\nGot invalid value of: `{testEvent.Game}`",alert:true, color:LOG_COLOR);
+                return;
+            }
+
+            await mentionRole.ModifyAsync(x => { x.Mentionable = true; });
 
             await testEvent.TestingChannel.SendMessageAsync(
-                $"Currently looking for **{neededPlayers}** players. {testEvent.TesterRole.Mention}\n" +
+                $"Currently looking for **{neededPlayers}** players. {mentionRole.Mention}\n" +
                 "Type `>playtester` to stop getting all playtest notifications.",
                 embed: _announcementMessage.CreatePlaytestEmbed(testEvent,
                     true, testEvent.AnnouncementMessage.Id));
 
-            await testEvent.TesterRole.ModifyAsync(x => { x.Mentionable = false; });
+            await mentionRole.ModifyAsync(x => { x.Mentionable = false; });
         }
     }
 }

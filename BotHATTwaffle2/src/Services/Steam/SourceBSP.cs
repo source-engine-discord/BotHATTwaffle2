@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-
 using static BotHATTwaffle2.Models.BSP.SourceBSPStructs;
 
 namespace BotHATTwaffle2.Services.Steam

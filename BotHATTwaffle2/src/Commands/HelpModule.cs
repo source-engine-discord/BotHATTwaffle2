@@ -66,8 +66,8 @@ namespace BotHATTwaffle2.Commands
         [Command("Help")]
         [Summary("Provides help for a specific command.")]
         [Alias("h")]
-        public async Task HelpAsync([Summary("The command for which to get help.")]
-            [Remainder] string command)
+        public async Task HelpAsync([Summary("The command for which to get help.")] [Remainder]
+            string command)
         {
             // Deletes the invoking message if it's not a direct message.
             if (!Context.IsPrivate)

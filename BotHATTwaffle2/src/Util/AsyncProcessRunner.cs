@@ -3,7 +3,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BotHATTwaffle2.Util {
+namespace BotHATTwaffle2.Util
+{
     /// <summary>
     ///     Process helper with asynchronous interface
     ///     - Based on https://gist.github.com/georg-jung/3a8703946075d56423e418ea76212745
@@ -77,10 +78,7 @@ namespace BotHATTwaffle2.Util {
                 // Reads the output stream first as needed and then waits because deadlocks are possible
                 if (process.StartInfo.RedirectStandardError) process.BeginOutputReadLine();
 
-                if (process.StartInfo.RedirectStandardError)
-                {
-                    process.BeginErrorReadLine();
-                }
+                if (process.StartInfo.RedirectStandardError) process.BeginErrorReadLine();
 
                 // === ASYNC WAIT OF PROCESS ===
 

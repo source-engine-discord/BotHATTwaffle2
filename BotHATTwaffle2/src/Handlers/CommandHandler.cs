@@ -228,7 +228,7 @@ namespace BotHATTwaffle2.Handlers
                 //Get the creator
                 var creator = _dataService.GetSocketUser(input[1]);
                 var creatorMention = creator != null ? creator.Mention : input[1];
-                var workshop = new Workshop(_dataService,_log);
+                var workshop = new Workshop(_dataService, _log);
                 await _dataService.CSGOTestingChannel.SendMessageAsync(
                     $"{creatorMention} has submitted a playtest request!", embed:
                     (await workshop.HandleWorkshopEmbeds(message,

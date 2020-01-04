@@ -10,15 +10,13 @@ namespace BotHATTwaffle2.Services.Playtesting
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
         private static int _lastImageIndex;
-        private readonly GoogleCalendar _calendar;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly Random _random;
 
-        public AnnouncementMessage(GoogleCalendar calendar, DataService data, Random random, LogHandler log)
+        public AnnouncementMessage(DataService data, Random random, LogHandler log)
         {
             _log = log;
-            _calendar = calendar;
             _dataService = data;
             _random = random;
         }

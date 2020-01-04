@@ -23,9 +23,12 @@ namespace BotHATTwaffle2.Services.FaceIt
         private const bool KEEP_CALLING_API = true;
         private const int API_LIMIT = 100;
         private const int ERROR_CALLING_API_COUNT_MAX = 20;
-        private const string HUB_BASE_URL = @"https://open.faceit.com/data/v4/hubs/";
+        //private const string HUB_BASE_URL = @"https://open.faceit.com/data/v4/hubs/";
+        private const string HUB_BASE_URL = @"https://open.faceit.com/data/v4/";
         private const int DOWNLOAD_AND_ZIP_RETRY_LIMIT = 20;
-        private const string UPDATE_BASE_URL = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&build=";
+
+        private const string UPDATE_BASE_URL =
+            @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&build=";
 
         private static bool _running;
 
@@ -37,11 +40,11 @@ namespace BotHATTwaffle2.Services.FaceIt
         private int _demosUnZipped;
         private int _demosUploaded;
         private long _downloadedData;
-        private string _updateResponses;
 
-        private List<string> _siteUpdateCalls = new List<string>();
+        private readonly List<string> _siteUpdateCalls = new List<string>();
 
         private DateTime _startTime;
+        private string _updateResponses;
 
         public FaceItApi(DataService dataService, LogHandler log)
         {
@@ -96,14 +99,13 @@ namespace BotHATTwaffle2.Services.FaceIt
             var web = new WebClient();
             foreach (var tag in _siteUpdateCalls)
             {
-                await _log.LogMessage($"Calling site update URL: " + UPDATE_BASE_URL + tag,false, color: LOG_COLOR);
+                await _log.LogMessage("Calling site update URL: " + UPDATE_BASE_URL + tag, false, color: LOG_COLOR);
 
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
                 _updateResponses += $"{tag}: `{reply}`\n";
 
-                await _log.LogMessage($"Response: " + reply,false, color: LOG_COLOR);
+                await _log.LogMessage("Response: " + reply, false, color: LOG_COLOR);
             }
-
         }
 
         private string GetReport()
@@ -143,14 +145,15 @@ namespace BotHATTwaffle2.Services.FaceIt
                     tag = "UNKNOWN";
                     _ = _log.LogMessage(
                         $"Hub seasons have no definitions in the database for date `{demo.DemoDate}`!\n`{demo.Filename}`",
-                        false,color: LOG_COLOR);
+                        false, color: LOG_COLOR);
                 }
 
                 var dir = Path.GetDirectoryName(demo.JsonLocation);
                 FileInfo targetFile;
                 try
                 {
-                    targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)) ?? throw new InvalidOperationException());
+                    targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)) ??
+                                              throw new InvalidOperationException());
                 }
                 catch (Exception e)
                 {
@@ -159,8 +162,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                     continue;
                 }
 
-                string uploadTags = $"{tag}_{demo.MapName}";
-                string radarDir = $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\Radars\\{tag}";
+                var uploadTags = $"{tag}_{demo.MapName}";
+                var radarDir = $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\Radars\\{tag}";
 
                 //Get the WS ID from the demos
                 Directory.CreateDirectory(radarDir);
@@ -178,14 +181,14 @@ namespace BotHATTwaffle2.Services.FaceIt
                     var sapi = new SteamAPI(_dataService, _log);
                     var radarFiles = await sapi.GetWorkshopMapRadarFiles(_tempPath, wsId);
 
-                    if(radarFiles != null)
+                    if (radarFiles != null)
                         foreach (var radarFile in radarFiles)
                         {
-                            if(File.Exists($"{radarDir}\\{radarFile.Name}"))
+                            if (File.Exists($"{radarDir}\\{radarFile.Name}"))
                                 File.Delete($"{radarDir}\\{radarFile.Name}");
 
                             File.Move(radarFile.FullName, $"{radarDir}\\{radarFile.Name}");
-                            uploadDictionary.Add(new FileInfo($"{radarDir}\\{radarFile.Name}"),uploadTags);
+                            uploadDictionary.Add(new FileInfo($"{radarDir}\\{radarFile.Name}"), uploadTags);
                         }
                 }
                 else
@@ -232,7 +235,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             while (KEEP_CALLING_API)
             {
-                var apiEndpoint = string.Concat(HUB_BASE_URL, faceItHub.HubGuid, "/matches?type=past&offset=",
+                var apiEndpoint = string.Concat(HUB_BASE_URL, faceItHub.Endpoint + "/", faceItHub.HubGuid, "/matches?type=past&offset=",
                     apiOffset,
                     "&limit=", API_LIMIT);
 
@@ -344,7 +347,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                 catch (WebException e)
                 {
                     await _log.LogMessage(
-                        $"Error calling Faceit API for `{faceItHub.HubName}` but will retry.\nEndpoint: `{apiEndpoint}`. Reason was:\n`{e}`", alert: false,
+                        $"Error calling Faceit API for `{faceItHub.HubName}` but will retry.\nEndpoint: `{apiEndpoint}`. Reason was:\n`{e}`",
+                        alert: false,
                         color: LOG_COLOR);
 
                     //Give the API a delay
@@ -588,7 +592,8 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             //Remove all demos that we should be skipping
             processedDemos.RemoveAll(x => x.Skip);
-            await _log.LogMessage($"Done downloading demos for {hubName}. Total of {processedDemos.Count}.", false, color: LOG_COLOR);
+            await _log.LogMessage($"Done downloading demos for {hubName}. Total of {processedDemos.Count}.", false,
+                color: LOG_COLOR);
 
             return processedDemos.ToArray();
         }

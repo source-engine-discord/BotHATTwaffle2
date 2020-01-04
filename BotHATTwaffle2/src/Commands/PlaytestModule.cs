@@ -549,7 +549,8 @@ namespace BotHATTwaffle2.Commands
             //Length 3 means workshop
             if (result.Length == 3)
             {
-                embed = await new Workshop(_dataService, _log).HandleWorkshopEmbeds(Context.Message, inputId: result[1]);
+                embed = await new Workshop(_dataService, _log).HandleWorkshopEmbeds(Context.Message,
+                    inputId: result[1]);
 
                 if (embed != null)
                 {

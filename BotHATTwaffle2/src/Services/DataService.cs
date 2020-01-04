@@ -17,6 +17,8 @@ namespace BotHATTwaffle2.Services
     public class DataService
     {
         private const ConsoleColor LOG_COLOR = ConsoleColor.Blue;
+
+        private static bool _playtestStartAlert = true;
         private readonly DiscordSocketClient _client;
         private LogHandler _log;
         public int CommandCount = 0;
@@ -71,9 +73,10 @@ namespace BotHATTwaffle2.Services
         public static bool IncludePlayerCount { get; set; }
         public static string PlayerCount { get; set; }
 
-        private static bool _playtestStartAlert = true;
-
-        public bool GetStartAlertStatus() => _playtestStartAlert;
+        public bool GetStartAlertStatus()
+        {
+            return _playtestStartAlert;
+        }
 
         public bool ToggleStartAlert()
         {
@@ -81,7 +84,11 @@ namespace BotHATTwaffle2.Services
             return _playtestStartAlert;
         }
 
-        public void SetStartAlert(bool value) => _playtestStartAlert = value;
+        public void SetStartAlert(bool value)
+        {
+            _playtestStartAlert = value;
+        }
+
         public bool GetIncludePlayerCount()
         {
             return IncludePlayerCount;

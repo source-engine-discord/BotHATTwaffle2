@@ -1,26 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Runtime.InteropServices;
+﻿using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.Models.JSON.Steam;
 using BotHATTwaffle2.Util;
-
 using Discord;
 using Discord.WebSocket;
-using ICSharpCode.SharpZipLib.Zip;
-using Newtonsoft.Json;
-using Color = Discord.Color;
-using ImageFormat = Pfim.ImageFormat;
-using ZipFile = System.IO.Compression.ZipFile;
 
 namespace BotHATTwaffle2.Services.Steam
 {
@@ -38,6 +22,10 @@ namespace BotHATTwaffle2.Services.Steam
         public async Task<EmbedBuilder> HandleWorkshopEmbeds(SocketMessage message,
             string images = null, string testType = null, string inputId = null)
         {
+            //Somehow a message ended up being null, so just return if we have a null message.
+            if (message == null)
+                return null;
+
             // Cut down the message to grab just the first URL
             var regMatch = Regex.Match(message.Content,
                 @"\b((https?|ftp|file)://|(www|ftp)\.)(steamcommunity)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]",

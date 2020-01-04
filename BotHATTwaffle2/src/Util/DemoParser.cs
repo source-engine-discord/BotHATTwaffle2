@@ -4,14 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Services;
-using BotHATTwaffle2.Services.Steam;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
 using Renci.SshNet;
 
 namespace BotHATTwaffle2.Util
@@ -22,7 +18,7 @@ namespace BotHATTwaffle2.Util
         private static LogHandler _log;
         private static DataService _dataService;
 
-        private static string
+        private static readonly string
             mainFolderName =
                 @"IDemO\"; // Changes to `string.Concat(Path.GetTempPath(), @"DemoGrabber\")` for bulk faceit demo parsing in ParseFaceItHubDemos()
 
@@ -44,7 +40,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Gets the Workshop ID as a string from a parsed Jason file.
+        ///     Gets the Workshop ID as a string from a parsed Jason file.
         /// </summary>
         /// <param name="jasonFile">Jason file to get workshop ID from</param>
         /// <returns></returns>
@@ -59,7 +55,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Parses FaceIt Demos in bulk.
+        ///     Parses FaceIt Demos in bulk.
         /// </summary>
         /// <param name="sourcePath"></param>
         /// <param name="destinationPath"></param>
@@ -76,7 +72,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Parses single demos from scheduled playtesting events
+        ///     Parses single demos from scheduled playtesting events
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
@@ -133,7 +129,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Uploads many FaceIt demos in a single session
+        ///     Uploads many FaceIt demos in a single session
         /// </summary>
         /// <param name="uploadDictionary"></param>
         /// <returns></returns>
@@ -189,7 +185,7 @@ namespace BotHATTwaffle2.Util
         }
 
         /// <summary>
-        /// Uploads a single demo, used for scheduled playtesting events.
+        ///     Uploads a single demo, used for scheduled playtesting events.
         /// </summary>
         /// <param name="file"></param>
         /// <returns></returns>

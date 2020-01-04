@@ -372,11 +372,13 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 async () => await rconService.GetPlayCountFromServer(ServerLocation),
                 s => s.WithName("[QueryPlayerCount]").ToRunEvery(60).Seconds());
 
-            //Figure out how long until the event starts
+            //Figure out how far away from start we are
+            string countdownString = null;
             var countdown = StartDateTime.GetValueOrDefault().Subtract(DateTime.Now);
-            var countdownString =
-                countdown.ToString("d'D 'h' Hour 'm' Minutes'").TrimStart(' ', 'D', 'H', 'o', 'u', 'r', '0')
-                    .Replace(" 0 Minutes", "");
+            if (StartDateTime.GetValueOrDefault().CompareTo(DateTime.Now) < 0)
+                countdownString = $"Started: {countdown:h\'H \'m\'M\'} ago!";
+            else
+                countdownString = countdown.ToString("d'D 'h'H 'm'M'").TrimStart(' ', 'D', 'H', '0');
 
             await rconService.RconCommand(ServerLocation, "sv_cheats 0");
             var mentionRole = TesterRole;
