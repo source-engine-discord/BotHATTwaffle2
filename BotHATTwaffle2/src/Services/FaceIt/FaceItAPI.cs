@@ -136,7 +136,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 FaceItHubTag targetTag = null;
                 var hubTypeTags = hubTags.Where(x => x.Type.Equals(hub.HubType, StringComparison.OrdinalIgnoreCase));
                 targetTag =
-                    hubTypeTags.FirstOrDefault(x => x.StartDate < demo.DemoDate && x.EndDate > demo.DemoDate);
+                    hubTypeTags.FirstOrDefault(x => x.StartDate.ToUniversalTime() < demo.DemoDate && x.EndDate.ToUniversalTime() > demo.DemoDate);
 
                 var tag = targetTag?.TagName;
 
