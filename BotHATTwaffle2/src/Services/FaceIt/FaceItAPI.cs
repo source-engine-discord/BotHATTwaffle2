@@ -40,6 +40,8 @@ namespace BotHATTwaffle2.Services.FaceIt
         private int _demosUnZipped;
         private int _demosUploaded;
         private long _downloadedData;
+        private int _demosFailedUnzip;
+        private int _demosFailedDownload;
 
         private readonly List<string> _siteUpdateCalls = new List<string>();
 
@@ -73,6 +75,9 @@ namespace BotHATTwaffle2.Services.FaceIt
                 }
 
                 var dlResult = await DownloadHubDemos(hub.HubName, reply);
+
+                _demosFailedDownload += dlResult.Select(x => x.DownloadFailed).Count();
+                _demosFailedDownload += dlResult.Select(x => x.UnzipFailed).Count();
 
                 if (dlResult.Length == 0)
                 {
@@ -117,7 +122,9 @@ namespace BotHATTwaffle2.Services.FaceIt
                    $"\nDemos Unzipped: `{_demosUnZipped}`" +
                    $"\nFiles Uploaded: `{_demosUploaded}`" +
                    $"\nData Downloaded: `{Math.Round(_downloadedData / 1024f / 1024f, 2)}MB`" +
-                   $"\nUpdate Responses:\n{_updateResponses.Trim()}";
+                   $"\nUpdate Responses:\n{_updateResponses.Trim()}" +
+                   $"\nDemos Failed Download: `{_demosFailedDownload}`" +
+                   $"\nDemos Failed Unzipped: `{_demosFailedUnzip}`";
         }
 
         private async Task UploadParsedFiles(DemoResult[] demoResults, FaceItHub hub)
@@ -385,9 +392,6 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             Directory.CreateDirectory(Path.GetDirectoryName(localPath));
 
-            if (string.IsNullOrEmpty(remotePath) || string.IsNullOrEmpty(localPath))
-                return false;
-
             await _log.LogMessage($"Downloading: {remotePath}", false, color: LOG_COLOR);
 
             using (var client = new WebClient())
@@ -478,6 +482,15 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             for (var i = 0; i < DOWNLOAD_AND_ZIP_RETRY_LIMIT; i++)
             {
+                if (demoResult.DemoUrl == null || demoResult.FileLocationGz == null)
+                {
+                    await _log.LogMessage($"Demo Id {demoResult.Filename} is missing a file path. Aborting this match" +
+                                              $"\nDemoUrl: {demoResult.DemoUrl}" +
+                                              $"\nLocal GZ Location: {demoResult.FileLocationGz}", false, color: LOG_COLOR);
+                    demoResult.DownloadFailed = true;
+                    return demoResult;
+                }
+
                 //Attempt to download demo
                 if (await DownloadHubDemo(demoResult.DemoUrl, demoResult.FileLocationGz))
                 {
