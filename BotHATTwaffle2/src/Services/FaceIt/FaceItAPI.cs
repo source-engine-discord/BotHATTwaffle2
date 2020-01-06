@@ -76,8 +76,8 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                 var dlResult = await DownloadHubDemos(hub.HubName, reply);
 
-                _demosFailedDownload += dlResult.Select(x => x.DownloadFailed).Count();
-                _demosFailedDownload += dlResult.Select(x => x.UnzipFailed).Count();
+                _demosFailedDownload += dlResult.Count(x => x.DownloadFailed);
+                _demosFailedUnzip += dlResult.Count(x => x.UnzipFailed);
 
                 if (dlResult.Length == 0)
                 {
