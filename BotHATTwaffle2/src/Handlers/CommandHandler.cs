@@ -33,40 +33,40 @@ namespace BotHATTwaffle2.Handlers
 
         public async Task InstallCommandsAsync()
         {
-            // Hook the MessageReceived event into our command handler
-            _client.MessageReceived += HandleCommandAsync;
+            // Use our event handlers for the following events.
+            _client.MessageReceived += MessageReceivedEventHandler;
+            _commands.CommandExecuted += CommandExecutedEventHandler;
 
-            //Register custom type readers
+            // Register custom type readers.
             _commands.AddTypeReader(typeof(TimeSpan), new BetterTimeSpanReader());
 
-            // Here we discover all of the command modules in the entry 
+            // Here we discover all of the command modules in the entry
             // assembly and load them. Starting from Discord.NET 2.0, a
             // service provider is required to be passed into the
-            // module registration method to inject the 
+            // module registration method to inject the
             // required dependencies.
             //
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(),
-                _service);
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _service);
         }
 
-        private async Task HandleCommandAsync(SocketMessage messageParam)
+        private async Task MessageReceivedEventHandler(SocketMessage messageParam)
         {
-            // Don't process the command if it was a system message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
+            // Don't process the command if it was a system message.
+            if (!(messageParam is SocketUserMessage message))
+                return;
 
             _dataService.MessageCount++;
 
-            //Ignore users who are inside interactive sessions
+            // Ignore users who are inside interactive sessions.
             if (_dataService.IgnoreListenList.Contains(message.Author))
                 return;
 
-            // Create a number to track where the prefix ends and the command begins
+            // Create a number to track where the prefix ends and the command begins.
             var argPos = 0;
 
-            // Determine if the message is a command based on the prefix and make sure no bots trigger commands
+            // Determine if the message is a command based on the prefix and make sure no bots trigger commands.
             if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
                   message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
@@ -74,33 +74,36 @@ namespace BotHATTwaffle2.Handlers
                       StringComparison.OrdinalIgnoreCase)) ||
                 message.Author.IsBot)
             {
-                //Fire and forget listening on the message.
+                // Fire and forget listening on the message.
                 Listen(messageParam);
                 return;
             }
 
-            // Create a WebSocket-based command context based on the message
+            // Create a WebSocket-based command context based on the message.
             var context = new SocketCommandContext(_client, message);
 
             // Execute the command with the command context we just
             // created, along with the service provider for precondition checks.
+            await _commands.ExecuteAsync(context, argPos, _service);
+        }
 
-            // Keep in mind that result does not indicate a return value
-            // rather an object stating if the command executed successfully.
-            var result = await _commands.ExecuteAsync(
-                context,
-                argPos,
-                _service);
-
+        private async Task CommandExecutedEventHandler(
+            Optional<CommandInfo> info,
+            ICommandContext context,
+            IResult result)
+        {
             if (result.Error is null || result.Error == CommandError.UnknownCommand)
             {
                 _dataService.CommandCount++;
                 return; // Ignores successful executions and unknown commands.
             }
 
-            var logMessage =
-                $"Command: {message}\nInvoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
             var alert = false;
+            var logMessage =
+                $"Command: {context.Message}\n" +
+                $"Invoking User: {context.Message.Author}\n" +
+                $"Channel: {context.Message.Channel}\n" +
+                $"Error Reason: {result.ErrorReason}";
 
             switch (result.Error)
             {
