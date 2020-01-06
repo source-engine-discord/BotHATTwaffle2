@@ -484,9 +484,9 @@ namespace BotHATTwaffle2.Services.FaceIt
             {
                 if (demoResult.DemoUrl == null || demoResult.FileLocationGz == null)
                 {
-                    await _log.LogMessage($"Demo Id {demoResult.Filename} is missing a file path. Aborting this match" +
-                                              $"\nDemoUrl: {demoResult.DemoUrl}" +
-                                              $"\nLocal GZ Location: {demoResult.FileLocationGz}", false, color: LOG_COLOR);
+                    await _log.LogMessage($"Demo Id `{demoResult.Filename}` is missing a file path. Aborting this match" +
+                                              $"\nDemoUrl: `{demoResult.DemoUrl}`" +
+                                              $"\nLocal GZ Location: `{demoResult.FileLocationGz}`", false, color: LOG_COLOR);
                     demoResult.DownloadFailed = true;
                     return demoResult;
                 }
@@ -514,6 +514,13 @@ namespace BotHATTwaffle2.Services.FaceIt
                 }
 
                 await Task.Delay(3000);
+            }
+
+            if (demoResult.DownloadFailed)
+            {
+                await _log.LogMessage($"Demo Id `{demoResult.Filename}` failed to within the max retry count" +
+                                      $"\nDemoUrl: `{demoResult.DemoUrl}`" +
+                                      $"\nLocal GZ Location: `{demoResult.FileLocationGz}`", false, color: LOG_COLOR);
             }
 
             //Delete gz file
