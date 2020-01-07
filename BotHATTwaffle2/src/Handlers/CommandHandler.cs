@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -33,6 +33,9 @@ namespace BotHATTwaffle2.Handlers
             _prefix = _dataService.RSettings.ProgramSettings.CommandPrefix[0];
         }
 
+        /// <summary>
+        /// Perform setup to enable command support.
+        /// </summary>
         public async Task InstallCommandsAsync()
         {
             // Use our event handlers for the following events.
@@ -53,6 +56,10 @@ namespace BotHATTwaffle2.Handlers
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _service);
         }
 
+        /// <summary>
+        /// Attempts to execute a command when a message is received.
+        /// </summary>
+        /// <param name="messageParam">The message sent to the client.</param>
         private async Task MessageReceivedEventHandler(SocketMessage messageParam)
         {
             // Don't process the command if it was a system message.
@@ -89,6 +96,15 @@ namespace BotHATTwaffle2.Handlers
             await _commands.ExecuteAsync(context, argPos, _service);
         }
 
+        /// <summary>
+        /// Provides feedback and/or logs any errors or exceptions resulting from an executed command.
+        /// </summary>
+        /// <param name="info">
+        /// The information for the executed command.
+        /// May be missing if failure occurs during parsing or precondition stages.
+        /// </param>
+        /// <param name="context">The context of the executed command.</param>
+        /// <param name="result">The result of the execution of the command.</param>
         private async Task CommandExecutedEventHandler(
             Optional<CommandInfo> info,
             ICommandContext context,
@@ -159,12 +175,13 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        ///     This is used to scan each message for less important things.
-        ///     Mostly used for shit posting, but also does useful things like nag users
-        ///     to use more up to date tools, or automatically answer some simple questions.
+        /// Checks contents of non-command messages for miscellaneous functionality.
         /// </summary>
-        /// <param name="message">Message that got us here</param>
-        /// <returns></returns>
+        /// <remarks>
+        /// Mostly used for shit posting, but also does useful things like nag users to use more up to date tools, or
+        /// automatically answer some simple questions.
+        /// </remarks>
+        /// <param name="message">The message to check.</param>
         internal async void Listen(SocketMessage message)
         {
             //Process webhooks
