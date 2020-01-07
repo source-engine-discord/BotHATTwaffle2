@@ -19,6 +19,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
+        private readonly char _prefix;
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
             DataService data, LogHandler log)
@@ -29,6 +30,7 @@ namespace BotHATTwaffle2.Handlers
             _service = service;
             _dataService = data;
             _log = log;
+            _prefix = _dataService.RSettings.ProgramSettings.CommandPrefix[0];
         }
 
         public async Task InstallCommandsAsync()
@@ -67,7 +69,7 @@ namespace BotHATTwaffle2.Handlers
             var argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands.
-            if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
+            if (!(message.HasCharPrefix(_prefix, ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
                   message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
                   message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos,
@@ -112,7 +114,7 @@ namespace BotHATTwaffle2.Handlers
                     var commandName = info.IsSpecified ? info.Value.Name : "";
 
                     await context.Channel.SendMessageAsync(
-                        $"You provided too {determiner} parameters! Please consult `{_dataService.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
+                        $"You provided too {determiner} parameters! Please consult `{_prefix}help {commandName}`");
 
                     break;
                 case CommandError.UnmetPrecondition:
