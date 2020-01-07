@@ -1,7 +1,6 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
@@ -21,8 +20,12 @@ namespace BotHATTwaffle2.Handlers
         private readonly IServiceProvider _service;
         private readonly char _prefix;
 
-        public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
-            DataService data, LogHandler log)
+        public CommandHandler(
+            DiscordSocketClient client,
+            CommandService commands,
+            IServiceProvider service,
+            DataService data,
+            LogHandler log)
         {
             Console.WriteLine("Setting up CommandHandler...");
             _commands = commands;
@@ -182,7 +185,7 @@ namespace BotHATTwaffle2.Handlers
         /// automatically answer some simple questions.
         /// </remarks>
         /// <param name="message">The message to check.</param>
-        internal async void Listen(SocketMessage message)
+        private async void Listen(SocketMessage message)
         {
             //Process webhooks
             if (message.Channel == _dataService.WebhookChannel && message.Author.IsWebhook)
