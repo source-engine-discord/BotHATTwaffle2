@@ -109,14 +109,7 @@ namespace BotHATTwaffle2.Handlers
             {
                 case CommandError.BadArgCount:
                     var determiner = result.ErrorReason == "The input text has too many parameters." ? "many" : "few";
-
-                    // Retrieves the command's name from the message by finding the first word after the prefix. The string will
-                    // be empty if somehow no match is found.
-                    var commandName =
-                        Regex.Match(context.Message.Content,
-                                _dataService.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)",
-                                RegexOptions.IgnoreCase)
-                            .Groups[1].Value;
+                    var commandName = info.IsSpecified ? info.Value.Name : "";
 
                     await context.Channel.SendMessageAsync(
                         $"You provided too {determiner} parameters! Please consult `{_dataService.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
