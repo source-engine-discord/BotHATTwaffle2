@@ -5,7 +5,7 @@ namespace BotHATTwaffle2.Models.FaceIt
     public class DemoResult
     {
         public DemoResult(string filename, string fileLocation, string fileLocationGz, string fileLocationDemo,
-            string jsonLocation, string demoUrl, DateTime demoDate, string mapName)
+            string jsonLocation, string demoUrl, DateTime demoDate, string mapName, int matchNum)
         {
             Filename = filename;
             FileLocation = fileLocation.TrimEnd('\\');
@@ -16,6 +16,7 @@ namespace BotHATTwaffle2.Models.FaceIt
             Skip = false;
             DemoDate = demoDate;
             MapName = mapName;
+            MatchNum = matchNum;
         }
 
         public bool DownloadFailed { get; set; }
@@ -29,5 +30,6 @@ namespace BotHATTwaffle2.Models.FaceIt
         public string MapName { get; }
         public bool Skip { get; set; }
         public DateTime DemoDate { get; }
+        public int MatchNum { get; }
     }
 }

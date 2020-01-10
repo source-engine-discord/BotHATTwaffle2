@@ -7,7 +7,7 @@ namespace BotHATTwaffle2.Models.FaceIt
     {
         public IDictionary<string, DateTime> DemoDate = new Dictionary<string, DateTime>();
         public IDictionary<string, string> DemoMapnames = new Dictionary<string, string>();
-        public IDictionary<string, string> DemoUrls = new Dictionary<string, string>();
+        public IDictionary<string, List<string>> DemoUrls = new Dictionary<string, List<string>>();
         public List<string> FailedApiCalls;
 
         public List<string> FileNames;

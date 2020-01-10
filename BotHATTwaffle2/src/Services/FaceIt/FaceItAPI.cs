@@ -151,22 +151,44 @@ namespace BotHATTwaffle2.Services.FaceIt
                 {
                     tag = "UNKNOWN";
                     _ = _log.LogMessage(
-                        $"Hub seasons have no definitions in the database for date `{demo.DemoDate}`!\n`{demo.Filename}`",
+                        $"Hub seasons have no definitions in the database for date `{demo.DemoDate}`!\n`{demo.Filename}`\nMatch number `{demo.MatchNum}`",
                         false, color: LOG_COLOR);
                 }
 
                 var dir = Path.GetDirectoryName(demo.JsonLocation);
                 FileInfo targetFile;
-                try
+
+                if (demo.MatchNum == 1)
                 {
-                    targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)) ??
-                                              throw new InvalidOperationException());
+                    try
+                    {
+                        targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)) ??
+                            throw new InvalidOperationException());
+                    }
+                    catch (Exception e)
+                    {
+                        if (_dataService.RSettings.ProgramSettings.Debug)
+                            await _log.LogMessage($"Issue getting file {demo.Filename}\n{e}", color: LOG_COLOR);
+                        continue;
+                    }
                 }
-                catch (Exception e)
+                else
                 {
-                    if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"Issue getting file {demo.Filename}\n{e}", color: LOG_COLOR);
-                    continue;
+                    try
+                    {
+                        var matchNameToUse = string.Join(demo.Filename, "-", demo.MatchNum);
+
+                        targetFile = new FileInfo(Directory.GetFiles(dir).FirstOrDefault(x => x.Contains(demo.Filename)) ??
+                            throw new InvalidOperationException());
+                    }
+                    catch (Exception e)
+                    {
+                        var matchNameToUse = string.Join(demo.Filename, "-", demo.MatchNum);
+
+                        if (_dataService.RSettings.ProgramSettings.Debug)
+                            await _log.LogMessage($"Issue getting file {matchNameToUse}\n{e}", color: LOG_COLOR);
+                        continue;
+                    }
                 }
 
                 var uploadTags = $"{tag}_{demo.MapName}";
@@ -230,7 +252,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             //These become faceItHubEndpointsResponsesInfo
             var fileNames = new List<string>();
             IDictionary<string, string> demoMapnames = new Dictionary<string, string>();
-            IDictionary<string, string> demoUrls = new Dictionary<string, string>();
+            IDictionary<string, List<string>> demoUrls = new Dictionary<string, List<string>>();
             IDictionary<string, DateTime> demoDates = new Dictionary<string, DateTime>();
             var failedApiCalls = new List<string>();
 
@@ -328,9 +350,12 @@ namespace BotHATTwaffle2.Services.FaceIt
                             else if (matchStatus != null && matchStatus.ToUpper() == "FINISHED")
                             {
                                 var serialisedDemoUrl = jsonItemsCurrentGame["demo_url"];
-                                var demoUrl = serialisedDemoUrl != null && serialisedDemoUrl.FirstOrDefault() != null
-                                    ? serialisedDemoUrl.FirstOrDefault().ToString()
-                                    : null;
+                                List<string> demoUrlList = new List<string>();
+
+                                if (serialisedDemoUrl != null)
+                                {
+                                    demoUrlList.Select(d => d).ToString();
+                                }
 
                                 var serialisedMatchId = jsonItemsCurrentGame["match_id"];
                                 var fileName = serialisedMatchId != null ? serialisedMatchId.ToString() : null;
@@ -343,7 +368,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                                 if (!string.IsNullOrWhiteSpace(fileName) && !fileNames.Contains(fileName))
                                 {
                                     fileNames.Add(fileName);
-                                    demoUrls.Add(new KeyValuePair<string, string>(fileName, demoUrl));
+                                    demoUrls.Add(new KeyValuePair<string, List<string>>(fileName, demoUrlList));
                                     demoMapnames.Add(new KeyValuePair<string, string>(fileName, demoMapname));
                                     demoDates.Add(new KeyValuePair<string, DateTime>(fileName, demoDate.Date));
                                 }
@@ -570,37 +595,45 @@ namespace BotHATTwaffle2.Services.FaceIt
             foreach (var fileName in faceItHubEndpointsResponsesInfo.FileNames)
                 if (faceItHubEndpointsResponsesInfo.DemoUrls.Keys.Any(k => k == fileName))
                 {
-                    var mapName = faceItHubEndpointsResponsesInfo.DemoMapnames[fileName];
-                    var demoUrl = faceItHubEndpointsResponsesInfo.DemoUrls[fileName];
-                    var demoDate = faceItHubEndpointsResponsesInfo.DemoDate[fileName];
+                    int numberOfGamesInMatch = faceItHubEndpointsResponsesInfo.DemoUrls[fileName].Count();
 
-                    var jsonLocation =
-                        $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\{demoDate:MM_dd_yyyy}\\" +
-                        $"{hubName}\\{faceItHubEndpointsResponsesInfo.DemoMapnames[fileName]}_{fileName}.json";
-
-                    var fileLocationGz = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\{fileName}.gz";
-                    var fileLocationDem = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\{fileName}.dem";
-                    var fileLocation = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\";
-
-                    demoTasks.Add(AcquireDemo(new DemoResult(fileName,
-                        fileLocation,
-                        fileLocationGz,
-                        fileLocationDem,
-                        jsonLocation,
-                        demoUrl,
-                        demoDate,
-                        mapName)));
-
-                    if (demoTasks.Count >= 8)
+                    for (int i=0; i < numberOfGamesInMatch; i++) //bo3 matches will provide multiple demos
                     {
-                        //Get a finished task
-                        var finishedTask = await Task.WhenAny(demoTasks);
+                        var mapName = faceItHubEndpointsResponsesInfo.DemoMapnames[fileName];
+                        var demoUrl = faceItHubEndpointsResponsesInfo.DemoUrls[fileName][i];
+                        var demoDate = faceItHubEndpointsResponsesInfo.DemoDate[fileName];
 
-                        //Slip it into our processed list
-                        processedDemos.Add(await finishedTask);
+                        var matchNameToUse = numberOfGamesInMatch == 1 ? fileName : string.Join(fileName, "-", i + 1);
 
-                        //Remove the task so we can keep processing
-                        demoTasks.Remove(finishedTask);
+                        var jsonLocation =
+                            $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\{demoDate:MM_dd_yyyy}\\" +
+                            $"{hubName}\\{faceItHubEndpointsResponsesInfo.DemoMapnames[fileName]}_{matchNameToUse}.json";
+
+                        var fileLocationGz = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\{matchNameToUse}.gz";
+                        var fileLocationDem = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\{matchNameToUse}.dem";
+                        var fileLocation = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\";
+
+                        demoTasks.Add(AcquireDemo(new DemoResult(fileName,
+                            fileLocation,
+                            fileLocationGz,
+                            fileLocationDem,
+                            jsonLocation,
+                            demoUrl,
+                            demoDate,
+                            mapName,
+                            i + 1)));
+
+                        if (demoTasks.Count >= 8)
+                        {
+                            //Get a finished task
+                            var finishedTask = await Task.WhenAny(demoTasks);
+
+                            //Slip it into our processed list
+                            processedDemos.Add(await finishedTask);
+
+                            //Remove the task so we can keep processing
+                            demoTasks.Remove(finishedTask);
+                        }
                     }
                 }
 
