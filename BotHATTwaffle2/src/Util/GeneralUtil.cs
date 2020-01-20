@@ -96,8 +96,8 @@ namespace BotHATTwaffle2.Util
         {
             try
             {
-                var albumId = albumUrl.Replace(@"/gallery/", @"/a/")
-                    .Substring(albumUrl.IndexOf(@"/a/", StringComparison.Ordinal) + 3);
+                var fullUrl = albumUrl.Replace(@"/gallery/", @"/a/");
+                var albumId = fullUrl.Substring(albumUrl.IndexOf(@"/a/", StringComparison.Ordinal) + 3);
                 var client = new ImgurClient(_dataService.RSettings.ProgramSettings.ImgurApi);
                 var endpoint = new AlbumEndpoint(client);
 
