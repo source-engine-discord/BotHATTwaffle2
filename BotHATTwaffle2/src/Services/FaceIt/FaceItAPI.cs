@@ -67,7 +67,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             {
                 var reply = await CallHubApiEndPoint(hub, startTime, endTime);
 
-                if (reply.FileNames.Count == 0)
+                if (reply.DemoInfos.Count == 0)
                 {
                     await _log.LogMessage($"No items found in API request. Skipping call to {hub.HubName}", false,
                         color: LOG_COLOR);
@@ -169,13 +169,13 @@ namespace BotHATTwaffle2.Services.FaceIt
                     continue;
                 }
 
-                var uploadTags = $"{tag}_{demo.MapName}";
+                var uploadTags = $"{tag}_{demo.Mapname}";
                 var radarDir = $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\Radars\\{tag}";
 
                 //Get the WS ID from the demos
                 Directory.CreateDirectory(radarDir);
-                var radarPng = Directory.GetFiles(radarDir, $"*{demo.MapName}*.png", SearchOption.AllDirectories);
-                var radarTxt = Directory.GetFiles(radarDir, $"*{demo.MapName}*.txt", SearchOption.AllDirectories);
+                var radarPng = Directory.GetFiles(radarDir, $"*{demo.Mapname}*.png", SearchOption.AllDirectories);
+                var radarTxt = Directory.GetFiles(radarDir, $"*{demo.Mapname}*.txt", SearchOption.AllDirectories);
 
                 //No radar or text file found. We need to get them and include in the upload.
                 if (radarTxt.Length == 0 || radarPng.Length == 0)
@@ -227,12 +227,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         private async Task<FaceItHubEndpointsResponsesInfo> CallHubApiEndPoint(FaceItHub faceItHub, DateTime startDate,
             DateTime endDate)
         {
-            //These become faceItHubEndpointsResponsesInfo
-            var fileNames = new List<string>();
-            IDictionary<string, string> demoMapnames = new Dictionary<string, string>();
-            IDictionary<string, string> demoUrls = new Dictionary<string, string>();
-            IDictionary<string, DateTime> demoDates = new Dictionary<string, DateTime>();
-            var failedApiCalls = new List<string>();
+			var faceItHubEndpointsResponsesInfo = new FaceItHubEndpointsResponsesInfo();
 
             var dateToDownloadFrom = (int) endDate.ToUniversalTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
             var dateToDownloadUntil = (int) startDate.ToUniversalTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
@@ -250,7 +245,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                 if (errorCallingApiCount > ERROR_CALLING_API_COUNT_MAX)
                 {
-                    failedApiCalls.Add(apiEndpoint);
+					faceItHubEndpointsResponsesInfo.FailedApiCalls.Add(apiEndpoint);
                     await _log.LogMessage($"Skipped calling FaceIt Endpoint {apiEndpoint}", alert: true);
                     goto FinishedCallingApis;
                 }
@@ -293,8 +288,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                             var serialisedDemoMapname =
                                 jsonItemsCurrentGame["voting"] != null &&
                                 jsonItemsCurrentGame["voting"]["map"] != null &&
-                                jsonItemsCurrentGame["voting"]["map"]["pick"] !=
-                                null // No idea what map it is if there is no voting stage
+                                jsonItemsCurrentGame["voting"]["map"]["pick"] != null // No idea what map it is if there is no voting stage
                                     ? jsonItemsCurrentGame["voting"]["map"]["pick"]
                                     : "Unknown";
                             var demoMapname = serialisedDemoMapname != null &&
@@ -333,19 +327,22 @@ namespace BotHATTwaffle2.Services.FaceIt
                                     : null;
 
                                 var serialisedMatchId = jsonItemsCurrentGame["match_id"];
-                                var fileName = serialisedMatchId != null ? serialisedMatchId.ToString() : null;
+                                var filename = serialisedMatchId != null ? serialisedMatchId.ToString() : null;
 
                                 //Lets get that date.
                                 var demoDate =
                                     DateTime.UnixEpoch.AddSeconds(serialisedMatchFinishedAt.ToObject<int>());
 
                                 // if a game has ended since the api was last called, the last demo from the previous call will have been returned again, so skip it
-                                if (!string.IsNullOrWhiteSpace(fileName) && !fileNames.Contains(fileName))
+                                if (!string.IsNullOrWhiteSpace(filename) && !faceItHubEndpointsResponsesInfo.DemoInfos.Any(f => f.Filename == filename))
                                 {
-                                    fileNames.Add(fileName);
-                                    demoUrls.Add(new KeyValuePair<string, string>(fileName, demoUrl));
-                                    demoMapnames.Add(new KeyValuePair<string, string>(fileName, demoMapname));
-                                    demoDates.Add(new KeyValuePair<string, DateTime>(fileName, demoDate.Date));
+									faceItHubEndpointsResponsesInfo.DemoInfos.Add(new FaceItHubEndpointResponseDemoInfo()
+									{
+										Filename = filename,
+										DemoDate = demoDate.Date,
+										DemoMapname = demoMapname,
+										DemoUrl = demoUrl,
+									});
                                 }
                             }
                         }
@@ -372,15 +369,8 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             await _log.LogMessage($"API Call Success for {faceItHub.HubName}", false, color: LOG_COLOR);
 
-            return new FaceItHubEndpointsResponsesInfo
-            {
-                FileNames = fileNames,
-                DemoUrls = demoUrls,
-                DemoMapnames = demoMapnames,
-                FailedApiCalls = failedApiCalls,
-                DemoDate = demoDates
-            };
-        }
+			return faceItHubEndpointsResponsesInfo;
+		}
 
         /// <summary>
         ///     Handles downloading the demo file, and stores the GZ file.
@@ -474,7 +464,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             }
 
             //Skip unknown maps
-            if (demoResult.MapName.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            if (demoResult.Mapname.Equals("unknown", StringComparison.OrdinalIgnoreCase))
             {
                 demoResult.Skip = true;
                 return demoResult;
@@ -567,42 +557,39 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             var demoTasks = new List<Task<DemoResult>>();
             var processedDemos = new List<DemoResult>();
-            foreach (var fileName in faceItHubEndpointsResponsesInfo.FileNames)
-                if (faceItHubEndpointsResponsesInfo.DemoUrls.Keys.Any(k => k == fileName))
+            foreach (var demoInfo in faceItHubEndpointsResponsesInfo.DemoInfos)
+			{
+                var jsonLocation =
+                    $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\{demoInfo.DemoDate:MM_dd_yyyy}\\" +
+                    $"{hubName}\\{demoInfo.DemoMapname}_{demoInfo.Filename}.json";
+
+				var fileLocation = $"{_tempPath}\\{demoInfo.DemoDate:MM_dd_yyyy}\\{hubName}\\{demoInfo.DemoMapname}\\";
+				var fileLocationGz = fileLocation + $"{demoInfo.Filename}.gz";
+                var fileLocationDem = fileLocation + $"{demoInfo.Filename}.dem";
+
+                demoTasks.Add(AcquireDemo(new DemoResult(
+					demoInfo.Filename,
+                    fileLocation,
+                    fileLocationGz,
+                    fileLocationDem,
+                    jsonLocation,
+					demoInfo.DemoUrl,
+					demoInfo.DemoDate,
+					demoInfo.DemoMapname
+				)));
+
+                if (demoTasks.Count >= 8)
                 {
-                    var mapName = faceItHubEndpointsResponsesInfo.DemoMapnames[fileName];
-                    var demoUrl = faceItHubEndpointsResponsesInfo.DemoUrls[fileName];
-                    var demoDate = faceItHubEndpointsResponsesInfo.DemoDate[fileName];
+                    //Get a finished task
+                    var finishedTask = await Task.WhenAny(demoTasks);
 
-                    var jsonLocation =
-                        $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\{demoDate:MM_dd_yyyy}\\" +
-                        $"{hubName}\\{faceItHubEndpointsResponsesInfo.DemoMapnames[fileName]}_{fileName}.json";
+                    //Slip it into our processed list
+                    processedDemos.Add(await finishedTask);
 
-                    var fileLocationGz = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\{fileName}.gz";
-                    var fileLocationDem = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\{fileName}.dem";
-                    var fileLocation = $"{_tempPath}\\{demoDate:MM_dd_yyyy}\\{hubName}\\{mapName}\\";
-
-                    demoTasks.Add(AcquireDemo(new DemoResult(fileName,
-                        fileLocation,
-                        fileLocationGz,
-                        fileLocationDem,
-                        jsonLocation,
-                        demoUrl,
-                        demoDate,
-                        mapName)));
-
-                    if (demoTasks.Count >= 8)
-                    {
-                        //Get a finished task
-                        var finishedTask = await Task.WhenAny(demoTasks);
-
-                        //Slip it into our processed list
-                        processedDemos.Add(await finishedTask);
-
-                        //Remove the task so we can keep processing
-                        demoTasks.Remove(finishedTask);
-                    }
+                    //Remove the task so we can keep processing
+                    demoTasks.Remove(finishedTask);
                 }
+            }
 
             //Await all results to finish - then we can handle them.
             var remainingTasks = await Task.WhenAll(demoTasks);
