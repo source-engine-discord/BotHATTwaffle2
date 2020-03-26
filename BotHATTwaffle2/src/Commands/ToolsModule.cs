@@ -290,5 +290,31 @@ namespace BotHATTwaffle2.Commands
 
             await ReplyAsync(string.Empty, false, embed.Build());
         }
+
+        [Command("ValveResourceFormat")]
+        [Summary("Provides a download link to the Valve Resource Format tool, used to decompile all kinds of Source 2 formats")]
+        [Alias("vrf")]
+        public async Task VrfAsync()
+        {
+            var embed = new EmbedBuilder
+            {
+                Author = new EmbedAuthorBuilder
+                {
+                    Name = "Download Valve Resource Format",
+                    IconUrl = _dataService.Guild.IconUrl
+                },
+                Title = "Click Here",
+                Url = "https://opensource.steamdb.info/ValveResourceFormat/",
+                ThumbnailUrl = "https://opensource.steamdb.info/ValveResourceFormat/static/screen_package.png",
+                Color = new Color(20, 72, 91),
+                Description =
+                    "VRF can open Valve's VPK packages and most Source 2 assets " +
+                    "(maps, models, meshes, materials, textures, sounds, and more!) " +
+                    "All Source 2 projects are supported: Dota 2, Half-Life: Alyx, " +
+                    "SteamVR, Underlords, and others"
+            };
+
+            await ReplyAsync(string.Empty, false, embed.Build());
+        }
     }
 }
