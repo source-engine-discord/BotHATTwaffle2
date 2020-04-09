@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
@@ -19,9 +18,14 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly IServiceProvider _service;
+        private readonly char _prefix;
 
-        public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider service,
-            DataService data, LogHandler log)
+        public CommandHandler(
+            DiscordSocketClient client,
+            CommandService commands,
+            IServiceProvider service,
+            DataService data,
+            LogHandler log)
         {
             Console.WriteLine("Setting up CommandHandler...");
             _commands = commands;
@@ -29,94 +33,107 @@ namespace BotHATTwaffle2.Handlers
             _service = service;
             _dataService = data;
             _log = log;
+            _prefix = _dataService.RSettings.ProgramSettings.CommandPrefix[0];
         }
 
+        /// <summary>
+        /// Perform setup to enable command support.
+        /// </summary>
         public async Task InstallCommandsAsync()
         {
-            // Hook the MessageReceived event into our command handler
-            _client.MessageReceived += HandleCommandAsync;
+            // Use our event handlers for the following events.
+            _client.MessageReceived += MessageReceivedEventHandler;
+            _commands.CommandExecuted += CommandExecutedEventHandler;
 
-            //Register custom type readers
+            // Register custom type readers.
             _commands.AddTypeReader(typeof(TimeSpan), new BetterTimeSpanReader());
 
-            // Here we discover all of the command modules in the entry 
+            // Here we discover all of the command modules in the entry
             // assembly and load them. Starting from Discord.NET 2.0, a
             // service provider is required to be passed into the
-            // module registration method to inject the 
+            // module registration method to inject the
             // required dependencies.
             //
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(),
-                _service);
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _service);
         }
 
-        private async Task HandleCommandAsync(SocketMessage messageParam)
+        /// <summary>
+        /// Attempts to execute a command when a message is received.
+        /// </summary>
+        /// <param name="messageParam">The message sent to the client.</param>
+        private async Task MessageReceivedEventHandler(SocketMessage messageParam)
         {
-            // Don't process the command if it was a system message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
+            // Don't process the command if it was a system message.
+            if (!(messageParam is SocketUserMessage message))
+                return;
 
             _dataService.MessageCount++;
 
-            //Ignore users who are inside interactive sessions
+            // Ignore users who are inside interactive sessions.
             if (_dataService.IgnoreListenList.Contains(message.Author))
                 return;
 
-            // Create a number to track where the prefix ends and the command begins
+            // Create a number to track where the prefix ends and the command begins.
             var argPos = 0;
 
-            // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix(_dataService.RSettings.ProgramSettings.CommandPrefix[0], ref argPos) ||
+            // Determine if the message is a command based on the prefix and make sure no bots trigger commands.
+            if (!(message.HasCharPrefix(_prefix, ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
                   message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
                   message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos,
                       StringComparison.OrdinalIgnoreCase)) ||
                 message.Author.IsBot)
             {
-                //Fire and forget listening on the message.
+                // Fire and forget listening on the message.
                 Listen(messageParam);
                 return;
             }
 
-            // Create a WebSocket-based command context based on the message
+            // Create a WebSocket-based command context based on the message.
             var context = new SocketCommandContext(_client, message);
 
             // Execute the command with the command context we just
             // created, along with the service provider for precondition checks.
+            await _commands.ExecuteAsync(context, argPos, _service);
+        }
 
-            // Keep in mind that result does not indicate a return value
-            // rather an object stating if the command executed successfully.
-            var result = await _commands.ExecuteAsync(
-                context,
-                argPos,
-                _service);
-
+        /// <summary>
+        /// Provides feedback and/or logs any errors or exceptions resulting from an executed command.
+        /// </summary>
+        /// <param name="info">
+        /// The information for the executed command.
+        /// May be missing if failure occurs during parsing or precondition stages.
+        /// </param>
+        /// <param name="context">The context of the executed command.</param>
+        /// <param name="result">The result of the execution of the command.</param>
+        private async Task CommandExecutedEventHandler(
+            Optional<CommandInfo> info,
+            ICommandContext context,
+            IResult result)
+        {
             if (result.Error is null || result.Error == CommandError.UnknownCommand)
             {
                 _dataService.CommandCount++;
                 return; // Ignores successful executions and unknown commands.
             }
 
-            var logMessage =
-                $"Command: {message}\nInvoking User: {context.Message.Author}\nChannel: {context.Message.Channel}\nError Reason: {result.ErrorReason}";
             var alert = false;
+            var logMessage =
+                $"Command: {context.Message}\n" +
+                $"Invoking User: {context.Message.Author}\n" +
+                $"Channel: {context.Message.Channel}\n" +
+                $"Error Reason: {result.ErrorReason}";
 
             switch (result.Error)
             {
                 case CommandError.BadArgCount:
                     var determiner = result.ErrorReason == "The input text has too many parameters." ? "many" : "few";
-
-                    // Retrieves the command's name from the message by finding the first word after the prefix. The string will
-                    // be empty if somehow no match is found.
-                    var commandName =
-                        Regex.Match(context.Message.Content,
-                                _dataService.RSettings.ProgramSettings.CommandPrefix[0] + @"(\w+)",
-                                RegexOptions.IgnoreCase)
-                            .Groups[1].Value;
+                    var commandName = info.IsSpecified ? info.Value.Name : "";
 
                     await context.Channel.SendMessageAsync(
-                        $"You provided too {determiner} parameters! Please consult `{_dataService.RSettings.ProgramSettings.CommandPrefix[0]}help {commandName}`");
+                        $"You provided too {determiner} parameters! Please consult `{_prefix}help {commandName}`");
 
                     break;
                 case CommandError.UnmetPrecondition:
@@ -161,13 +178,14 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        ///     This is used to scan each message for less important things.
-        ///     Mostly used for shit posting, but also does useful things like nag users
-        ///     to use more up to date tools, or automatically answer some simple questions.
+        /// Checks contents of non-command messages for miscellaneous functionality.
         /// </summary>
-        /// <param name="message">Message that got us here</param>
-        /// <returns></returns>
-        internal async void Listen(SocketMessage message)
+        /// <remarks>
+        /// Mostly used for shit posting, but also does useful things like nag users to use more up to date tools, or
+        /// automatically answer some simple questions.
+        /// </remarks>
+        /// <param name="message">The message to check.</param>
+        private async void Listen(SocketMessage message)
         {
             //Process webhooks
             if (message.Channel == _dataService.WebhookChannel && message.Author.IsWebhook)

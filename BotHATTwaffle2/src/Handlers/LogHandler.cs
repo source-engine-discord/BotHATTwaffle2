@@ -22,10 +22,12 @@ namespace BotHATTwaffle2.Handlers
             _client.Log += LogEventHandler;
         }
 
-        private Task LogEventHandler(LogMessage msg)
+        private async Task LogEventHandler(LogMessage msg)
         {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
+            if (msg.Exception == null)
+                Console.WriteLine(msg.ToString());
+            else
+                await LogMessage(msg.ToString(prependTimestamp: false), alert: true, color: ConsoleColor.Red);
         }
 
         public async Task LogMessage(string msg, bool channel = true, bool console = true, bool alert = false,
