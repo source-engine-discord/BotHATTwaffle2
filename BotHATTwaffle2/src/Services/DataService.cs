@@ -23,7 +23,7 @@ namespace BotHATTwaffle2.Services
         private LogHandler _log;
         public int CommandCount = 0;
 
-        public List<SocketUser> IgnoreListenList = new List<SocketUser>();
+        public List<ulong> IgnoreListenList = new List<ulong>();
         public int MessageCount = 0;
 
         public DateTime StartTime;

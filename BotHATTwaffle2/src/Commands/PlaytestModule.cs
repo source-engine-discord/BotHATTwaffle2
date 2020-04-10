@@ -311,7 +311,7 @@ namespace BotHATTwaffle2.Commands
 
                 if (user.Roles.Any(x => x.Id == _dataService.ModeratorRole.Id || x.Id == _dataService.AdminRole.Id))
                 {
-                    _dataService.IgnoreListenList.Add(Context.User);
+                    _dataService.IgnoreListenList.Add(Context.User.Id);
 
                     var display = await ReplyAsync(embed: embed.Build());
 
@@ -319,7 +319,7 @@ namespace BotHATTwaffle2.Commands
                         _playtestService);
                     await requestBuilder.SchedulePlaytestAsync(display);
 
-                    _dataService.IgnoreListenList.Remove(Context.User);
+                    _dataService.IgnoreListenList.Remove(Context.User.Id);
                     return;
                 }
 
@@ -338,7 +338,7 @@ namespace BotHATTwaffle2.Commands
             [Summary("A pre-built playtest event based on the template.")] [Optional] [Remainder]
             string playtestInformation)
         {
-            _dataService.IgnoreListenList.Add(Context.User);
+            _dataService.IgnoreListenList.Add(Context.User.Id);
 
             var requestBuilder =
                 new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
@@ -351,7 +351,7 @@ namespace BotHATTwaffle2.Commands
                 if (split.Length != 12)
                 {
                     await ReplyAsync("Invalid bulk playtest quest submission. Consult the help documents.");
-                    _dataService.IgnoreListenList.Remove(Context.User);
+                    _dataService.IgnoreListenList.Remove(Context.User.Id);
                     return;
                 }
 
@@ -372,7 +372,7 @@ namespace BotHATTwaffle2.Commands
                 await requestBuilder.BuildPlaytestRequestWizard();
             }
 
-            _dataService.IgnoreListenList.Remove(Context.User);
+            _dataService.IgnoreListenList.Remove(Context.User.Id);
         }
 
         [Command("PublicServer")]

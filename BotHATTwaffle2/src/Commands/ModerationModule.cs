@@ -864,7 +864,7 @@ namespace BotHATTwaffle2.Commands
             //In auto mode
             if (!ServerDictionary.ContainsKey(Context.User.Id))
             {
-                if (testEvent.IsValid)
+                if (testEvent != null && testEvent.IsValid)
                 {
                     //There is a playtest event, get the server ID from the test event
                     var serverAddress = testEvent.ServerLocation;

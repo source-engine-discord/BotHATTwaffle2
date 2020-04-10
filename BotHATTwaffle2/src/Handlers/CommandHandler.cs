@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
@@ -8,6 +9,7 @@ using BotHATTwaffle2.TypeReader;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Newtonsoft.Json.Linq;
 
 namespace BotHATTwaffle2.Handlers
 {
@@ -72,8 +74,14 @@ namespace BotHATTwaffle2.Handlers
             _dataService.MessageCount++;
 
             // Ignore users who are inside interactive sessions.
-            if (_dataService.IgnoreListenList.Contains(message.Author))
+            if (_dataService.IgnoreListenList.Contains(message.Author.Id))
                 return;
+
+//            if (message.Attachments.Count != 0 && message.Attachments.FirstOrDefault().Filename.Equals("message.txt"))
+//            {
+//                var attachment = message.Attachments.FirstOrDefault();
+//                Console.WriteLine();
+//            }
 
             // Create a number to track where the prefix ends and the command begins.
             var argPos = 0;
@@ -177,6 +185,7 @@ namespace BotHATTwaffle2.Handlers
             await _log.LogMessage(logMessage, alert: alert);
         }
 
+
         /// <summary>
         /// Checks contents of non-command messages for miscellaneous functionality.
         /// </summary>
@@ -187,17 +196,21 @@ namespace BotHATTwaffle2.Handlers
         /// <param name="message">The message to check.</param>
         private async void Listen(SocketMessage message)
         {
-            //Process webhooks
-            if (message.Channel == _dataService.WebhookChannel && message.Author.IsWebhook)
-            {
-                if (message.Content.StartsWith("PT"))
-                    await PlaytestRequest();
-
-                return;
-            }
-
             // Don't want to listen to what a bot tells us to do
             if (message.Author.IsBot) return;
+
+            //Handle Pastebin Message
+            if (message.Attachments.Count == 1)
+            {
+                Attachment file = message.Attachments.FirstOrDefault();
+
+                //Should never be null, but better safe than sorry.
+                if (file == null)
+                    return;
+
+                if(file.Filename.Equals("message.txt", StringComparison.OrdinalIgnoreCase) || file.Filename.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
+                    await LargeMeessage(file);
+            }
 
             // Embed Steam workshop links
             if (message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/",
@@ -334,6 +347,31 @@ namespace BotHATTwaffle2.Handlers
                     .WithColor(new Color(243, 128, 72));
 
                 await message.Channel.SendMessageAsync(embed: wallWormEmbed.Build());
+            }
+
+            async Task LargeMeessage(Attachment file)
+            {
+                //Limit size
+                if (file.Size > 5000000)
+                    return;
+
+                using (var client = new WebClient())
+                {
+                    try
+                    {
+                        string content = client.DownloadString(file.Url);
+
+                        string webResult = client.UploadString(new Uri("https://hastebin.com/documents"), content);
+
+                        JObject jResult = JObject.Parse(webResult);
+
+                        await message.Channel.SendMessageAsync("The message was pretty long, for convenience I've uploaded it online:\n" + @"https://hastebin.com/" + jResult.PropertyValues().FirstOrDefault());
+                    }
+                    catch(Exception e)
+                    {
+                        await _log.LogMessage("Tried to send to hastebin, but failed for some reason.\n" + e,false);
+                    }
+                }
             }
         }
     }
