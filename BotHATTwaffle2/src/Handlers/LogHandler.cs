@@ -27,7 +27,7 @@ namespace BotHATTwaffle2.Handlers
             if (msg.Exception == null)
                 Console.WriteLine(msg.ToString());
             else
-                await LogMessage(msg.ToString(prependTimestamp: false), alert: true, color: ConsoleColor.Red);
+                await LogMessage(msg.ToString(prependTimestamp: false), alert: false, color: ConsoleColor.Red);
         }
 
         public async Task LogMessage(string msg, bool channel = true, bool console = true, bool alert = false,
