@@ -103,7 +103,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 for (var i = 0; i < 4; i++)
                 {
                     _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
-                        $"script ScriptPrintMessageCenterAll(\"Playtest of {PlaytestCommandInfo.Title} is live! Be respectful and GLHF!</font>\");",
+                        $"script ScriptPrintMessageCenterAll(\"Playtest of {PlaytestCommandInfo.Title} is live! Be respectful and GLHF!\");",
                         false);
                     await Task.Delay(3000);
                 }
@@ -139,7 +139,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                     for (var i = 0; i < 4; i++)
                     {
                         _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
-                            "script ScriptPrintMessageCenterAll(\"Please join the level testing voice channel for feedback!</font>\");",
+                            "script ScriptPrintMessageCenterAll(\"Please join the level testing voice channel for feedback!\");",
                             false);
                         await Task.Delay(3000);
                     }
