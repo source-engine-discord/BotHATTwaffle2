@@ -23,6 +23,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_USERS_STEAMID = "usersSteamID";
         private const string COLLECTION_PREVIOUS_TEST = "previousTest";
         private const string COLLECTION_FACEIT_HUB_SEASON = "faceitHubSeason";
+        private const string COLLECTION_FACEIT_HUBS = "faceitHubs";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -179,6 +180,87 @@ namespace BotHATTwaffle2.Util
             }
 
             return true;
+        }
+
+        /// <summary>
+        ///     Get's all the faceit hubs currently in the DB
+        /// </summary>
+        /// <returns>A collection of the retrieved hubs.</returns>
+        public static IEnumerable<FaceItHub> GetHubs()
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<FaceItHub>(COLLECTION_FACEIT_HUBS);
+                    return col.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("An error occurred while getting FACEIT Hubs\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return null;
+            }
+        }
+
+        /// <summary>
+        ///     Insert a new FACEIT Hub.
+        /// </summary>
+        /// <param name="hub">Hub to add</param>
+        /// <returns>true if successfully added; otherwise, false.</returns>
+        public static bool InsertHub(FaceItHub hub)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<FaceItHub>(COLLECTION_FACEIT_HUBS);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Storing FACEIT Hub...", false, color: LOG_COLOR);
+
+                    col.Insert(hub);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("An error occurred while inserting a FACEIT Hub\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        ///     Delete a FACEIT Hub tag.
+        /// </summary>
+        /// <param name="id">The id of the tag to delete.</param>
+        /// <returns>true if successfully deleted; otherwise, false.</returns>
+        public static bool DeleteHub(int id)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var col = db.GetCollection<FaceItHub>(COLLECTION_FACEIT_HUBS);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage($"Deleting FACEIT Hub for ID {id}", false, color: LOG_COLOR);
+
+                    return col.Delete(id);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("An error occurred while deleting a FACEIT Hub\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
         }
 
         /// <summary>

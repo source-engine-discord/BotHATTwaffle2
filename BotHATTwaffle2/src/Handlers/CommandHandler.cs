@@ -249,25 +249,6 @@ namespace BotHATTwaffle2.Handlers
             if (_dataService.RSettings.AutoReplies.Propper.Any(s => message.Content.ToLower().Contains(s)))
                 await Propper();
 
-            // Methods for building the embeds that the if statements caught above
-            async Task PlaytestRequest()
-            {
-                //Format input and trim.
-                //prefix | creator | images | workshop | Type
-                var input = message.Content.Split('|').Select(s => s.Trim()).ToArray();
-
-                //Get the creator
-                var creator = _dataService.GetSocketUser(input[1]);
-                var creatorMention = creator != null ? creator.Mention : input[1];
-                var workshop = new Workshop(_dataService, _log);
-                await _dataService.CSGOTestingChannel.SendMessageAsync(
-                    $"{creatorMention} has submitted a playtest request!", embed:
-                    (await workshop.HandleWorkshopEmbeds(message,
-                        $"[Map Images]({input[2]}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
-                        input[4]))
-                    .Build());
-            }
-
             /// <summary>
             /// Shames users for asking about carve.
             /// </summary>
@@ -365,7 +346,7 @@ namespace BotHATTwaffle2.Handlers
 
                         JObject jResult = JObject.Parse(webResult);
 
-                        await message.Channel.SendMessageAsync("The message was pretty long, for convenience I've uploaded it online:\n" + @"https://hastebin.com/" + jResult.PropertyValues().FirstOrDefault());
+                        await message.Channel.SendMessageAsync("The message was pretty long, for convenience I've uploaded it online:\n" + @"https://hastebin.com/raw/" + jResult.PropertyValues().FirstOrDefault());
                     }
                     catch(Exception e)
                     {
