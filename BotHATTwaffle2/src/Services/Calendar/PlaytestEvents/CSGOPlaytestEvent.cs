@@ -158,6 +158,21 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                                       e.Message);
                 }
 
+                _ = Task.Run(async () =>
+                {
+                    foreach (var creator in Creators)
+                    {
+                        try
+                        {
+                            var user = _dataService.GetSocketGuildUser(creator.Id);
+                            await user.RemoveRoleAsync(_dataService.ComptesterPlaytestCreator);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                });
+
                 var embed = new EmbedBuilder()
                     .WithAuthor($"Download playtest demo for {CleanedTitle}", _dataService.Guild.IconUrl,
                         demoUrl)
@@ -184,29 +199,35 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestStartingInTask", false, color: LOG_COLOR);
 
+            var embed = new EmbedBuilder().WithAuthor(CleanedTitle)
+                .AddField("Connect Information", $"`connect {ServerLocation}; password {CompPassword}`")
+                .WithColor(new Color(55, 55, 165));
+
             if (!IsCasual)
             {
                 foreach (var creator in Creators)
+                {
                     try
                     {
                         var user = _dataService.GetSocketGuildUser(creator.Id);
-                        if (user.Roles.All(x => x.Id != _dataService.CompetitiveTesterRole.Id))
-                        {
-                            await _log.LogMessage(
-                                $"{user} ID:{user.Id} does not have competitive tester role for this comp test. Applying.");
-                            await user.AddRoleAsync(_dataService.CompetitiveTesterRole);
-                        }
+                        await user.AddRoleAsync(_dataService.ComptesterPlaytestCreator);
                     }
                     catch
                     {
                     }
 
-                await _dataService.CompetitiveTestingChannel.SendMessageAsync(embed: new EmbedBuilder()
-                    .WithAuthor(CleanedTitle)
-                    .AddField("Connect Information", $"`connect {ServerLocation}; password {CompPassword}`")
-                    .WithColor(new Color(55, 55, 165))
-                    .Build());
+                    //Try to DM them connect information
+                    try
+                    {
+                        await creator.SendMessageAsync(embed: embed.Build());
+                    }
+                    catch
+                    {
+                    }
+                }
 
+                await _dataService.CompetitiveTestingChannel.SendMessageAsync(embed: embed.Build());
+                   
                 await rconService.RconCommand(ServerLocation, $"sv_password {CompPassword}");
             }
         }

@@ -14,5 +14,6 @@
         public ulong Bots { get; set; }
         public ulong CSGOPlaytestAdmin { get; set; }
         public ulong TF2PlaytestAdmin { get; set; }
-    }
+        public ulong ComptesterPlaytestCreator { get; set; }
+}
 }

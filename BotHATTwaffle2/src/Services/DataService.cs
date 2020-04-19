@@ -67,6 +67,7 @@ namespace BotHATTwaffle2.Services
         public SocketRole BotsRole { get; private set; }
         public SocketRole AdminRole { get; private set; }
         public SocketRole CompetitiveTesterRole { get; private set; }
+        public SocketRole ComptesterPlaytestCreator { get; private set; }
         public SocketUser AlertUser { get; private set; }
         public SocketRole CSGOPlaytestAdmin { get; private set; }
         public SocketRole TF2PlaytestAdmin { get; private set; }
@@ -284,6 +285,10 @@ namespace BotHATTwaffle2.Services
             CompetitiveTesterRole = Guild.GetRole(RSettings.UserRoles.CompetitiveTester);
             Console.WriteLine(
                 $"CompetitiveTesterRole ID:{CompetitiveTesterRole.Id} Discovered Name:{CompetitiveTesterRole.Name}");
+
+            ComptesterPlaytestCreator = Guild.GetRole(RSettings.UserRoles.ComptesterPlaytestCreator);
+            Console.WriteLine(
+                $"CompetitiveTesterCreator ID:{ComptesterPlaytestCreator.Id} Discovered Name:{ComptesterPlaytestCreator.Name}");
 
             CSGOPlaytestAdmin = Guild.GetRole(RSettings.UserRoles.CSGOPlaytestAdmin);
             Console.WriteLine($"CSGOPlaytestAdmin ID:{CSGOPlaytestAdmin.Id} Discovered Name:{CSGOPlaytestAdmin.Name}");
