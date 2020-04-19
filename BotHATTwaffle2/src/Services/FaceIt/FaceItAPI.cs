@@ -115,6 +115,8 @@ namespace BotHATTwaffle2.Services.FaceIt
             await _log.LogMessage($"Match IDs that failed parsing:\n{message}");
 
             return $"Start Time: `{_runStartTime}` | Ran for `{DateTime.Now.Subtract(_runStartTime).ToString()}`\n" +
+                   $"Total Matches: {_gameInfo.Count}\n" +
+                   $"Total New Matches (Not Previously Seen): {_gameInfo.Count(x => !x.Skip)}\n" +
                    $"Demos Downloaded: `{_gameInfo.Count(x => x.DownloadSuccess && !x.Skip)}`\n" +
                    $"Demos Unzipped: `{_gameInfo.Count(x => x.UnzipSuccess && !x.Skip)}`\n" +
                    $"Failed Downloads: `{_gameInfo.Count(x => !x.DownloadSuccess && !x.Skip)}`\n" +
