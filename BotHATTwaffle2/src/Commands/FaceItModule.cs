@@ -138,7 +138,10 @@ namespace BotHATTwaffle2.Commands
             [Command("Add")]
             [RequireUserPermission(GuildPermission.MoveMembers)]
             [Summary("Add a new FACEIT Hub tag.")]
-            [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well.")]
+            [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well. " +
+                     "The TagName is what appears on the website. The Type is what links this tag to " +
+                     "related hubs. For instance if you wanted to add a championship event, make tagName " +
+                     "and Type the same. Then when adding the hubs, make the HubType match type you put here.")]
             public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime)
             {
                 var embed = new EmbedBuilder()

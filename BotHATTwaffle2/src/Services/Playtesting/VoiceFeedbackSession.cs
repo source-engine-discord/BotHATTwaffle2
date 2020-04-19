@@ -421,7 +421,16 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
                 else
                 {
-                    await _display.DeleteAsync();
+                    //Sometimes the bot fails to delete something when a queue is ending. Just try catch it
+                    try
+                    {
+                        await _display.DeleteAsync();
+                    }
+                    catch
+                    {
+                        //You honestly think I'm gonna do anything with this?
+                    }
+
                     _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: emptyEmbed.Build());
                 }
 
