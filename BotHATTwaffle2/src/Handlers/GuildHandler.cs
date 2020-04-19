@@ -39,6 +39,9 @@ namespace BotHATTwaffle2.Handlers
             await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LOG_COLOR);
             await _dataService.DeserializeConfig();
 
+            //Remove all jobs, just to make sure they are removed before they get re-added
+            _schedule.RemoveAllJobs();
+
             _schedule.AddRequiredJobs();
 
             await _logReceiverService.RestartLogAfterDisconnect();
