@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -18,26 +16,28 @@ namespace BotHATTwaffle2.Services.FaceIt
 {
     public class FaceItApi
     {
-        private static bool _running;
         private const ConsoleColor LOG_COLOR = ConsoleColor.DarkYellow;
 
-        private readonly LogHandler _log;
-        private readonly DataService _dataService;
-
-        private Dictionary<FaceItHub, HttpStatusCode> _statusCodes;
-        private DateTime _runStartTime;
-        private List<FaceItGameInfo> _gameInfo = new List<FaceItGameInfo>();
-        private readonly List<string> _siteUpdateCalls = new List<string>();
-        private readonly List<string> _siteUpdateResponses = new List<string>();
-        private readonly List<string> _matchesWithNullDemoUrls = new List<string>();
-        private readonly List<string> _matchesWithNullVoting = new List<string>();
-        private readonly List<string> _matchesFailedParse = new List<string>();
-        private readonly Dictionary<FileInfo, string>  _uploadDictionary = new Dictionary<FileInfo, string>();
-        private int _uploadSuccessCount;
-
         private const int DL_UNZIP_RETRY_LIMIT = 4;
+
         private const string UPDATE_BASE_URL =
             @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&build=";
+
+        private static bool _running;
+        private readonly DataService _dataService;
+
+        private readonly LogHandler _log;
+        private readonly List<string> _matchesFailedParse = new List<string>();
+        private readonly List<string> _matchesWithNullDemoUrls = new List<string>();
+        private readonly List<string> _matchesWithNullVoting = new List<string>();
+        private readonly List<string> _siteUpdateCalls = new List<string>();
+        private readonly List<string> _siteUpdateResponses = new List<string>();
+        private readonly Dictionary<FileInfo, string> _uploadDictionary = new Dictionary<FileInfo, string>();
+        private List<FaceItGameInfo> _gameInfo = new List<FaceItGameInfo>();
+        private DateTime _runStartTime;
+
+        private Dictionary<FaceItHub, HttpStatusCode> _statusCodes;
+        private int _uploadSuccessCount;
 
         public FaceItApi(DataService dataService, LogHandler log)
         {
@@ -50,17 +50,19 @@ namespace BotHATTwaffle2.Services.FaceIt
             var failedGames = _gameInfo.Where(x => (!x.DownloadSuccess || !x.UnzipSuccess) && !x.Skip).ToArray();
             if (failedGames.Count() != 0)
             {
-                int failedMessagePostCount = 0;
-                bool channelLog = true;
+                var failedMessagePostCount = 0;
+                var channelLog = true;
                 foreach (var failedGame in failedGames)
                 {
                     if (failedMessagePostCount == 5)
                     {
-                        await _log.LogMessage("To prevent spam, channel logging is now disabled, see bot console for more logs", true, alert:true, color: LOG_COLOR);
+                        await _log.LogMessage(
+                            "To prevent spam, channel logging is now disabled, see bot console for more logs", true,
+                            alert: true, color: LOG_COLOR);
                         channelLog = false;
                     }
 
-                    await _log.LogMessage($"Something happened downloading or unzipping a demo!\n" +
+                    await _log.LogMessage("Something happened downloading or unzipping a demo!\n" +
                                           $"UID: {failedGame.GetGameUID()}\n" +
                                           $"Download Status: {failedGame.DownloadSuccess}\n" +
                                           $"Unzip Status: {failedGame.UnzipSuccess}\n" +
@@ -73,7 +75,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             }
 
             //Display out matches that are null for demo URL
-            string message = "";
+            var message = "";
             foreach (var nullMatch in _matchesWithNullDemoUrls)
             {
                 message += $"`{nullMatch}`\n";
@@ -84,6 +86,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     message = "";
                 }
             }
+
             await _log.LogMessage($"Match IDs with null Demo URLs:\n{message}");
 
             //Display out matches that are null for voting
@@ -98,6 +101,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     message = "";
                 }
             }
+
             await _log.LogMessage($"Match IDs with null Voting:\n{message}");
 
             //Display out matches that are null for voting
@@ -112,6 +116,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     message = "";
                 }
             }
+
             await _log.LogMessage($"Match IDs that failed parsing:\n{message}");
 
             return $"Start Time: `{_runStartTime}` | Ran for `{DateTime.Now.Subtract(_runStartTime).ToString()}`\n" +
@@ -122,12 +127,12 @@ namespace BotHATTwaffle2.Services.FaceIt
                    $"Failed Downloads: `{_gameInfo.Count(x => !x.DownloadSuccess && !x.Skip)}`\n" +
                    $"Failed Unzipped: `{_gameInfo.Count(x => !x.UnzipSuccess && !x.Skip)}`\n" +
                    $"Files Uploaded: `{_uploadSuccessCount}`\n" +
-                   $"Data Downloaded: `{Math.Round(_gameInfo.Select(x => x.DownloadSize).Sum() / 1024f /1024f, 2)}MB`\n" +
+                   $"Data Downloaded: `{Math.Round(_gameInfo.Select(x => x.DownloadSize).Sum() / 1024f / 1024f, 2)}MB`\n" +
                    $"Demos that Failed to Parse: `{_matchesFailedParse.Count}`\n" +
                    $"Matches with Null Demo URLs: `{_matchesWithNullDemoUrls.Count}`\n" +
                    $"Matches with Null Voting: `{_matchesWithNullVoting.Count}`\n\n" +
-                   $"Update Responses:\n" +
-                   $"{string.Join("\n",_siteUpdateResponses)}";
+                   "Update Responses:\n" +
+                   $"{string.Join("\n", _siteUpdateResponses)}";
         }
 
         public async Task<string> GetDemos(DateTime startTime, DateTime endTime)
@@ -143,7 +148,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             if (_gameInfo.Count == 0)
             {
-                string msg = "No matches were found on any endpoint!";
+                var msg = "No matches were found on any endpoint!";
                 await _log.LogMessage(msg);
                 _running = false;
                 return msg;
@@ -167,7 +172,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             //Update the files on the website
             await UpdateWebsiteFiles();
 
-            string report = await GetReport();
+            var report = await GetReport();
             await _log.LogMessage(report);
             _running = false;
             return report;
@@ -186,7 +191,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private void DeleteOldFiles()
         {
-            _ = _log.LogMessage($"Deleting old demo files...", false, color: LOG_COLOR);
+            _ = _log.LogMessage("Deleting old demo files...", false, color: LOG_COLOR);
 
             foreach (var demo in _gameInfo)
                 if (File.Exists(demo.GetPathTempDemo()))
@@ -194,7 +199,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         }
 
         /// <summary>
-        /// Gets matches from all hubs inside the database.
+        ///     Gets matches from all hubs inside the database.
         /// </summary>
         /// <param name="startTime">Start date to get demos from</param>
         /// <param name="endTime">End time to get demos to</param>
@@ -206,28 +211,20 @@ namespace BotHATTwaffle2.Services.FaceIt
             _gameInfo = new List<FaceItGameInfo>();
 
             //Status for each hub call
-            _statusCodes = new Dictionary <FaceItHub,HttpStatusCode>();
+            _statusCodes = new Dictionary<FaceItHub, HttpStatusCode>();
 
             foreach (var hub in DatabaseUtil.GetHubs())
             {
-                await _log.LogMessage($"Calling Faceit Endpoint: `{hub.HubName}`", color:LOG_COLOR);
+                await _log.LogMessage($"Calling Faceit Endpoint: `{hub.HubName}`", color: LOG_COLOR);
 
-                List<MatchesListObject> callResult = new List<MatchesListObject>();
+                var callResult = new List<MatchesListObject>();
 
                 //hub
                 if (hub.Endpoint == 0)
-                {
                     callResult = await faceit.GetMatchesFromHubBetweenDates(hub.HubGUID, startTime, endTime);
-                }
                 //Championships
                 else if (hub.Endpoint == 1)
-                {
                     callResult = await faceit.GetMatchesFromChampionshipBetweenDates(hub.HubGUID, startTime, endTime);
-                }
-                else
-                {
-                    //Should never be here
-                }
 
                 var callStatus = faceit.GetStatusCode();
 
@@ -253,10 +250,9 @@ namespace BotHATTwaffle2.Services.FaceIt
                         continue;
                     }
 
-                    for (int i = 0; i < match.DemoURL.Count; i++)
-                    {
-                        _gameInfo.Add(new FaceItGameInfo(match, hub, _dataService.RSettings.ProgramSettings.FaceItDemoPath, i));
-                    }
+                    for (var i = 0; i < match.DemoURL.Count; i++)
+                        _gameInfo.Add(new FaceItGameInfo(match, hub,
+                            _dataService.RSettings.ProgramSettings.FaceItDemoPath, i));
                 }
             }
         }
@@ -268,16 +264,20 @@ namespace BotHATTwaffle2.Services.FaceIt
             foreach (var game in _gameInfo.Where(x => x.DownloadSuccess && x.UnzipSuccess))
             {
                 //Don't re-upload something we already uploaded
-                if(game.Skip)
+                if (game.Skip)
                     continue;
 
                 if (_dataService.RSettings.ProgramSettings.Debug)
-                    await _log.LogMessage("Adding " + game.GetPathLocalJson() + " to the upload list!", false, color: LOG_COLOR);
+                    await _log.LogMessage("Adding " + game.GetPathLocalJson() + " to the upload list!", false,
+                        color: LOG_COLOR);
 
                 //Get the hub with the desired date and season tags.
                 FaceItHubTag targetTag = null;
-                targetTag = hubTags.FirstOrDefault(x => (x.StartDate.ToUniversalTime() < game.GetStartDate() && x.EndDate.ToUniversalTime() > game.GetStartDate()) 
-                                                            && x.Type.Equals(game.GetHubType(), StringComparison.OrdinalIgnoreCase));
+                targetTag = hubTags.FirstOrDefault(x =>
+                    x.StartDate.ToUniversalTime() < game.GetStartDate() && x.EndDate.ToUniversalTime() >
+                                                                        game.GetStartDate()
+                                                                        && x.Type.Equals(game.GetHubType(),
+                                                                            StringComparison.OrdinalIgnoreCase));
 
                 //Try to get set our selected tag.
                 var selectedTag = targetTag?.TagName;
@@ -296,13 +296,15 @@ namespace BotHATTwaffle2.Services.FaceIt
                 FileInfo targetFile;
                 try
                 {
-                    targetFile = new FileInfo(Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUID())) ?? 
-                                              throw new InvalidOperationException());
+                    targetFile = new FileInfo(
+                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUID())) ??
+                        throw new InvalidOperationException());
                 }
                 catch (Exception e)
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"Issue getting file {game.GetGameUID()} It likely failed to parse\n{e}", color: LOG_COLOR);
+                        await _log.LogMessage($"Issue getting file {game.GetGameUID()} It likely failed to parse\n{e}",
+                            color: LOG_COLOR);
                     _matchesFailedParse.Add(game.GetMatchId());
                     continue;
                 }
@@ -316,8 +318,10 @@ namespace BotHATTwaffle2.Services.FaceIt
                 Directory.CreateDirectory(localRadarDir);
 
                 //Get the radar file paths
-                var radarPng = Directory.GetFiles(localRadarDir, $"*{game.GetMapName()}*.png", SearchOption.AllDirectories);
-                var radarTxt = Directory.GetFiles(localRadarDir, $"*{game.GetMapName()}*.txt", SearchOption.AllDirectories);
+                var radarPng = Directory.GetFiles(localRadarDir, $"*{game.GetMapName()}*.png",
+                    SearchOption.AllDirectories);
+                var radarTxt = Directory.GetFiles(localRadarDir, $"*{game.GetMapName()}*.txt",
+                    SearchOption.AllDirectories);
 
                 //No radar or text file found. We need to get them and include in the upload.
                 if (radarTxt.Length == 0 || radarPng.Length == 0)
@@ -330,7 +334,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                     var steamApi = new SteamAPI(_dataService, _log);
 
                     //Handle radar files
-                    var radarFiles = await steamApi.GetWorkshopMapRadarFiles(game.GetBaseTempPath().TrimEnd('\\'), wsId);
+                    var radarFiles =
+                        await steamApi.GetWorkshopMapRadarFiles(game.GetBaseTempPath().TrimEnd('\\'), wsId);
 
                     if (radarFiles != null)
                         foreach (var radarFile in radarFiles)
@@ -400,7 +405,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
 
         /// <summary>
-        /// Starts multiple tasks at once to increase the speed of processing.
+        ///     Starts multiple tasks at once to increase the speed of processing.
         /// </summary>
         /// <returns></returns>
         private async Task HandleMatchDemos()
@@ -428,10 +433,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                 demoTasks.Add(DownloadAndUnzipDemo(game));
 
                 if (demoTasks.Count >= 8)
-                {
                     //Wait for a task to complete, then remove it from the list.
                     demoTasks.Remove(await Task.WhenAny(demoTasks));
-                }
             }
 
             //Wait for the rest of the tasks to finish
@@ -440,11 +443,11 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private async Task DownloadAndUnzipDemo(FaceItGameInfo faceItGameInfo)
         {
-            for (int i = 0; i < DL_UNZIP_RETRY_LIMIT; i++)
+            for (var i = 0; i < DL_UNZIP_RETRY_LIMIT; i++)
             {
                 var downloadResult = await DownloadDemo(faceItGameInfo);
 
-                bool unzipResult = false;
+                var unzipResult = false;
 
                 //Only unzip if download was a success
                 if (downloadResult)
@@ -460,8 +463,8 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private async Task<bool> UnzipDemo(FaceItGameInfo faceItGameInfo)
         {
-            string sourceFile = faceItGameInfo.GetPathTempGz();
-            string destinationFile = faceItGameInfo.GetPathTempDemo();
+            var sourceFile = faceItGameInfo.GetPathTempGz();
+            var destinationFile = faceItGameInfo.GetPathTempDemo();
 
             var gzipFileName = new FileInfo(sourceFile);
 
@@ -469,7 +472,8 @@ namespace BotHATTwaffle2.Services.FaceIt
             {
                 using (var decompressedStream = File.Create(destinationFile))
                 {
-                    using (var decompressionStream = new GZipStream(fileToDecompressAsStream, CompressionMode.Decompress))
+                    using (var decompressionStream =
+                        new GZipStream(fileToDecompressAsStream, CompressionMode.Decompress))
                     {
                         try
                         {
@@ -478,7 +482,9 @@ namespace BotHATTwaffle2.Services.FaceIt
                         catch (Exception e)
                         {
                             if (_dataService.RSettings.ProgramSettings.Debug)
-                                await _log.LogMessage("Failed to unzip. Will retry if the limit was not reached. " + sourceFile, false, color: LOG_COLOR);
+                                await _log.LogMessage(
+                                    "Failed to unzip. Will retry if the limit was not reached. " + sourceFile, false,
+                                    color: LOG_COLOR);
 
                             //Delete the file so we can re-download it
                             if (File.Exists(sourceFile))
@@ -506,8 +512,8 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private async Task<bool> DownloadDemo(FaceItGameInfo faceItGameInfo)
         {
-            string localPath = faceItGameInfo.GetPathTempGz();
-            string remotePath = faceItGameInfo.GetDemoUrl();
+            var localPath = faceItGameInfo.GetPathTempGz();
+            var remotePath = faceItGameInfo.GetDemoUrl();
 
             Directory.CreateDirectory(Path.GetDirectoryName(localPath));
 

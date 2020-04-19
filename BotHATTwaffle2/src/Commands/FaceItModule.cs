@@ -197,7 +197,8 @@ namespace BotHATTwaffle2.Commands
                 foreach (var r in result)
                 {
                     counter++;
-                    embed.AddField($"[{r.Id}] `{r.StartDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss} - {r.EndDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss}`",
+                    embed.AddField(
+                        $"[{r.Id}] `{r.StartDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss} - {r.EndDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss}`",
                         $"Type: `{r.Type}`" +
                         $"\nTag: `{r.TagName}`");
                     // Handle embed field limit

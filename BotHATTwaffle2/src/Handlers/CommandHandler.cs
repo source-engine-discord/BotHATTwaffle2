@@ -19,8 +19,8 @@ namespace BotHATTwaffle2.Handlers
         private readonly CommandService _commands;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
-        private readonly IServiceProvider _service;
         private readonly char _prefix;
+        private readonly IServiceProvider _service;
 
         public CommandHandler(
             DiscordSocketClient client,
@@ -39,7 +39,7 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// Perform setup to enable command support.
+        ///     Perform setup to enable command support.
         /// </summary>
         public async Task InstallCommandsAsync()
         {
@@ -62,7 +62,7 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// Attempts to execute a command when a message is received.
+        ///     Attempts to execute a command when a message is received.
         /// </summary>
         /// <param name="messageParam">The message sent to the client.</param>
         private async Task MessageReceivedEventHandler(SocketMessage messageParam)
@@ -108,11 +108,11 @@ namespace BotHATTwaffle2.Handlers
         }
 
         /// <summary>
-        /// Provides feedback and/or logs any errors or exceptions resulting from an executed command.
+        ///     Provides feedback and/or logs any errors or exceptions resulting from an executed command.
         /// </summary>
         /// <param name="info">
-        /// The information for the executed command.
-        /// May be missing if failure occurs during parsing or precondition stages.
+        ///     The information for the executed command.
+        ///     May be missing if failure occurs during parsing or precondition stages.
         /// </param>
         /// <param name="context">The context of the executed command.</param>
         /// <param name="result">The result of the execution of the command.</param>
@@ -187,11 +187,11 @@ namespace BotHATTwaffle2.Handlers
 
 
         /// <summary>
-        /// Checks contents of non-command messages for miscellaneous functionality.
+        ///     Checks contents of non-command messages for miscellaneous functionality.
         /// </summary>
         /// <remarks>
-        /// Mostly used for shit posting, but also does useful things like nag users to use more up to date tools, or
-        /// automatically answer some simple questions.
+        ///     Mostly used for shit posting, but also does useful things like nag users to use more up to date tools, or
+        ///     automatically answer some simple questions.
         /// </remarks>
         /// <param name="message">The message to check.</param>
         private async void Listen(SocketMessage message)
@@ -202,13 +202,14 @@ namespace BotHATTwaffle2.Handlers
             //Handle Pastebin Message
             if (message.Attachments.Count == 1)
             {
-                Attachment file = message.Attachments.FirstOrDefault();
+                var file = message.Attachments.FirstOrDefault();
 
                 //Should never be null, but better safe than sorry.
                 if (file == null)
                     return;
 
-                if(file.Filename.Equals("message.txt", StringComparison.OrdinalIgnoreCase) || file.Filename.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
+                if (file.Filename.Equals("message.txt", StringComparison.OrdinalIgnoreCase) ||
+                    file.Filename.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
                     await LargeMeessage(file);
             }
 
@@ -340,17 +341,19 @@ namespace BotHATTwaffle2.Handlers
                 {
                     try
                     {
-                        string content = client.DownloadString(file.Url);
+                        var content = client.DownloadString(file.Url);
 
-                        string webResult = client.UploadString(new Uri("https://hastebin.com/documents"), content);
+                        var webResult = client.UploadString(new Uri("https://hastebin.com/documents"), content);
 
-                        JObject jResult = JObject.Parse(webResult);
+                        var jResult = JObject.Parse(webResult);
 
-                        await message.Channel.SendMessageAsync("The message was pretty long, for convenience I've uploaded it online:\n" + @"https://hastebin.com/raw/" + jResult.PropertyValues().FirstOrDefault());
+                        await message.Channel.SendMessageAsync(
+                            "The message was pretty long, for convenience I've uploaded it online:\n" +
+                            @"https://hastebin.com/raw/" + jResult.PropertyValues().FirstOrDefault());
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
-                        await _log.LogMessage("Tried to send to hastebin, but failed for some reason.\n" + e,false);
+                        await _log.LogMessage("Tried to send to hastebin, but failed for some reason.\n" + e, false);
                     }
                 }
             }

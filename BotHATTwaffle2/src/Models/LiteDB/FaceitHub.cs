@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace BotHATTwaffle2.Models.LiteDB
+﻿namespace BotHATTwaffle2.Models.LiteDB
 {
     public class FaceItHub
     {

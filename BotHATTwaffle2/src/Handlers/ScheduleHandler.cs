@@ -275,20 +275,21 @@ namespace BotHATTwaffle2.Handlers
             const string combineUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&combine=";
             const string listCreatorUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&list=";
 
-            string combineResult = "";
+            var combineResult = "";
             var tags = DatabaseUtil.GetHubTags();
 
             foreach (var faceItHubTag in tags)
-            {
                 if (faceItHubTag.EndDate.AddDays(2) > DateTime.Now)
                 {
                     //The seasons is either ongoing, or ended within 2 days.
-                    combineResult += $"Combine URL for `{faceItHubTag.TagName}`: `" + new WebClient().DownloadString(combineUrl + faceItHubTag.TagName).Trim() + "`";
-                    combineResult += $"listCreator URL for `{faceItHubTag.TagName}`: `" + new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim() + "`\n";
+                    combineResult += $"Combine URL for `{faceItHubTag.TagName}`: `" +
+                                     new WebClient().DownloadString(combineUrl + faceItHubTag.TagName).Trim() + "`";
+                    combineResult += $"listCreator URL for `{faceItHubTag.TagName}`: `" +
+                                     new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim() +
+                                     "`\n";
                 }
-            }
 
-            await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color:LOG_COLOR);
+            await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);
         }
 
         public void DisablePlayingUpdate()

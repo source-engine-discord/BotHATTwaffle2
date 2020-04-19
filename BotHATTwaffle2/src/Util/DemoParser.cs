@@ -137,7 +137,7 @@ namespace BotHATTwaffle2.Util
         {
             _ = _log.LogMessage($"Starting upload of {uploadDictionary.Count} files!");
 
-            int uploadCount = 0;
+            var uploadCount = 0;
             using (var client = new SftpClient(_dataService.RSettings.ProgramSettings.DemoFtpServer,
                 _dataService.RSettings.ProgramSettings.DemoFtpUser,
                 _dataService.RSettings.ProgramSettings.DemoFtpPassword))
@@ -160,10 +160,8 @@ namespace BotHATTwaffle2.Util
                         var dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
 
                         if (!dirListing.Any(x => x.Name.Equals(upload.Value)))
-                        {
                             client.CreateDirectory(
                                 $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}");
-                        }
 
                         using (var fileStream = File.OpenRead(upload.Key.FullName))
                         {

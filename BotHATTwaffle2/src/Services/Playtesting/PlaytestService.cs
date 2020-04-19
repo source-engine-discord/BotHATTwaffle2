@@ -628,14 +628,18 @@ namespace BotHATTwaffle2.Services.Playtesting
             var testEvent = _calendar.GetNextPlaytestEvent();
 
             if (testEvent.Game == PlaytestEvent.Games.TF2)
+            {
                 mentionRole = _dataService.TF2PlayTesterRole;
+            }
             else if (testEvent.Game == PlaytestEvent.Games.CSGO)
+            {
                 mentionRole = _dataService.CSGOPlayTesterRole;
+            }
             else
             {
                 await _log.LogMessage(
                     "Something happened calling all testers. I didn't understand what game to call testers for." +
-                    $"\nGot invalid value of: `{testEvent.Game}`",alert:true, color:LOG_COLOR);
+                    $"\nGot invalid value of: `{testEvent.Game}`", alert: true, color: LOG_COLOR);
                 return;
             }
 

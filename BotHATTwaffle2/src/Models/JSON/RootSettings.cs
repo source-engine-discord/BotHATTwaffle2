@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace BotHATTwaffle2.Models.JSON
+﻿namespace BotHATTwaffle2.Models.JSON
 {
     public class RootSettings
     {
