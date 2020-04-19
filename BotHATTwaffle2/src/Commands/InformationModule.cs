@@ -310,6 +310,13 @@ namespace BotHATTwaffle2.Commands
                         $"**[{HttpUtility.HtmlDecode(result.Snippet.Title)}]({baseYouTubeUrl}{result.Id.VideoId})**\n" +
                         $"{result.Snippet.Description}\n\n";
 
+                if (string.IsNullOrEmpty(description))
+                {
+                    await ReplyAsync(embed: new EmbedBuilder().WithAuthor("You must provide a search term...")
+                        .WithColor(165, 55, 55).Build());
+                    return;
+                }
+
                 embed.WithDescription(description.Trim());
                 valid = true;
             }
