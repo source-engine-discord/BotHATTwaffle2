@@ -14,7 +14,7 @@ namespace BotHATTwaffle2.Models.LiteDB
         {
             return $"DB ID: {Id}" +
                    $"StartDate: {StartDate}" +
-                   $"EndDate: {EndDate}" +
+                   $"\nEndDate: {EndDate}" +
                    $"\nTagName: {TagName}" +
                    $"\nType: {Type}";
         }

@@ -292,7 +292,8 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("ValveResourceFormat")]
-        [Summary("Provides a download link to the Valve Resource Format tool, used to decompile all kinds of Source 2 formats")]
+        [Summary(
+            "Provides a download link to the Valve Resource Format tool, used to decompile all kinds of Source 2 formats")]
         [Alias("vrf")]
         public async Task VrfAsync()
         {

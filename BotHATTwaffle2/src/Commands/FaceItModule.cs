@@ -24,7 +24,7 @@ namespace BotHATTwaffle2.Commands
         }
 
         [Command("GetDemos", RunMode = RunMode.Async)]
-        [RequireUserPermission(GuildPermission.BanMembers)]
+        [RequireUserPermission(GuildPermission.MoveMembers)]
         [Summary("Invokes a fetch of games from all FACEIT hubs")]
         [Remarks("Example: `>FaceIt GetDemos 11/20/2019 12/20/2019`")]
         public async Task GetDemosAsync(DateTime startTime, DateTime endTime)
@@ -35,8 +35,8 @@ namespace BotHATTwaffle2.Commands
 
             var message = await ReplyAsync(embed: embed.Build());
 
-            var faceItAPI = new FaceItApi(_dataService, _log);
-            var result = await faceItAPI.GetDemos(startTime, endTime);
+            var faceItApi = new FaceItApi(_dataService, _log);
+            var result = await faceItApi.GetDemos(startTime, endTime);
 
             embed.WithAuthor("Retrieved FACEIT Demos");
             embed.WithDescription(result);
@@ -45,25 +45,34 @@ namespace BotHATTwaffle2.Commands
             await message.ModifyAsync(x => x.Embed = embed.Build());
         }
 
-        [Group("Tags")]
-        public class FaceItTagsModule : ModuleBase<SocketCommandContext>
+        [Group("Hubs")]
+        public class FaceItHubsModule : ModuleBase<SocketCommandContext>
         {
             [Command("Add")]
-            [RequireUserPermission(GuildPermission.BanMembers)]
-            [Summary("Add a new FACEIT Hub tag.")]
-            [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well.")]
-            public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime)
+            [RequireUserPermission(GuildPermission.MoveMembers)]
+            [Summary("Add a new FACEIT Hub.")]
+            [Remarks("Adds a hub to the database")]
+            public async Task AddAsync(string hubName, string hubType, string hubGuid, int endpoint)
             {
                 var embed = new EmbedBuilder()
                     .WithAuthor("Added new FACEIT Hub tags")
                     .WithColor(55, 165, 55);
 
-                var result = DatabaseUtil.InsertHubTag(new FaceItHubTag
+                if (endpoint != 0 && endpoint != 1)
                 {
-                    TagName = tagName,
-                    Type = type,
-                    StartDate = startTime,
-                    EndDate = endTime
+                    embed.WithAuthor("Endpoint can only be 0 or 1");
+                    embed.WithDescription("`0` = Hub\n`1` = Championships");
+                    embed.WithColor(165, 55, 55);
+                    await ReplyAsync(embed: embed.Build());
+                    return;
+                }
+
+                var result = DatabaseUtil.InsertHub(new FaceItHub
+                {
+                    HubName = hubName,
+                    HubGUID = hubGuid,
+                    HubType = hubType,
+                    Endpoint = endpoint
                 });
 
                 if (!result)
@@ -76,7 +85,85 @@ namespace BotHATTwaffle2.Commands
             }
 
             [Command("Delete")]
-            [RequireUserPermission(GuildPermission.BanMembers)]
+            [RequireUserPermission(GuildPermission.MoveMembers)]
+            [Summary("Delete a FACEIT Hub.")]
+            public async Task DeleteAsync(int id)
+            {
+                var embed = new EmbedBuilder()
+                    .WithColor(55, 165, 55)
+                    .WithAuthor($"Deleted FACEIT Hub #{id}");
+
+                if (!DatabaseUtil.DeleteHub(id))
+                {
+                    embed.WithColor(165, 55, 55);
+                    embed.WithAuthor($"Failure deleting FACEIT Hub #{id}");
+                    embed.WithDescription("Are you sure that hub exists?");
+                }
+
+                await ReplyAsync(embed: embed.Build());
+            }
+
+            [Command("Show")]
+            [RequireUserPermission(GuildPermission.MoveMembers)]
+            [Summary("Show all current FACEIT Hubs")]
+            public async Task ShowAsync()
+            {
+                var embed = new EmbedBuilder()
+                    .WithColor(55, 55, 165);
+
+                var result = DatabaseUtil.GetHubs();
+                embed.WithAuthor("Current FACEIT Hubs");
+
+                var counter = 0;
+                foreach (var r in result)
+                {
+                    if (counter >= 24)
+                        break;
+
+                    embed.AddField($"[{r.Id}] `{r.HubName}`",
+                        $"Type: `{r.HubType}`" +
+                        $"\nEndpoint: `{r.Endpoint}`" +
+                        $"\nGUID: `{r.HubGUID}`");
+                    // Handle embed field limit
+                    counter++;
+                }
+
+                await ReplyAsync(embed: embed.Build());
+            }
+        }
+
+        [Group("Tags")]
+        public class FaceItTagsModule : ModuleBase<SocketCommandContext>
+        {
+            [Command("Add")]
+            [RequireUserPermission(GuildPermission.MoveMembers)]
+            [Summary("Add a new FACEIT Hub tag.")]
+            [Remarks("Dates should **NOT** overlap. Make sure the ending date is 23:59 as well.")]
+            public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime)
+            {
+                var embed = new EmbedBuilder()
+                    .WithAuthor("Added new FACEIT Hub tags")
+                    .WithColor(55, 165, 55);
+
+                var result = DatabaseUtil.InsertHubTag(new FaceItHubTag
+                {
+                    TagName = tagName,
+                    Type = type,
+                    StartDate = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
+                    EndDate = DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
+                });
+
+                if (!result)
+                {
+                    embed.WithAuthor("Failure adding FACEIT Hub tags");
+                    embed.WithColor(165, 55, 55);
+                }
+
+                await ReplyAsync(embed: embed.Build());
+            }
+
+            [Command("Delete")]
+            [RequireUserPermission(GuildPermission.MoveMembers)]
             [Summary("Delete a FACEIT Hub tag.")]
             public async Task DeleteAsync(int id)
             {
@@ -95,7 +182,7 @@ namespace BotHATTwaffle2.Commands
             }
 
             [Command("Show")]
-            [RequireUserPermission(GuildPermission.BanMembers)]
+            [RequireUserPermission(GuildPermission.MoveMembers)]
             [Summary("Show all current FACEIT Hub tags sorted by date.")]
             public async Task ShowAsync()
             {
@@ -110,7 +197,8 @@ namespace BotHATTwaffle2.Commands
                 foreach (var r in result)
                 {
                     counter++;
-                    embed.AddField($"[{r.Id}] `{r.StartDate:MM/dd/yyyy HH:mm:ss} - {r.EndDate:MM/dd/yyyy HH:mm:ss}`",
+                    embed.AddField(
+                        $"[{r.Id}] `{r.StartDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss} - {r.EndDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss}`",
                         $"Type: `{r.Type}`" +
                         $"\nTag: `{r.TagName}`");
                     // Handle embed field limit

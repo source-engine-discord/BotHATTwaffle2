@@ -1,6 +1,5 @@
 ﻿using System;
 using BotHATTwaffle2.Handlers;
-using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.Calendar.PlaytestEvents;
 using Discord;
 

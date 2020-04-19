@@ -132,9 +132,12 @@ namespace BotHATTwaffle2.Util
         ///     Uploads many FaceIt demos in a single session
         /// </summary>
         /// <param name="uploadDictionary"></param>
-        /// <returns></returns>
-        public static async Task<bool> UploadFaceitDemosAndRadars(Dictionary<FileInfo, string> uploadDictionary)
+        /// <returns>-1 if failed, upload count if successful.</returns>
+        public static async Task<int> UploadFaceitDemosAndRadars(Dictionary<FileInfo, string> uploadDictionary)
         {
+            _ = _log.LogMessage($"Starting upload of {uploadDictionary.Count} files!");
+
+            var uploadCount = 0;
             using (var client = new SftpClient(_dataService.RSettings.ProgramSettings.DemoFtpServer,
                 _dataService.RSettings.ProgramSettings.DemoFtpUser,
                 _dataService.RSettings.ProgramSettings.DemoFtpPassword))
@@ -148,7 +151,7 @@ namespace BotHATTwaffle2.Util
                     await _log.LogMessage(
                         $"Failed to connect to SFTP server. {_dataService.RSettings.ProgramSettings.DemoFtpServer}" +
                         $"\n {e.Message}", alert: true, color: LOG_COLOR);
-                    return false;
+                    return -1;
                 }
 
                 foreach (var upload in uploadDictionary)
@@ -157,31 +160,33 @@ namespace BotHATTwaffle2.Util
                         var dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
 
                         if (!dirListing.Any(x => x.Name.Equals(upload.Value)))
-                        {
                             client.CreateDirectory(
                                 $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}");
-                            dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
-                        }
 
                         using (var fileStream = File.OpenRead(upload.Key.FullName))
                         {
+                            if (_dataService.RSettings.ProgramSettings.Debug)
+                                _ = _log.LogMessage($"Uploading {upload.Key.FullName}", false, color: LOG_COLOR);
+
                             client.UploadFile(fileStream,
                                 $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}/{upload.Key.Name}",
                                 true);
                         }
+
+                        uploadCount++;
                     }
                     catch (Exception e)
                     {
                         await _log.LogMessage(
                             $"Failed uploading {upload.Key.FullName}\n{e.Message}", color: LOG_COLOR);
-                        return false;
+                        return -1;
                     }
 
                 client.Disconnect();
             }
 
-            _ = _log.LogMessage("Uploaded FaceIt Demos!", false, color: LOG_COLOR);
-            return true;
+            _ = _log.LogMessage($"Uploaded {uploadCount} files!", false, color: LOG_COLOR);
+            return uploadCount;
         }
 
         /// <summary>
