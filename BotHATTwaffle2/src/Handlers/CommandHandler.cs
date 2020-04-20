@@ -95,7 +95,10 @@ namespace BotHATTwaffle2.Handlers
                 message.Author.IsBot)
             {
                 // Fire and forget listening on the message.
-                Listen(messageParam);
+                _ = Task.Run(() =>
+                {
+                    Listen(messageParam);
+                });
                 return;
             }
 
@@ -210,7 +213,7 @@ namespace BotHATTwaffle2.Handlers
 
                 if (file.Filename.Equals("message.txt", StringComparison.OrdinalIgnoreCase) ||
                     file.Filename.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
-                    await LargeMeessage(file);
+                    await LargeMessage(file);
             }
 
             // Embed Steam workshop links
@@ -331,7 +334,7 @@ namespace BotHATTwaffle2.Handlers
                 await message.Channel.SendMessageAsync(embed: wallWormEmbed.Build());
             }
 
-            async Task LargeMeessage(Attachment file)
+            async Task LargeMessage(Attachment file)
             {
                 //Limit size
                 if (file.Size > 5000000)
