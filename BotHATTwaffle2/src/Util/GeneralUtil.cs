@@ -242,5 +242,20 @@ namespace BotHATTwaffle2.Util
 
             return inUrl + validImg[_random.Next(0, validImg.Count)];
         }
+
+        /// <summary>
+        /// Gets all files inside a directory
+        /// </summary>
+        /// <param name="path">Path to get files from</param>
+        /// <returns>List of FileInfo objects for each file in the directory</returns>
+        public static List<FileInfo> GetFilesInDirectory(string path)
+        {
+            List<FileInfo> files = new List<FileInfo>();
+            foreach (var file in Directory.GetFiles(path))
+            {
+                files.Add(new FileInfo(file));
+            }
+            return files;
+        }
     }
 }

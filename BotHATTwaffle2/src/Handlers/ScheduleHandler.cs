@@ -284,9 +284,8 @@ namespace BotHATTwaffle2.Handlers
                     //The seasons is either ongoing, or ended within 2 days.
                     combineResult += $"Combine URL for `{faceItHubTag.TagName}`: `" +
                                      new WebClient().DownloadString(combineUrl + faceItHubTag.TagName).Trim() + "`";
-                    combineResult += $"listCreator URL for `{faceItHubTag.TagName}`: `" +
-                                     new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim() +
-                                     "`\n";
+                    combineResult += $"\nlistCreator URL for `{faceItHubTag.TagName}`: `" +
+                                     new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim();
                 }
 
             await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);

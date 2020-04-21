@@ -6,7 +6,7 @@ namespace BotHATTwaffle2.Models.LiteDB
     {
         public int Id { get; set; }
         public string TagName { get; set; }
-        public string Type { get; set; }
+        public string HubType { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
 
@@ -16,7 +16,7 @@ namespace BotHATTwaffle2.Models.LiteDB
                    $"StartDate: {StartDate}" +
                    $"\nEndDate: {EndDate}" +
                    $"\nTagName: {TagName}" +
-                   $"\nType: {Type}";
+                   $"\nType: {HubType}";
         }
     }
 }

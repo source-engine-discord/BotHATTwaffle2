@@ -34,11 +34,6 @@ namespace BotHATTwaffle2.Util
             _log = log;
         }
 
-        private static bool CanParse()
-        {
-            return File.Exists(exeFolderName + fileName);
-        }
-
         /// <summary>
         ///     Gets the Workshop ID as a string from a parsed Jason file.
         /// </summary>
@@ -51,6 +46,16 @@ namespace BotHATTwaffle2.Util
                 var jason = reader.ReadToEnd();
                 var jasonObject = (JObject) JsonConvert.DeserializeObject(jason);
                 return jasonObject["mapInfo"]["WorkshopID"].Value<string>();
+            }
+        }
+
+        public static string GetMapnameJasonFile(FileInfo jasonFile)
+        {
+            using (var reader = new StreamReader(jasonFile.FullName))
+            {
+                var jason = reader.ReadToEnd();
+                var jasonObject = (JObject)JsonConvert.DeserializeObject(jason);
+                return jasonObject["mapInfo"]["MapName"].Value<string>();
             }
         }
 
@@ -67,8 +72,8 @@ namespace BotHATTwaffle2.Util
                 $"-folders \"{sourcePath}\" -output \"{destinationPath}\" -nochickens -samefilename -lowoutputmode");
             processStartInfo.WorkingDirectory = "IDemO";
 
-            //Start demo parser with a 10m timeout
-            await AsyncProcessRunner.RunAsync(processStartInfo, 10 * 60 * 1000);
+            //Start demo parser with a 20m timeout
+            await AsyncProcessRunner.RunAsync(processStartInfo, 20 * 60 * 1000);
         }
 
         /// <summary>
@@ -78,9 +83,6 @@ namespace BotHATTwaffle2.Util
         /// <returns></returns>
         public static FileInfo ParseDemo(string path)
         {
-            if (!CanParse())
-                return null;
-
             //Start the process
             var processStartInfo = new ProcessStartInfo(exeFolderName + fileName, $"-folders \"{path}\"");
             processStartInfo.WorkingDirectory = mainFolderName;
@@ -166,7 +168,8 @@ namespace BotHATTwaffle2.Util
                         using (var fileStream = File.OpenRead(upload.Key.FullName))
                         {
                             if (_dataService.RSettings.ProgramSettings.Debug)
-                                _ = _log.LogMessage($"Uploading {upload.Key.FullName}", false, color: LOG_COLOR);
+                                _ = _log.LogMessage($"Uploading {upload.Key.FullName}\n" +
+                                                    $"File {uploadCount} of {uploadDictionary.Count}", false, color: LOG_COLOR);
 
                             client.UploadFile(fileStream,
                                 $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}/{upload.Key.Name}",

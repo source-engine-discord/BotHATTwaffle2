@@ -142,7 +142,7 @@ namespace BotHATTwaffle2.Commands
                      "The TagName is what appears on the website. The Type is what links this tag to " +
                      "related hubs. For instance if you wanted to add a championship event, make tagName " +
                      "and Type the same. Then when adding the hubs, make the HubType match type you put here.")]
-            public async Task AddAsync(string type, string tagName, DateTime startTime, DateTime endTime)
+            public async Task AddAsync(string hubType, string tagName, DateTime startTime, DateTime endTime)
             {
                 var embed = new EmbedBuilder()
                     .WithAuthor("Added new FACEIT Hub tags")
@@ -151,7 +151,7 @@ namespace BotHATTwaffle2.Commands
                 var result = DatabaseUtil.InsertHubTag(new FaceItHubTag
                 {
                     TagName = tagName,
-                    Type = type,
+                    HubType = hubType,
                     StartDate = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
                     EndDate = DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
                 });
@@ -202,7 +202,7 @@ namespace BotHATTwaffle2.Commands
                     counter++;
                     embed.AddField(
                         $"[{r.Id}] `{r.StartDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss} - {r.EndDate.ToUniversalTime():MM/dd/yyyy HH:mm:ss}`",
-                        $"Type: `{r.Type}`" +
+                        $"Type: `{r.HubType}`" +
                         $"\nTag: `{r.TagName}`");
                     // Handle embed field limit
                     if (counter >= 24)

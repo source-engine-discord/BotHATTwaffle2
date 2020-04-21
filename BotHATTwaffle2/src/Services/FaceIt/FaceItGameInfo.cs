@@ -8,20 +8,38 @@ namespace BotHATTwaffle2.Services.FaceIt
     internal class FaceItGameInfo
     {
         private readonly DateTime _demoStartTime;
-        private readonly FaceItHub _hub;
+        public FaceItHub Hub { get; }
         private readonly int _index;
         private readonly string _jsonLocation;
+        private FileInfo _realJsonLocation;
         private readonly MatchesListObject _match;
         private readonly string _tempPath = string.Concat(Path.GetTempPath(), @"DemoGrabber");
+        public FaceItHubTag Tag { get; private set; }
+
 
         public FaceItGameInfo(MatchesListObject match, FaceItHub hub, string jsonLocation, int index)
         {
             _match = match;
-            _hub = hub;
+            Hub = hub;
             _jsonLocation = jsonLocation;
             _index = index;
 
             _demoStartTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(_match.StartedAt);
+        }
+
+        public void SetHubTag(FaceItHubTag tag)
+        {
+            Tag = tag;
+        }
+
+        public void SetRealJsonLocation(FileInfo fileInfo)
+        {
+            _realJsonLocation = fileInfo;
+        }
+
+        public FileInfo GetRealJsonLocation()
+        {
+            return _realJsonLocation;
         }
 
         public long DownloadSize { get; private set; }
@@ -43,14 +61,14 @@ namespace BotHATTwaffle2.Services.FaceIt
             return _match.DemoURL[_index];
         }
 
-        public string GetHubType()
+        public string GetGameUid()
         {
-            return _hub.HubType;
+            return $"{_index}_{_match.MatchID}";
         }
 
-        public string GetGameUID()
+        public string GetLocalDateFolderName()
         {
-            return $"{GetMapName()}_{_index}_{_match.MatchID}";
+            return $"{_demoStartTime:MM_dd_yyyy}";
         }
 
         /// <summary>
@@ -60,8 +78,8 @@ namespace BotHATTwaffle2.Services.FaceIt
         public string GetBaseTempPath()
         {
             return $"{_tempPath}\\" +
-                   $"{_demoStartTime:MM_dd_yyyy}\\" +
-                   $"{_hub.HubName}\\" +
+                   $"{GetLocalDateFolderName()}\\" +
+                   $"{Hub.HubName}\\" +
                    $"{GetMapName()}\\";
         }
 
@@ -72,9 +90,9 @@ namespace BotHATTwaffle2.Services.FaceIt
         public string GetPathLocalJson()
         {
             return $"{_jsonLocation}\\" +
-                   $"{_demoStartTime:MM_dd_yyyy}\\" +
-                   $"{_hub.HubName}\\" +
-                   $"{GetGameUID()}.json";
+                   $"{GetLocalDateFolderName()}\\" +
+                   $"{Hub.HubName}\\" +
+                   $"{GetMapName()}_{GetGameUid()}.json";
         }
 
         /// <summary>
@@ -83,7 +101,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         /// <returns>Full path for the GZ file containing the demo</returns>
         public string GetPathTempGz()
         {
-            return GetBaseTempPath() + GetGameUID() + ".gz";
+            return GetBaseTempPath() + GetGameUid() + ".gz";
         }
 
         /// <summary>
@@ -92,7 +110,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         /// <returns></returns>
         public string GetPathTempDemo()
         {
-            return GetBaseTempPath() + GetGameUID() + ".dem";
+            return GetBaseTempPath() + GetGameUid() + ".dem";
         }
 
         public void SetDownloadSuccess(bool status)

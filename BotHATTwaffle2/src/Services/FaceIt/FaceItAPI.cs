@@ -4,11 +4,14 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
+using Discord;
 using FaceitLib;
 using FaceitLib.Models.ClassObjectLists;
 
@@ -35,6 +38,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         private readonly Dictionary<FileInfo, string> _uploadDictionary = new Dictionary<FileInfo, string>();
         private List<FaceItGameInfo> _gameInfo = new List<FaceItGameInfo>();
         private DateTime _runStartTime;
+        private List<FaceItHubTag> _hubTags = new List<FaceItHubTag>();
 
         private Dictionary<FaceItHub, HttpStatusCode> _statusCodes;
         private int _uploadSuccessCount;
@@ -63,7 +67,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     }
 
                     await _log.LogMessage("Something happened downloading or unzipping a demo!\n" +
-                                          $"UID: {failedGame.GetGameUID()}\n" +
+                                          $"UID: {failedGame.GetGameUid()}\n" +
                                           $"Download Status: {failedGame.DownloadSuccess}\n" +
                                           $"Unzip Status: {failedGame.UnzipSuccess}\n" +
                                           $"Download Response: {failedGame.DownloadResponse}\n" +
@@ -74,50 +78,59 @@ namespace BotHATTwaffle2.Services.FaceIt
                 }
             }
 
-            //Display out matches that are null for demo URL
-            var message = "";
-            foreach (var nullMatch in _matchesWithNullDemoUrls)
+            if(_matchesWithNullDemoUrls.Count != 0)
             {
-                message += $"`{nullMatch}`\n";
-
-                if (message.Length > 1800)
+                //Display out matches that are null for demo URL
+                var message = "";
+                foreach (var nullMatch in _matchesWithNullDemoUrls)
                 {
-                    await _log.LogMessage($"Match IDs with null Demo URLs:\n{message}");
-                    message = "";
+                    message += $"`{nullMatch}`\n";
+
+                    if (message.Length > 1800)
+                    {
+                        await _log.LogMessage($"Match IDs with null Demo URLs:\n{message}");
+                        message = "";
+                    }
                 }
+
+                await _log.LogMessage($"Match IDs with null Demo URLs:\n{message}");
             }
 
-            await _log.LogMessage($"Match IDs with null Demo URLs:\n{message}");
-
-            //Display out matches that are null for voting
-            message = "";
-            foreach (var nullMatch in _matchesWithNullVoting)
+            if(_matchesWithNullVoting.Count != 0)
             {
-                message += $"`{nullMatch}`\n";
-
-                if (message.Length > 1800)
+                //Display out matches that are null for voting
+                string message = "";
+                foreach (var nullMatch in _matchesWithNullVoting)
                 {
-                    await _log.LogMessage($"Match IDs with null Voting:\n{message}");
-                    message = "";
+                    message += $"`{nullMatch}`\n";
+
+                    if (message.Length > 1800)
+                    {
+                        await _log.LogMessage($"Match IDs with null Voting:\n{message}");
+                        message = "";
+                    }
                 }
+
+                await _log.LogMessage($"Match IDs with null Voting:\n{message}");
             }
 
-            await _log.LogMessage($"Match IDs with null Voting:\n{message}");
-
-            //Display out matches that are null for voting
-            message = "";
-            foreach (var failedParse in _matchesFailedParse)
+            if(_matchesFailedParse.Count != 0)
             {
-                message += $"`{failedParse}`\n";
-
-                if (message.Length > 1800)
+                //Display out matches that are null for voting
+                string message = "";
+                foreach (var failedParse in _matchesFailedParse)
                 {
-                    await _log.LogMessage($"Match IDs that failed parsing:\n{message}");
-                    message = "";
-                }
-            }
+                    message += $"`{failedParse}`\n";
 
-            await _log.LogMessage($"Match IDs that failed parsing:\n{message}");
+                    if (message.Length > 1800)
+                    {
+                        await _log.LogMessage($"Match IDs that failed parsing:\n{message}");
+                        message = "";
+                    }
+                }
+
+                await _log.LogMessage($"Match IDs that failed parsing:\n{message}");
+            }
 
             return $"Start Time: `{_runStartTime}` | Ran for `{DateTime.Now.Subtract(_runStartTime).ToString()}`\n" +
                    $"Total Matches: {_gameInfo.Count}\n" +
@@ -143,6 +156,9 @@ namespace BotHATTwaffle2.Services.FaceIt
             _runStartTime = DateTime.Now;
             _running = true;
 
+            //Get tags now, so they are in memory.
+            _hubTags = DatabaseUtil.GetHubTags().ToList();
+
             //Populate the matches list
             await GetMatches(startTime, endTime);
 
@@ -163,6 +179,9 @@ namespace BotHATTwaffle2.Services.FaceIt
             //Handle games after they are parsed
             await HandleParsedGames();
 
+            //Handle heat map generation
+            await HandleHeatmapGeneration();
+
             //Send the files to the uploader
             _uploadSuccessCount = await DemoParser.UploadFaceitDemosAndRadars(_uploadDictionary);
 
@@ -178,12 +197,117 @@ namespace BotHATTwaffle2.Services.FaceIt
             return report;
         }
 
+        private async Task HandleHeatmapGeneration()
+        {
+            /*
+             *Master list, this is really some shit.
+             * Hub1
+             *  Map1
+             *   Game1
+             *   Game2
+             *  Map2
+             *   Game1
+             * Hub2
+             *  Map1
+             *   Game1
+             *   Game2
+             *  Map2
+             *   Game1
+             */
+            var hubMapGameList = new List<List<List<FaceItGameInfo>>>();
+
+
+            var uniqueTags = new List<FaceItHubTag>();
+            //Discover unique hub tags
+            foreach (var game in _gameInfo)
+            {
+                if(!uniqueTags.Contains(game.Tag))
+                    uniqueTags.Add(game.Tag);
+            }
+
+            /*
+             * Hub1
+             *  Game1
+             *  Game2
+             * Hub2
+             *  Game1
+             */
+            var gamesByHubList = new List<List<FaceItGameInfo>>();
+
+            //Put all games into a list based onto their unique hub tag
+            foreach (var tag in uniqueTags)
+            {
+                gamesByHubList.Add(_gameInfo.Where(x => x.Tag.TagName.Equals(tag.TagName)).ToList());
+            }
+
+            //Now that all the games are sorted by hub, we need to sort them by map.
+            foreach (var hubGames in gamesByHubList)
+            {
+                //Figure out what maps are in the list, by name.
+                List<string> uniqueMaps = new List<string>();
+                foreach (var game in hubGames)
+                {
+                    if(!uniqueMaps.Contains(game.GetMapName()))
+                        uniqueMaps.Add(game.GetMapName());
+                }
+
+                //Now have to get a list of matches on each map, then put that list into this one.
+                List<List<FaceItGameInfo>> sortedMatchesByHubAndMap = new List<List<FaceItGameInfo>>();
+                foreach (var uniqueMap in uniqueMaps)
+                {
+                    //Also skip games with unknown hub tag, as we don't want those.
+                    sortedMatchesByHubAndMap.Add(hubGames.Where(x => x.GetMapName().Equals(uniqueMap)).ToList());
+                }
+                
+                //Put our 2D array of 'sortedMatchesByHubAndMap' into the master 3d array
+                hubMapGameList.Add(sortedMatchesByHubAndMap);
+            }
+
+            var ListFiles = HeatmapGenerator.CreateListFiles(hubMapGameList);
+
+            var generatedFiles = new List<List<FileInfo>>();
+            //List of tasks that we'll use to spawn multiple parsers.
+            var heatmapTasks = new List<Task<List<FileInfo>>>();
+            foreach (var listFile in ListFiles)
+            {
+                string seasonTag = listFile.Name.Substring(0, listFile.Name.IndexOf('_'));
+                string radarLocation = _dataService.RSettings.ProgramSettings.FaceItDemoPath + "\\Radars\\" + seasonTag;
+                heatmapTasks.Add(HeatmapGenerator.GenerateHeatMapsByListFile(listFile.FullName,
+                    radarLocation,
+                    seasonTag,
+                    listFile.Name.Replace(listFile.Extension,"")));
+
+                //Don't spawn more than 8 generators at a time
+                if (heatmapTasks.Count >= 8)
+                {
+                    var completed = await Task.WhenAny(heatmapTasks);
+                    generatedFiles.Add(await completed);
+                    heatmapTasks.Remove(completed);
+                }
+            }
+
+            //Add the remaining tasks
+            //Now we have a 2d array. Top level contains each map, bottom then each with a list of images.
+            //The folder that each file is in, will be the upload target
+            generatedFiles.AddRange((await Task.WhenAll(heatmapTasks)).ToList());
+
+            //Now we have to put all the generated files into the upload dictionary
+            foreach (var mapList in generatedFiles)
+            {
+                foreach (var map in mapList)
+                {
+                    _uploadDictionary.Add(map,map.Directory?.Name);
+                }
+            }
+        }
+
         private async Task UpdateWebsiteFiles()
         {
             await _log.LogMessage("Calling site update URLs...", false, color: LOG_COLOR);
             var web = new WebClient();
             foreach (var tag in _siteUpdateCalls)
             {
+                
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
                 _siteUpdateResponses.Add($"{tag}: `{reply}`");
             }
@@ -254,42 +378,52 @@ namespace BotHATTwaffle2.Services.FaceIt
                         _gameInfo.Add(new FaceItGameInfo(match, hub,
                             _dataService.RSettings.ProgramSettings.FaceItDemoPath, i));
                 }
+
+                //Apply the hub tags onto each game
+                foreach (var game in _gameInfo)
+                {
+                    SetHubTagOnGame(game);
+                }
+            }
+        }
+
+        private void SetHubTagOnGame(FaceItGameInfo game)
+        {
+            //Get the hub with the desired date and season tags.
+            var targetTag = _hubTags.FirstOrDefault(x =>
+                x.StartDate < game.GetStartDate()
+                && x.EndDate > game.GetStartDate()
+                && x.HubType.Equals(game.Hub.HubType, StringComparison.OrdinalIgnoreCase)) ?? new FaceItHubTag
+            {
+                TagName = "UNKNOWN",
+                HubType = "UNKNOWN"
+            };
+
+            game.SetHubTag(targetTag);
+
+            //targetTag was unknown, so default it.
+            if (game.Tag.TagName == "UNKNOWN")
+            {
+                _ = _log.LogMessage(
+                    $"Hub seasons have no definitions in the database for date `{game.GetStartDate()}`!\n`{game.GetGameUid()}`\n" +
+                    $"I set it to unknown tag for this match...",
+                    false, color: LOG_COLOR);
             }
         }
 
         private async Task HandleParsedGames()
         {
-            var hubTags = DatabaseUtil.GetHubTags();
-
             foreach (var game in _gameInfo.Where(x => x.DownloadSuccess && x.UnzipSuccess))
             {
                 //Don't re-upload something we already uploaded
                 if (game.Skip)
                     continue;
 
+                
+
                 if (_dataService.RSettings.ProgramSettings.Debug)
                     await _log.LogMessage("Adding " + game.GetPathLocalJson() + " to the upload list!", false,
                         color: LOG_COLOR);
-
-                //Get the hub with the desired date and season tags.
-                FaceItHubTag targetTag = null;
-                targetTag = hubTags.FirstOrDefault(x =>
-                    x.StartDate.ToUniversalTime() < game.GetStartDate() && x.EndDate.ToUniversalTime() >
-                                                                        game.GetStartDate()
-                                                                        && x.Type.Equals(game.GetHubType(),
-                                                                            StringComparison.OrdinalIgnoreCase));
-
-                //Try to get set our selected tag.
-                var selectedTag = targetTag?.TagName;
-
-                //targetTag was unknown, so default it.
-                if (targetTag == null)
-                {
-                    selectedTag = "UNKNOWN";
-                    _ = _log.LogMessage(
-                        $"Hub seasons have no definitions in the database for date `{game.GetStartDate()}`!\n`{game.GetGameUID()}`",
-                        false, color: LOG_COLOR);
-                }
 
                 //Get the json file to be sent to the server
                 var jsonDir = Path.GetDirectoryName(game.GetPathLocalJson());
@@ -297,17 +431,21 @@ namespace BotHATTwaffle2.Services.FaceIt
                 try
                 {
                     targetFile = new FileInfo(
-                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUID())) ??
+                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid())) ??
                         throw new InvalidOperationException());
+
+                    game.SetRealJsonLocation(targetFile);
                 }
                 catch (Exception e)
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"Issue getting file {game.GetGameUID()} It likely failed to parse\n{e}",
+                        await _log.LogMessage($"Issue getting file {game.GetGameUid()} It likely failed to parse\n{e}",
                             color: LOG_COLOR);
                     _matchesFailedParse.Add(game.GetMatchId());
                     continue;
                 }
+                
+                string selectedTag = game.Tag.TagName;
 
                 //Determine paths on the remote server
                 var remoteDirectory = $"{selectedTag}_{game.GetMapName()}";
@@ -419,7 +557,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 if (Directory.Exists(dir))
                 {
                     var localFiles = Directory.GetFiles(dir);
-                    if (localFiles.Any(x => x.Contains(game.GetGameUID())))
+                    if (localFiles.Any(x => x.Contains(game.GetGameUid())))
                     {
                         if (_dataService.RSettings.ProgramSettings.Debug)
                             await _log.LogMessage($"Already have {game.GetPathLocalJson()}! Skipping", false,
@@ -456,7 +594,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 //Unzip was a success, return
                 if (unzipResult)
                     return;
-
+                    
                 await Task.Delay(5000);
             }
         }
@@ -499,14 +637,13 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                 await _log.LogMessage($"Unzipped {destinationFile}", false, color: LOG_COLOR);
             }
-
-            faceItGameInfo.SetUnzipResponse("Unzip Successful");
-            faceItGameInfo.SetUnzipSuccess(true);
-
+            
             //Unzipped file, can delete the GZ
             if (File.Exists(sourceFile))
                 File.Delete(sourceFile);
 
+            faceItGameInfo.SetUnzipResponse("Unzip Successful");
+            faceItGameInfo.SetUnzipSuccess(true);
             return true;
         }
 

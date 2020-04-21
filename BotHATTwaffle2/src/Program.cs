@@ -89,6 +89,8 @@ namespace BotHATTwaffle2
                 _services.GetRequiredService<DataService>(), _services.GetRequiredService<Random>());
             DemoParser.SetHandlers(_services.GetRequiredService<LogHandler>(),
                 _services.GetRequiredService<DataService>());
+            HeatmapGenerator.SetHandlers(_services.GetRequiredService<LogHandler>(),
+                _services.GetRequiredService<DataService>());
 
             await _client.StartAsync();
 
