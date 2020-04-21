@@ -255,8 +255,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 List<List<FaceItGameInfo>> sortedMatchesByHubAndMap = new List<List<FaceItGameInfo>>();
                 foreach (var uniqueMap in uniqueMaps)
                 {
-                    //Also skip games with unknown hub tag, as we don't want those.
-                    sortedMatchesByHubAndMap.Add(hubGames.Where(x => x.GetMapName().Equals(uniqueMap)).ToList());
+                    sortedMatchesByHubAndMap.Add(hubGames.Where(x => x.GetMapName().Equals(uniqueMap) && !x.Skip).ToList());
                 }
                 
                 //Put our 2D array of 'sortedMatchesByHubAndMap' into the master 3d array

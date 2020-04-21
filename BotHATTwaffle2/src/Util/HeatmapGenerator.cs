@@ -86,6 +86,11 @@ namespace BotHATTwaffle2.Util
                 foreach (var map in hubTag)
                 {
                     //Don't include unknown tagged games
+                    //Make sure games are valid, as skipped games aren't included so we might get empty lists.
+                    //Holy cow this can really be cleaned up, but I can't be bothered right now.
+                    if (map == null || map.Count == 0)
+                        continue;
+
                     if (map[0].Tag.TagName.Equals("unknown", StringComparison.OrdinalIgnoreCase))
                         continue;
 
