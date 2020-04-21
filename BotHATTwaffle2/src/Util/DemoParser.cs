@@ -155,15 +155,23 @@ namespace BotHATTwaffle2.Util
                         $"\n {e.Message}", alert: true, color: LOG_COLOR);
                     return -1;
                 }
+                
+                //Get a listing of directories for uploading
+                var dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
 
                 foreach (var upload in uploadDictionary)
                     try
                     {
-                        var dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
-
+                        //Check if the destination dir exists
                         if (!dirListing.Any(x => x.Name.Equals(upload.Value)))
+                        {
+                            //Create it if not
                             client.CreateDirectory(
                                 $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}");
+
+                            //Refresh out directory listing
+                            dirListing = client.ListDirectory(_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath);
+                        }
 
                         using (var fileStream = File.OpenRead(upload.Key.FullName))
                         {

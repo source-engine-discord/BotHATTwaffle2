@@ -430,7 +430,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                 try
                 {
                     targetFile = new FileInfo(
-                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid())) ??
+                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid()) 
+                                                                        && !x.Contains("playerpositions")) ??
                         throw new InvalidOperationException());
 
                     game.SetRealJsonLocation(targetFile);
