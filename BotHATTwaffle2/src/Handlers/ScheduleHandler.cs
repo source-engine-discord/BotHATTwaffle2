@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Services;
@@ -270,25 +272,6 @@ namespace BotHATTwaffle2.Handlers
             //Asking for the past 7 days, and we check what we already have.
             //The faceit API is kinda garbage and does not always return recent games.
             await fapi.GetDemos(DateTime.Now.AddDays(-7), DateTime.Now);
-
-            //Process Combined Demos on the site
-            const string combineUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&combine=";
-            const string listCreatorUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&list=";
-
-            var combineResult = "";
-            var tags = DatabaseUtil.GetHubTags();
-
-            foreach (var faceItHubTag in tags)
-                if (faceItHubTag.EndDate.AddDays(2) > DateTime.Now)
-                {
-                    //The seasons is either ongoing, or ended within 2 days.
-                    combineResult += $"Combine URL for `{faceItHubTag.TagName}`: `" +
-                                     new WebClient().DownloadString(combineUrl + faceItHubTag.TagName).Trim() + "`";
-                    combineResult += $"\nlistCreator URL for `{faceItHubTag.TagName}`: `" +
-                                     new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim();
-                }
-
-            await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);
         }
 
         public void DisablePlayingUpdate()

@@ -257,5 +257,15 @@ namespace BotHATTwaffle2.Util
             }
             return files;
         }
+
+        /// <summary>
+        /// Removes all invalid chars inside a file path
+        /// </summary>
+        /// <param name="filename">string to clean</param>
+        /// <returns>safe file path</returns>
+        public static string RemoveInvalidChars(string filename)
+        {
+            return string.Concat(filename.Split(Path.GetInvalidFileNameChars()));
+        }
     }
 }

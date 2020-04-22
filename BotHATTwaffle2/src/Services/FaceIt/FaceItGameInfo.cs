@@ -13,16 +13,17 @@ namespace BotHATTwaffle2.Services.FaceIt
         private readonly string _jsonLocation;
         private FileInfo _realJsonLocation;
         private readonly MatchesListObject _match;
-        private readonly string _tempPath = string.Concat(Path.GetTempPath(), @"DemoGrabber");
         public FaceItHubTag Tag { get; private set; }
+        private readonly string _tempPath;
 
 
-        public FaceItGameInfo(MatchesListObject match, FaceItHub hub, string jsonLocation, int index)
+        public FaceItGameInfo(MatchesListObject match, FaceItHub hub, string jsonLocation, int index, string tempPath)
         {
             _match = match;
             Hub = hub;
             _jsonLocation = jsonLocation;
             _index = index;
+            _tempPath = tempPath;
 
             _demoStartTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(_match.StartedAt);
         }

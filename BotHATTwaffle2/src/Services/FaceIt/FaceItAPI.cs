@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.LiteDB;
@@ -13,6 +14,7 @@ using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.Util;
 using Discord;
 using FaceitLib;
+using FaceitLib.Models;
 using FaceitLib.Models.ClassObjectLists;
 
 namespace BotHATTwaffle2.Services.FaceIt
@@ -28,7 +30,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private static bool _running;
         private readonly DataService _dataService;
-
+        private readonly string _tempPath = string.Concat(Path.GetTempPath(), @"DemoGrabber");
         private readonly LogHandler _log;
         private readonly List<string> _matchesFailedParse = new List<string>();
         private readonly List<string> _matchesWithNullDemoUrls = new List<string>();
@@ -157,7 +159,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             _running = true;
 
             //Get tags now, so they are in memory.
-            _hubTags = DatabaseUtil.GetHubTags().ToList();
+            _hubTags = await GetFaceHubTags();
 
             //Populate the matches list
             await GetMatches(startTime, endTime);
@@ -195,6 +197,61 @@ namespace BotHATTwaffle2.Services.FaceIt
             await _log.LogMessage(report);
             _running = false;
             return report;
+        }
+
+        public async Task<List<FaceItHubTag>> GetFaceHubTags()
+        {
+            var faceit = new FaceitClient(_dataService.RSettings.ProgramSettings.FaceitAPIKey);
+            List<FaceItHubTag> tags = new List<FaceItHubTag>();
+            
+            foreach (var hub in DatabaseUtil.GetHubs())
+            {
+                GenericContainer<LeaderboardListObject> containerResponse = null;
+
+                //hub
+                if (hub.Endpoint == 0)
+                    containerResponse = await faceit.GetHubLeaderboards(hub.HubGUID);
+                //Championships
+                else if (hub.Endpoint == 1)
+                    containerResponse = await faceit.GetChampionshipLeaderboards(hub.HubGUID);
+
+                foreach (var item in containerResponse.Items.Where(x => x.CompetitionID.Equals(hub.HubGUID, StringComparison.OrdinalIgnoreCase)
+                && !x.LeaderboardType.Equals("hub_general",StringComparison.OrdinalIgnoreCase)).ToList())
+                {
+                    //For championships this is all we use
+                    string tagName = hub.HubType;
+                    var startDate = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    var endDate = new DateTime(2100, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+                    if (hub.Endpoint == 0)
+                    {
+                        //Modify data for normal hubs
+                        if (item.LeaderboardType.Equals("event", StringComparison.OrdinalIgnoreCase))
+                            tagName += $"_{item.LeaderboardName}";
+                        else
+                        {
+                            string season = Regex.Match(item.LeaderboardName, @"\d+").Value;
+
+                            if (string.IsNullOrEmpty(season))
+                                season = "0";
+
+                            tagName += $"_{item.LeaderboardType}{season}";
+                        }
+
+                        startDate = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(item.StartDate);
+                        endDate = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(item.EndDate);
+                    }
+
+                    tags.Add(new FaceItHubTag
+                    {
+                        TagName = GeneralUtil.RemoveInvalidChars(tagName).Replace(" ","_"),
+                        StartDate = startDate,
+                        EndDate = endDate,
+                        HubGuid = hub.HubGUID
+                    });
+                }
+            }
+            return tags;
         }
 
         private async Task HandleHeatmapGeneration()
@@ -269,7 +326,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             var heatmapTasks = new List<Task<List<FileInfo>>>();
             foreach (var listFile in ListFiles)
             {
-                string seasonTag = listFile.Name.Substring(0, listFile.Name.IndexOf('_'));
+                string seasonTag = listFile.Name.Substring(0, listFile.Name.IndexOf('-'));
                 string radarLocation = _dataService.RSettings.ProgramSettings.FaceItDemoPath + "\\Radars\\" + seasonTag;
                 heatmapTasks.Add(HeatmapGenerator.GenerateHeatMapsByListFile(listFile.FullName,
                     radarLocation,
@@ -310,15 +367,33 @@ namespace BotHATTwaffle2.Services.FaceIt
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
                 _siteUpdateResponses.Add($"{tag}: `{reply}`");
             }
+
+            //Process Combined Demos on the site
+            const string combineUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&combine=";
+            const string listCreatorUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&list=";
+
+            var combineResult = "";
+            var tags = _hubTags
+                .Where(x => x.EndDate > DateTime.Now.AddDays(4))
+                .GroupBy(x => x.TagName)
+                .Select(x => x.First()).ToList();
+
+            foreach (var faceItHubTag in tags)
+            {
+                combineResult += $"Combine URL for `{faceItHubTag.TagName}`: `" +
+                                 new WebClient().DownloadString(combineUrl + faceItHubTag.TagName).Trim() + "`";
+                combineResult += $"\nlistCreator URL for `{faceItHubTag.TagName}`: `" +
+                                 new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim() + "`\n\n";
+            }
+
+            await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);
         }
 
         private void DeleteOldFiles()
         {
             _ = _log.LogMessage("Deleting old demo files...", false, color: LOG_COLOR);
-
-            foreach (var demo in _gameInfo)
-                if (File.Exists(demo.GetPathTempDemo()))
-                    File.Delete(demo.GetPathTempDemo());
+            var dir = new DirectoryInfo(_tempPath);
+            dir.Delete(true);
         }
 
         /// <summary>
@@ -375,7 +450,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                     for (var i = 0; i < match.DemoURL.Count; i++)
                         _gameInfo.Add(new FaceItGameInfo(match, hub,
-                            _dataService.RSettings.ProgramSettings.FaceItDemoPath, i));
+                            _dataService.RSettings.ProgramSettings.FaceItDemoPath, i, _tempPath));
                 }
 
                 //Apply the hub tags onto each game
@@ -390,13 +465,10 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             //Get the hub with the desired date and season tags.
             var targetTag = _hubTags.FirstOrDefault(x =>
-                x.StartDate < game.GetStartDate()
-                && x.EndDate > game.GetStartDate()
-                && x.HubType.Equals(game.Hub.HubType, StringComparison.OrdinalIgnoreCase)) ?? new FaceItHubTag
-            {
-                TagName = "UNKNOWN",
-                HubType = "UNKNOWN"
-            };
+                                x.StartDate < game.GetStartDate()
+                                && x.EndDate > game.GetStartDate()
+                                && x.HubGuid.Equals(game.Hub.HubGUID, StringComparison.OrdinalIgnoreCase)) ??
+                            new FaceItHubTag(); //Makes a default, unknown tag.
 
             game.SetHubTag(targetTag);
 
@@ -412,43 +484,39 @@ namespace BotHATTwaffle2.Services.FaceIt
 
         private async Task HandleParsedGames()
         {
-            foreach (var game in _gameInfo.Where(x => x.DownloadSuccess && x.UnzipSuccess))
+            foreach (var game in _gameInfo.Where(x => x.DownloadSuccess && x.UnzipSuccess && !x.Skip))
             {
-                //Don't re-upload something we already uploaded
-                if (game.Skip)
-                    continue;
-
-                
-
-                if (_dataService.RSettings.ProgramSettings.Debug)
-                    await _log.LogMessage("Adding " + game.GetPathLocalJson() + " to the upload list!", false,
-                        color: LOG_COLOR);
-
                 //Get the json file to be sent to the server
                 var jsonDir = Path.GetDirectoryName(game.GetPathLocalJson());
                 FileInfo targetFile;
                 try
                 {
                     targetFile = new FileInfo(
-                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid()) 
-                                                                        && !x.Contains("playerpositions")) ??
-                        throw new InvalidOperationException());
+                        Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid())
+                                                                        && !x.Contains("playerpositions")));
+                    Console.WriteLine(targetFile.FullName);
 
                     game.SetRealJsonLocation(targetFile);
                 }
                 catch (Exception e)
                 {
                     if (_dataService.RSettings.ProgramSettings.Debug)
-                        await _log.LogMessage($"Issue getting file {game.GetGameUid()} It likely failed to parse\n{e}",
+                        await _log.LogMessage($"Issue getting file {game.GetGameUid()} It likely failed to parse\n{e}",false,
                             color: LOG_COLOR);
                     _matchesFailedParse.Add(game.GetMatchId());
+
+                    game.SetSkip(true);
                     continue;
                 }
-                
+
+                if (_dataService.RSettings.ProgramSettings.Debug)
+                    await _log.LogMessage("Adding " + game.GetPathLocalJson() + " to the upload list!", false,
+                        color: LOG_COLOR);
+
                 string selectedTag = game.Tag.TagName;
 
                 //Determine paths on the remote server
-                var remoteDirectory = $"{selectedTag}_{game.GetMapName()}";
+                var remoteDirectory = $"{selectedTag}-{game.GetMapName()}";
                 //Path to local directory containing radars
                 var localRadarDir = $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\Radars\\{selectedTag}";
 
@@ -564,6 +632,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                                 color: LOG_COLOR);
 
                         game.SetSkip(true);
+
                         continue;
                     }
                 }
