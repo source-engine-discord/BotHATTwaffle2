@@ -84,7 +84,7 @@ namespace BotHATTwaffle2.Util
         public static FileInfo ParseDemo(string path)
         {
             //Start the process
-            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName, $"-folders \"{path}\"");
+            var processStartInfo = new ProcessStartInfo(exeFolderName + fileName, $"-folders \"{path}\" -noplayerpositions");
             processStartInfo.WorkingDirectory = mainFolderName;
             var demoProcess = Process.Start(processStartInfo);
 
