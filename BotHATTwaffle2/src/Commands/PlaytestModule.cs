@@ -870,7 +870,9 @@ namespace BotHATTwaffle2.Commands
                 .WithAuthor("Source Engine Discord Test Servers")
                 .WithFooter($"Total of {foundServers.Count()} servers.")
                 .WithThumbnailUrl(_dataService.Guild.IconUrl)
-                .WithColor(new Color(255, 135, 57));
+                .WithColor(new Color(255, 135, 57))
+                .WithDescription("All servers have a default password of `se`.\n" +
+                                 "Example of connect information: `connect can.tophattwaffle.com;password se`");
 
             foreach (var server in foundServers)
                 embed.AddField(server.Address, $"Server Type: `{server.Game.ToUpper()}`\n{server.Description}", true);
