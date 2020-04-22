@@ -74,7 +74,7 @@ namespace BotHATTwaffle2.Services.SRCDS
             //and removes this client so we can make another one later on.
             await Task.Run(async () =>
             {
-                log.Listen<GenericCommand>(ganericCommand => { HandleIngameCommand(ActiveServer, ganericCommand); });
+                log.Listen<GenericCommand>(genericCommand => { HandleIngameCommand(ActiveServer, genericCommand); });
 
                 if (_dataService.RSettings.ProgramSettings.Debug)
                     log.ListenRaw(msg => { Console.WriteLine("RAW: " + msg); });
