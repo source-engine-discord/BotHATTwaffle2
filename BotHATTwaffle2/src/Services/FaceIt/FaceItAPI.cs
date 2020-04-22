@@ -235,7 +235,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                             if (string.IsNullOrEmpty(season))
                                 season = "0";
 
-                            tagName += $"_{item.LeaderboardType}{season}";
+                            tagName += $"-{item.LeaderboardType}{season}";
                         }
 
                         startDate = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(item.StartDate);
@@ -244,7 +244,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                     tags.Add(new FaceItHubTag
                     {
-                        TagName = GeneralUtil.RemoveInvalidChars(tagName).Replace(" ","_"),
+                        TagName = GeneralUtil.RemoveInvalidChars(tagName).Replace(" ","-").Replace("_","-"),
                         StartDate = startDate,
                         EndDate = endDate,
                         HubGuid = hub.HubGUID
@@ -326,7 +326,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             var heatmapTasks = new List<Task<List<FileInfo>>>();
             foreach (var listFile in ListFiles)
             {
-                string seasonTag = listFile.Name.Substring(0, listFile.Name.IndexOf('-'));
+                string seasonTag = listFile.Name.Substring(0, listFile.Name.IndexOf('_'));
                 string radarLocation = _dataService.RSettings.ProgramSettings.FaceItDemoPath + "\\Radars\\" + seasonTag;
                 heatmapTasks.Add(HeatmapGenerator.GenerateHeatMapsByListFile(listFile.FullName,
                     radarLocation,
@@ -393,7 +393,8 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             _ = _log.LogMessage("Deleting old demo files...", false, color: LOG_COLOR);
             var dir = new DirectoryInfo(_tempPath);
-            dir.Delete(true);
+            if(dir.Exists)
+                dir.Delete(true);
         }
 
         /// <summary>

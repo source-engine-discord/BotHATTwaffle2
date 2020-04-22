@@ -94,7 +94,7 @@ namespace BotHATTwaffle2.Util
                     if (map[0].Tag.TagName.Equals("unknown", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    string outputFile = $"{listsDir}\\{map[0].Tag.TagName}-{map[0].GetMapName()}.txt";
+                    string outputFile = $"{listsDir}\\{map[0].Tag.TagName}_{map[0].GetMapName()}.txt";
                     //Get the full json path for each map, and place it in the tag folder
                     try
                     {

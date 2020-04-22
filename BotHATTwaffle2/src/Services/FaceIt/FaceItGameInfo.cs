@@ -15,8 +15,7 @@ namespace BotHATTwaffle2.Services.FaceIt
         private readonly MatchesListObject _match;
         public FaceItHubTag Tag { get; private set; }
         private readonly string _tempPath;
-
-
+        
         public FaceItGameInfo(MatchesListObject match, FaceItHub hub, string jsonLocation, int index, string tempPath)
         {
             _match = match;
