@@ -183,14 +183,18 @@ namespace BotHATTwaffle2.Util
                                 $"{_dataService.RSettings.ProgramSettings.FaceItDemoFtpPath}/{upload.Value}/{upload.Key.Name}",
                                 true);
                         }
-
                         uploadCount++;
+
+                        if (uploadCount % 10 == 0)
+                        {
+                            if (!_dataService.RSettings.ProgramSettings.Debug)
+                                _ = _log.LogMessage($"Uploading file {uploadCount} of {uploadDictionary.Count}", false, color: LOG_COLOR);
+                        }
                     }
                     catch (Exception e)
                     {
                         await _log.LogMessage(
                             $"Failed uploading {upload.Key.FullName}\n{e.Message}", color: LOG_COLOR);
-                        return -1;
                     }
 
                 client.Disconnect();

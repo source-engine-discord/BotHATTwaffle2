@@ -194,6 +194,10 @@ namespace BotHATTwaffle2.Services.FaceIt
             await UpdateWebsiteFiles();
 
             var report = await GetReport();
+
+            if (report.Length > 1900)
+                report = report.Substring(0, 1900) + "\n`[OUTPUT TRUNCATED]`";
+
             await _log.LogMessage(report);
             _running = false;
             return report;
