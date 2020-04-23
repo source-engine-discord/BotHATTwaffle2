@@ -521,7 +521,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 string selectedTag = game.Tag.TagName;
 
                 //Determine paths on the remote server
-                var remoteDirectory = $"{selectedTag}-{game.GetMapName()}";
+                var remoteDirectory = $"{selectedTag}_{game.GetMapName()}";
                 //Path to local directory containing radars
                 var localRadarDir = $"{_dataService.RSettings.ProgramSettings.FaceItDemoPath}\\Radars\\{selectedTag}";
 
