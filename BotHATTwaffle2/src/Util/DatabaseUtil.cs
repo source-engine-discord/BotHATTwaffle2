@@ -399,6 +399,9 @@ namespace BotHATTwaffle2.Util
         /// <returns>Server object if found, null otherwise</returns>
         public static Server GetTestServer(string serverId)
         {
+            if (serverId == null)
+                return null;
+
             //If the server ID contains a period, it can be assumed that it is a FQDN, and we should trim it down.
             serverId = GeneralUtil.GetServerCode(serverId);
 

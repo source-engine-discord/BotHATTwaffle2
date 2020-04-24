@@ -12,7 +12,7 @@ using CoreRCON.Parsers.Standard;
 
 namespace BotHATTwaffle2.Services.SRCDS
 {
-    public class LogReceiverService
+    public class LogReceiverServiceOld
     {
         private static bool _isActive;
         private static string _lastKnownPath;
@@ -26,7 +26,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         public Server ActiveServer;
         public bool EnableLog;
 
-        public LogReceiverService(DataService dataService, RconService rconService, LogHandler logHandler)
+        public LogReceiverServiceOld(DataService dataService, RconService rconService, LogHandler logHandler)
         {
             _rconService = rconService;
             _dataService = dataService;

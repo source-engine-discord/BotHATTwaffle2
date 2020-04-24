@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -16,12 +17,11 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
-        private readonly LogReceiverService _logReceiverService;
+        private readonly SrcdsLogService _srcdsLogService;
 
-        public ReservationService(DataService data, LogHandler log, Random random, DiscordSocketClient client,
-            LogReceiverService logReceiverService)
+        public ReservationService(DataService data, LogHandler log, Random random, DiscordSocketClient client, SrcdsLogService srcdsLogService)
         {
-            _logReceiverService = logReceiverService;
+            _srcdsLogService = srcdsLogService;
             _dataService = data;
             _log = log;
             _client = client;
@@ -123,9 +123,13 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (job != null)
                 JobManager.RemoveJob(job.Name);
 
-            //Is this the server with the log running?
-            if (_logReceiverService.EnableLog && _logReceiverService.ActiveServer.ServerId == reservation.ServerId)
-                _logReceiverService.StopLogReceiver();
+            //If there is feedback running on this server, remove it. Also delete the file.
+            var server = DatabaseUtil.GetTestServer(reservation.ServerId);
+            var filePath = _srcdsLogService.GetFeedbackFile(server).FileName;
+            if(File.Exists(filePath))
+                File.Delete(filePath);
+
+            _srcdsLogService.RemoveFeedbackFile(server);
 
             DatabaseUtil.RemoveServerReservation(userId);
             return embed;

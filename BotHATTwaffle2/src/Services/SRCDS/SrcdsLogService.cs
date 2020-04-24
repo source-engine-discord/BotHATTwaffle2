@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -12,18 +13,23 @@ using BotHATTwaffle2.Util;
 using CoreRCON;
 using CoreRCON.Parsers.Standard;
 using Discord.WebSocket;
+using SixLabors.Shapes;
 
 namespace BotHATTwaffle2.Services.SRCDS
 {
-    class SrcdsLogService
+    public class SrcdsLogService
     {
+        private const ConsoleColor LOG_COLOR = ConsoleColor.Green;
         private readonly DataService _dataService;
         private readonly LogHandler _logHandler;
         private readonly RconService _rconService;
-        private readonly string _publicIpAddress;
         private readonly PlaytestService _playtestService;
         private LogReceiver _logReceiver;
         private Dictionary<IPEndPoint, Server> _serverIdDictionary = new Dictionary<IPEndPoint, Server>();
+        private List<FeedbackFile> _feedbackFiles = new List<FeedbackFile>();
+        private readonly ushort _port;
+        private int _restartCount = 0;
+        private const int RESTART_LIMIT = 5;
 
         public SrcdsLogService(DataService dataService, RconService rconService, LogHandler logHandler, PlaytestService playtestService)
         {
@@ -31,44 +37,96 @@ namespace BotHATTwaffle2.Services.SRCDS
             _rconService = rconService;
             _dataService = dataService;
             _logHandler = logHandler;
-            _publicIpAddress = new WebClient().DownloadString("http://icanhazip.com/").Trim();
             _playtestService = playtestService;
-            
+            _port = _dataService.RSettings.ProgramSettings.ListenPort;
+
+            Console.WriteLine("Setting up SRCDS Log Service...");
+
             //Need to map servers
             var servers = DatabaseUtil.GetAllTestServers();
 
             foreach (var server in servers)
                 _serverIdDictionary.Add(GeneralUtil.GetIpEndPointFromString(server.Address), server);
 
-
-            //Let's start the listener on our listen port. Allow all IPs from the server list.
-            _ = _logHandler.LogMessage($"Starting LogService on {_dataService.RSettings.ProgramSettings.ListenPort}");
-            _logReceiver = new LogReceiver(_dataService.RSettings.ProgramSettings.ListenPort, CreateIpEndPoints());
-
             Start();
-        }
-
-        private IPEndPoint[] CreateIpEndPoints()
-        {
-            var ipEndPoints = new List<IPEndPoint>();
-            foreach (var server in _serverIdDictionary)
-            {
-                var ipep = server.Key;
-                _ = _logHandler.LogMessage($"Adding {ipep.Address}:{ipep.Port} to listener sources!");
-                ipEndPoints.Add(ipep);
-            }
-            return ipEndPoints.ToArray();
         }
 
         private async void Start()
         {
-            await Task.Run(async () =>
+            //Let's start the listener on our listen port. Allow all IPs from the server list.
+            _ = _logHandler.LogMessage($"Starting LogService on {_port}");
+            _logReceiver = new LogReceiver(_port, CreateIpEndPoints());
+
+            await Task.Run(() =>
             {
                 if (_dataService.RSettings.ProgramSettings.Debug)
                     _logReceiver.ListenRaw(msg => { Console.WriteLine($"RAW LOG FROM {_logReceiver.lastServer.Address}: " + msg); });
 
                 _logReceiver.Listen<GenericCommand>(genericCommand => { HandleIngameCommand(_logReceiver.lastServer, genericCommand); });
             });
+
+            //We are going to use this loop to make sure log services are still running. Should they fail, we will tear
+            //down and rebuild.
+            while (true)
+            {
+                bool portBound = IPGlobalProperties.GetIPGlobalProperties()
+                    .GetActiveUdpListeners().Any(p => p.Port == _port);
+
+                if (!portBound)
+                {
+                    if(_restartCount < RESTART_LIMIT)
+                    {
+                        try
+                        {
+                            _logReceiver.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            await _logHandler.LogMessage($"Attempted dispose, but had an issue.\n{e}", alert: true, color: LOG_COLOR);
+                        }
+
+                        _restartCount++;
+
+                        //Restart the service
+                        Start();
+                        await _logHandler.LogMessage($"Log service has been restarted {_restartCount} times!", color: LOG_COLOR);
+
+                        //Reset the retry count in 15 minutes after the first issue
+                        //I expect the log service to die sometimes for whatever reason.
+                        if(_restartCount == 0)
+                            _ = Task.Run(async () =>
+                              {
+                                  await Task.Delay(TimeSpan.FromMinutes(15));
+                                  _restartCount = 0;
+                              });
+                    }
+                    else
+                    {
+                        await _logHandler.LogMessage($"The SrcdsLogService has restarted over {RESTART_LIMIT} in the last 15 minutes. " +
+                                                     $"I will not restart the service again.",alert:true, color:LOG_COLOR);
+                    }
+                    return;
+                }
+
+                //Hol up for a bit before rechecking
+                await Task.Delay(5000);
+            }
+        }
+
+        /// <summary>
+        /// Creates IPEndPoint's based on all of the servers we have. We use this to start log services with allowed IPs.
+        /// </summary>
+        /// <returns></returns>
+        private IPEndPoint[] CreateIpEndPoints()
+        {
+            var ipEndPoints = new List<IPEndPoint>();
+            foreach (var server in _serverIdDictionary)
+            {
+                var ipep = server.Key;
+                Console.WriteLine($"Adding {ipep.Address}:{ipep.Port} to listener sources!");
+                ipEndPoints.Add(ipep);
+            }
+            return ipEndPoints.ToArray();
         }
 
         /// <summary>
@@ -82,6 +140,15 @@ namespace BotHATTwaffle2.Services.SRCDS
             Server server = null;
             if (_serverIdDictionary.ContainsKey(ipServer))
                 server = _serverIdDictionary[ipServer];
+
+            //Handle commands that don't need a steam user mapping.
+            switch (genericCommand.Command.Trim().ToLower())
+            {
+                case "fb":
+                case "feedback":
+                    HandleInGameFeedback(server, genericCommand);
+                    return;
+            }
 
             genericCommand.Player.SteamId = GeneralUtil.TranslateSteamId3ToSteamId(genericCommand.Player.SteamId);
             var user = _dataService.GetSocketGuildUserFromSteamId(genericCommand.Player.SteamId);
@@ -134,6 +201,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// </summary>
         /// <param name="server"></param>
         /// <param name="genericCommand"></param>
+        /// <param name="user"></param>
         public async void HandleInGamePublicCommand(Server server, GenericCommand genericCommand, SocketGuildUser user)
         {
             var testServer = DatabaseUtil.GetTestServerFromReservationUserId(user.Id);
@@ -159,6 +227,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// </summary>
         /// <param name="server"></param>
         /// <param name="genericCommand"></param>
+        /// <param name="user"></param>
         private async void HandleInGameQueue(Server server, GenericCommand genericCommand, SocketGuildUser user)
         {
             if (_playtestService.FeedbackSession == null)
@@ -178,6 +247,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// </summary>
         /// <param name="server"></param>
         /// <param name="genericCommand"></param>
+        /// <param name="user"></param>
         private async void HandleInGameDone(Server server, GenericCommand genericCommand, SocketGuildUser user)
         {
             if (_playtestService.FeedbackSession == null)
@@ -195,6 +265,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         /// </summary>
         /// <param name="server">Server to send RCON to</param>
         /// <param name="genericCommand">Command to send</param>
+        /// <param name="user"></param>
         /// <returns></returns>
         private async void HandleInGameRcon(Server server, GenericCommand genericCommand, SocketGuildUser user)
         {
@@ -273,49 +344,80 @@ namespace BotHATTwaffle2.Services.SRCDS
         }
 
         /// <summary>
-        ///     Adds ingame feedback to a text file which will be sent to the create at a later date.
+        /// Creates a feedback instance for a server.
+        /// </summary>
+        /// <param name="server">Server to create the file for</param>
+        /// <param name="fileName">File name to create and store feedback in</param>
+        /// <returns>True if created, false if it cannot because it found an existing one.</returns>
+        public bool CreateFeedbackFile(Server server, string fileName)
+        {
+            //Make sure we don't have a server already
+            if (GetFeedbackFile(server) == null)
+                return false;
+
+            var fbf = new FeedbackFile(server, fileName, _rconService);
+            _ = fbf.LogFeedback(new GenericCommand
+            {
+                Message = $"Log Started at {DateTime.Now} CT",
+                Player = new Player
+                {
+                    Name = "Ido",
+                    Team = "Bot"
+                }
+            });
+
+            _feedbackFiles.Add(fbf);
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts removal of a FeedbackFile for a server. Make sure to get the path to the file before removing
+        /// </summary>
+        /// <param name="server">Server to attempt removal for</param>
+        /// <returns>True if removal complete, false if it can't find one.</returns>
+        public bool RemoveFeedbackFile(Server server)
+        {
+            var targetFile = GetFeedbackFile(server);
+
+            _feedbackFiles.Remove(targetFile);
+            return true;
+        }
+
+        /// <summary>
+        /// Returns a Feedback file, if it exists for a server
+        /// </summary>
+        /// <param name="server">Server to get the feedback file for</param>
+        /// <returns>FeedbackFile for the server, or null if none found.</returns>
+        public FeedbackFile GetFeedbackFile(Server server)
+        {
+            //We need a feedback file instance to work with.
+            FeedbackFile feedback = null;
+            if (_feedbackFiles.Any(x => x.Server.Equals(server)))
+            {
+                feedback = _feedbackFiles.FirstOrDefault(x => x.Server.Equals(server));
+            }
+
+            return feedback;
+        }
+
+        /// <summary>
+        /// Adds ingame feedback to a text file which will be sent to the create at a later date.
         /// </summary>
         /// <param name="server">Server to send acks to</param>
         /// <param name="genericCommand">Message to log</param>
         /// <returns></returns>
         private async void HandleInGameFeedback(Server server, GenericCommand genericCommand)
         {
-            if (!_enableFeedback)
+            var feedbackFile = GetFeedbackFile(server);
+
+            if (feedbackFile == null)
+            {
+                //Handle somehow not getting a server, likely due to not having a playtest
+                await _rconService.RconCommand(server.Address, $"say There is no feedback session started on {server.Address}");
                 return;
+            }
 
-            Directory.CreateDirectory("Feedback");
-
-            if (!File.Exists(_path))
-                // Create a file to write to.
-                using (var sw = File.CreateText(_path))
-                {
-                    sw.WriteLine(
-                        $"{DateTime.Now} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
-                }
-            else
-                // This text is always added, making the file longer over time
-                // if it is not deleted.
-                using (var sw = File.AppendText(_path))
-                {
-                    sw.WriteLine(
-                        $"{DateTime.Now:t} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}");
-                }
-
-            await _rconService.RconCommand(server.ServerId, $"say Feedback from {genericCommand.Player.Name} captured!",
-                false);
-        }
-
-        private void SetFileName(string fileName)
-        {
-            if (fileName.Contains(".txt"))
-                _path = "Feedback\\" + fileName;
-
-            _path = "Feedback\\" + fileName + ".txt";
-        }
-
-        public string GetFilePath()
-        {
-            return _path;
+            await feedbackFile.LogFeedback(genericCommand);
         }
     }
 }
