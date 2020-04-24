@@ -338,7 +338,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     listFile.Name.Replace(listFile.Extension,"")));
 
                 //Don't spawn more than 8 generators at a time
-                if (heatmapTasks.Count >= 8)
+                if (heatmapTasks.Count >= 16)
                 {
                     var completed = await Task.WhenAny(heatmapTasks);
                     generatedFiles.Add(await completed);
@@ -598,7 +598,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 }
 
                 //8 Parser instances max
-                if (parsingWork.Count >= 8)
+                if (parsingWork.Count >= 16)
                 {
                     await Task.WhenAny(parsingWork);
 
