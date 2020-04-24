@@ -365,10 +365,15 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             await _log.LogMessage("Calling site update URLs...", false, color: LOG_COLOR);
             var web = new WebClient();
+            var uniqueCombineCalls = new List<string>();
+
             foreach (var tag in _siteUpdateCalls)
             {
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
                 _siteUpdateResponses.Add($"{tag}: `{reply}`");
+
+                //Strip the map name from the update call.
+                uniqueCombineCalls.Add(tag.Substring(0, tag.IndexOf("_", StringComparison.Ordinal)));
             }
 
             //Process Combined Demos on the site
@@ -377,14 +382,15 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             var combineResult = "";
 
-            foreach (var tag in _siteUpdateCalls)
+            //Call the combiner and list URLs but only once for each distinct tag.
+            foreach (var tag in uniqueCombineCalls.Distinct())
             {
                 var tagSub = tag.Substring(0, tag.IndexOf("_", StringComparison.Ordinal));
 
                 combineResult += $"Combine URL for `{tagSub}`: `" +
-                                 new WebClient().DownloadString(combineUrl + tagSub).Trim() + "`";
+                                 web.DownloadString(combineUrl + tagSub).Trim() + "`";
                 combineResult += $"\nlistCreator URL for `{tagSub}`: `" +
-                                 new WebClient().DownloadString(listCreatorUrl + tagSub).Trim() + "`\n\n";
+                                 web.DownloadString(listCreatorUrl + tagSub).Trim() + "`\n\n";
             }
 
             await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);
