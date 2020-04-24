@@ -185,10 +185,10 @@ namespace BotHATTwaffle2.Services.FaceIt
             await HandleHeatmapGeneration();
 
             //Send the files to the uploader
-            _uploadSuccessCount = await DemoParser.UploadFaceitDemosAndRadars(_uploadDictionary);
+            //_uploadSuccessCount = await DemoParser.UploadFaceitDemosAndRadars(_uploadDictionary);
 
             //Delete the old .dem files, we don't need them anymore
-            DeleteOldFiles();
+            //DeleteOldFiles();
 
             //Update the files on the website
             await UpdateWebsiteFiles();
@@ -367,7 +367,6 @@ namespace BotHATTwaffle2.Services.FaceIt
             var web = new WebClient();
             foreach (var tag in _siteUpdateCalls)
             {
-                
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
                 _siteUpdateResponses.Add($"{tag}: `{reply}`");
             }
@@ -377,17 +376,15 @@ namespace BotHATTwaffle2.Services.FaceIt
             const string listCreatorUrl = @"https://www.tophattwaffle.com/demos/requested/build.php?idoMode=true&list=";
 
             var combineResult = "";
-            var tags = _hubTags
-                .Where(x => x.EndDate > DateTime.Now.AddDays(4))
-                .GroupBy(x => x.TagName)
-                .Select(x => x.First()).ToList();
 
-            foreach (var faceItHubTag in tags)
+            foreach (var tag in _siteUpdateCalls)
             {
-                combineResult += $"Combine URL for `{faceItHubTag.TagName}`: `" +
-                                 new WebClient().DownloadString(combineUrl + faceItHubTag.TagName).Trim() + "`";
-                combineResult += $"\nlistCreator URL for `{faceItHubTag.TagName}`: `" +
-                                 new WebClient().DownloadString(listCreatorUrl + faceItHubTag.TagName).Trim() + "`\n\n";
+                var tagSub = tag.Substring(0, tag.IndexOf("_", StringComparison.Ordinal));
+
+                combineResult += $"Combine URL for `{tagSub}`: `" +
+                                 new WebClient().DownloadString(combineUrl + tagSub).Trim() + "`";
+                combineResult += $"\nlistCreator URL for `{tagSub}`: `" +
+                                 new WebClient().DownloadString(listCreatorUrl + tagSub).Trim() + "`\n\n";
             }
 
             await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);
