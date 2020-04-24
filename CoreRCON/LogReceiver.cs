@@ -26,13 +26,14 @@ namespace CoreRCON
 		private List<Action<string>> _rawListeners { get; } = new List<Action<string>>();
 		private UdpClient _udp { get; set; }
 		private IPEndPoint[] _sources { get; set; }
+        public IPEndPoint lastServer { get; private set; }
 
-		/// <summary>
-		/// Opens a socket to receive LogAddress logs, and registers it with the server.  The IP can also be a local IP if the server is on the same network.
-		/// </summary>
-		/// <param name="port">Local port to bind to.</param>
-		/// <param name="sources">Array of endpoints to accept logaddress packets from.  The server you plan on receiving packets from must be in this list.</param>
-		public LogReceiver(ushort port, params IPEndPoint[] sources)
+        /// <summary>
+        /// Opens a socket to receive LogAddress logs, and registers it with the server.  The IP can also be a local IP if the server is on the same network.
+        /// </summary>
+        /// <param name="port">Local port to bind to.</param>
+        /// <param name="sources">Array of endpoints to accept logaddress packets from.  The server you plan on receiving packets from must be in this list.</param>
+        public LogReceiver(ushort port, params IPEndPoint[] sources)
 		{
 			_sources = sources;
 			_udp = new UdpClient(port);
@@ -106,6 +107,9 @@ namespace CoreRCON
 
 				// If the packet did not come from an accepted source, throw it out
 				if (!_sources.Contains(result.RemoteEndPoint)) continue;
+
+                //Set the last server we got a packet on.
+                lastServer = result.RemoteEndPoint;
 
 				// Parse out the LogAddress packet
 				LogAddressPacket packet = LogAddressPacket.FromBytes(result.Buffer);
