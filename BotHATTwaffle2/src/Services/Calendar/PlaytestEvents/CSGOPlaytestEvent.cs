@@ -52,9 +52,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestCommandPre(bool replyInContext,
-            LogReceiverService logReceiverService, RconService rconService)
+            SrcdsLogService srcdsLogService, RconService rconService)
         {
-            await base.PlaytestCommandPre(replyInContext, logReceiverService, rconService);
+            await base.PlaytestCommandPre(replyInContext, srcdsLogService, rconService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestCommandPre", false, color: LOG_COLOR);
@@ -112,10 +112,10 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             PlaytestCommandRunning = false;
         }
 
-        public override async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService,
+        public override async Task PlaytestCommandPost(bool replyInContext, SrcdsLogService srcdsLogService,
             RconService rconService)
         {
-            await base.PlaytestCommandPost(replyInContext, logReceiverService, rconService);
+            await base.PlaytestCommandPost(replyInContext, srcdsLogService, rconService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestCommandPost", false, color: LOG_COLOR);
@@ -191,10 +191,10 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             });
         }
 
-        public override async Task PlaytestStartingInTask(RconService rconService, LogReceiverService logReceiverService
+        public override async Task PlaytestStartingInTask(RconService rconService, SrcdsLogService srcdsLogService
             , AnnouncementMessage announcementMessage)
         {
-            await base.PlaytestStartingInTask(rconService, logReceiverService, announcementMessage);
+            await base.PlaytestStartingInTask(rconService, srcdsLogService, announcementMessage);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestStartingInTask", false, color: LOG_COLOR);
@@ -233,9 +233,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestTwentyMinuteTask(RconService rconService,
-            LogReceiverService logReceiverService)
+            SrcdsLogService srcdsLogService)
         {
-            await base.PlaytestTwentyMinuteTask(rconService, logReceiverService);
+            await base.PlaytestTwentyMinuteTask(rconService, srcdsLogService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestTwentyMinuteTask", false, color: LOG_COLOR);
@@ -280,16 +280,14 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestFifteenMinuteTask(RconService rconService,
-            LogReceiverService logReceiverService)
+            SrcdsLogService srcdsLogService)
         {
-            await base.PlaytestFifteenMinuteTask(rconService, logReceiverService);
+            await base.PlaytestFifteenMinuteTask(rconService, srcdsLogService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestFifteenMinuteTask", false, color: LOG_COLOR);
 
-            //Start the log listener for users to give feedback before the test starts.
             var gameMode = IsCasual ? "casual" : "comp";
-            logReceiverService.EnableFeedback(GetFeedbackFileName());
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Setting up test server for {CleanedTitle}")
@@ -327,9 +325,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestStartingTask(RconService rconService,
-            LogReceiverService logReceiverService, AnnouncementMessage announcementMessage)
+            SrcdsLogService srcdsLogService, AnnouncementMessage announcementMessage)
         {
-            await base.PlaytestStartingTask(rconService, logReceiverService, announcementMessage);
+            await base.PlaytestStartingTask(rconService, srcdsLogService, announcementMessage);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("CSGO class PlaytestStartingTask", false, color: LOG_COLOR);

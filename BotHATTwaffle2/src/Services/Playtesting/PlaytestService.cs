@@ -31,27 +31,26 @@ namespace BotHATTwaffle2.Services.Playtesting
         private readonly DataService _dataService;
         private readonly int _failedRetryCount = 60;
         private readonly LogHandler _log;
-        private readonly LogReceiverService _logReceiverService;
+        private readonly SrcdsLogService _srcdsLogService;
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
         private int _failedToFetch;
 
         public PlaytestService(DataService data, GoogleCalendar calendar, LogHandler log, Random random,
-            ReservationService reservationService, RconService rconService, LogReceiverService logReceiverService,
+            ReservationService reservationService, RconService rconService, SrcdsLogService srcdsLogService,
             DiscordSocketClient client)
         {
             _dataService = data;
             _log = log;
             _calendar = calendar;
             _reservationService = reservationService;
-            _logReceiverService = logReceiverService;
+            _srcdsLogService = srcdsLogService;
             _client = client;
 
             _rconService = rconService;
             _announcementMessage = new AnnouncementMessage(_dataService, random, _log);
 
-
-            _logReceiverService.SetPlayTestService(this);
+            _srcdsLogService.PostStartSetup(this);
         }
 
         public VoiceFeedbackSession FeedbackSession { get; private set; }
@@ -124,7 +123,7 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             var testEvent = _calendar.GetNextPlaytestEvent();
 
-            await testEvent.PlaytestCommandPost(replyInContext, _logReceiverService, _rconService);
+            await testEvent.PlaytestCommandPost(replyInContext, _srcdsLogService, _rconService);
 
             //Delay setting previous test event to prevent playtest channel from getting out of order.
             _ = Task.Run(async () =>
@@ -149,7 +148,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         {
             var testEvent = _calendar.GetNextPlaytestEvent();
 
-            await testEvent.PlaytestCommandPre(replyInContext, _logReceiverService, _rconService);
+            await testEvent.PlaytestCommandPre(replyInContext, _srcdsLogService, _rconService);
 
             return testEvent.PlaytestCommandInfo;
         }
@@ -576,7 +575,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             _ = _log.LogMessage($"Running playtesting starting in X minutes task for {playtestEvent.Title}", true,
                 color: LOG_COLOR);
 
-            await playtestEvent.PlaytestStartingInTask(_rconService, _logReceiverService, _announcementMessage);
+            await playtestEvent.PlaytestStartingInTask(_rconService, _srcdsLogService, _announcementMessage);
         }
 
         /// <summary>
@@ -591,7 +590,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _reservationService.DisableReservations();
             JobManager.RemoveJob("[AllowReservationsStopCount]");
 
-            await playtestEvent.PlaytestTwentyMinuteTask(_rconService, _logReceiverService);
+            await playtestEvent.PlaytestTwentyMinuteTask(_rconService, _srcdsLogService);
         }
 
         /// <summary>
@@ -605,7 +604,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _reservationService.DisableReservations();
             JobManager.RemoveJob("[AllowReservationsStopCount]");
 
-            await playtestEvent.PlaytestFifteenMinuteTask(_rconService, _logReceiverService);
+            await playtestEvent.PlaytestFifteenMinuteTask(_rconService, _srcdsLogService);
         }
 
         /// <summary>
@@ -619,7 +618,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             await _reservationService.DisableReservations();
             JobManager.RemoveJob("[AllowReservationsStopCount]");
 
-            await playtestEvent.PlaytestStartingTask(_rconService, _logReceiverService, _announcementMessage);
+            await playtestEvent.PlaytestStartingTask(_rconService, _srcdsLogService, _announcementMessage);
         }
 
         public async Task CallNormalTesters(int neededPlayers)

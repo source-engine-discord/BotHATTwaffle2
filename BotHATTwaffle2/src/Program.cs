@@ -51,7 +51,6 @@ namespace BotHATTwaffle2
                 .AddSingleton<ReservationService>()
                 .AddSingleton<PlaytestService>()
                 .AddSingleton<RconService>()
-                .AddSingleton<LogReceiverService>()
                 .AddSingleton<SrcdsLogService>()
                 .AddSingleton<VoiceChannelHandler>()
                 .AddSingleton<IHelpService, HelpService>()

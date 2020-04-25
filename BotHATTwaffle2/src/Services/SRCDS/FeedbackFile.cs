@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Models.LiteDB;
+using BotHATTwaffle2.Util;
 using CoreRCON.Parsers.Standard;
 
 namespace BotHATTwaffle2.Services.SRCDS
@@ -24,6 +25,26 @@ namespace BotHATTwaffle2.Services.SRCDS
             Directory.CreateDirectory("Feedback");
         }
 
+        public FeedbackFile(FeedbackFileStore feedbackFileStore, RconService rconService)
+        {
+            Server = DatabaseUtil.GetTestServer(feedbackFileStore.ServerAddress);
+            FileName = feedbackFileStore.FileName;
+            _rconService = rconService;
+        }
+
+        public async Task LogFeedback(string message)
+        {
+            await LogFeedback(new GenericCommand
+            {
+                Message = message,
+                Player = new Player
+                {
+                    Name = "Ido",
+                    Team = "Bot"
+                }
+            });
+        }
+        
         public async Task LogFeedback(GenericCommand genericCommand)
         {
             string message =

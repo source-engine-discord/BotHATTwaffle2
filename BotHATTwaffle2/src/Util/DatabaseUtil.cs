@@ -22,8 +22,8 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_COMP = "compPw";
         private const string COLLECTION_USERS_STEAMID = "usersSteamID";
         private const string COLLECTION_PREVIOUS_TEST = "previousTest";
-        private const string COLLECTION_FACEIT_HUB_SEASON = "faceitHubSeason";
         private const string COLLECTION_FACEIT_HUBS = "faceitHubs";
+        private const string COLLECTION_FEEDBACK_FILE = "feedbackFile";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -416,8 +416,6 @@ namespace BotHATTwaffle2.Util
                     foundServer = servers.FindOne(Query.EQ("ServerId", serverId));
                 }
 
-                if (_dataService.RSettings.ProgramSettings.Debug && foundServer != null)
-                    _ = _log.LogMessage(foundServer.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)
             {
@@ -454,9 +452,6 @@ namespace BotHATTwaffle2.Util
 
                     servers.Delete(foundServer.Id);
                 }
-
-                if (_dataService.RSettings.ProgramSettings.Debug)
-                    _ = _log.LogMessage(foundServer.ToString(), false, color: LOG_COLOR);
             }
             catch (Exception e)
             {
@@ -1226,6 +1221,89 @@ namespace BotHATTwaffle2.Util
             }
 
             return null;
+        }
+
+
+        public static bool AddFeedbackFile(FeedbackFileStore feedbackFileStore)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var feedBackFile = db.GetCollection<FeedbackFileStore>(COLLECTION_FEEDBACK_FILE);
+                    feedBackFile.EnsureIndex(x => x.ServerAddress);
+
+                    feedBackFile.Insert(feedbackFileStore);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Inserting new FeedbackFile into DB", false, color: LOG_COLOR);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened adding FeedbackFile\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+            }
+
+            return true;
+        }
+
+        public static IEnumerable<FeedbackFileStore> GetAllFeedbackFiles()
+        {
+            IEnumerable<FeedbackFileStore> feedbackFiles = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var feedbackCol = db.GetCollection<FeedbackFileStore>(COLLECTION_FEEDBACK_FILE);
+
+                    feedbackFiles = feedbackCol.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting all test servers\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return feedbackFiles;
+            }
+
+            return feedbackFiles;
+        }
+
+        public static bool RemoveFeedbackFile(string serverId)
+        {
+            var foundServer = GetTestServer(serverId);
+
+            if (foundServer == null)
+            {
+                if (_dataService.RSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("No server found, so cannot remove anything", false, color: LOG_COLOR);
+                return false;
+            }
+
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var feedbackFile = db.GetCollection<FeedbackFileStore>(COLLECTION_FEEDBACK_FILE);
+
+                    feedbackFile.Delete(x => x.ServerAddress == foundServer.Address);
+                }
+
+                if (_dataService.RSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage(foundServer.ToString(), false, color: LOG_COLOR);
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened removing FeedbackFile\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
         }
     }
 }

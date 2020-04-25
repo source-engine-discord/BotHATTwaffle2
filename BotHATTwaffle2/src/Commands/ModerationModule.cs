@@ -173,6 +173,22 @@ namespace BotHATTwaffle2.Commands
                 server = DatabaseUtil.GetTestServer(ptEvent.ServerLocation);
             }
 
+            if (server == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"Server {serverId} not found!")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
+            if(fileName == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"You must provide a file name if you provide a server.")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
             //Should build the name inside the test event and just get that back instead of saving it each time.
             var result = _srcdsLogService.CreateFeedbackFile(server, fName);
 
@@ -203,7 +219,25 @@ namespace BotHATTwaffle2.Commands
             if (serverId == null)
                 server = DatabaseUtil.GetTestServer(_calendar.GetNextPlaytestEvent().ServerLocation);
 
-            var feedbackPath = _srcdsLogService.GetFeedbackFile(server).FileName;
+            if (server == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"Server {serverId} not found!")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
+            var fbf = _srcdsLogService.GetFeedbackFile(server);
+
+            if (fbf == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"Server {server.Address} did not have a feedback session!")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
+            var feedbackPath = fbf.FileName;
 
             //Should build the name inside the test event and just get that back instead of saving it each time.
             var result = _srcdsLogService.RemoveFeedbackFile(server);
@@ -216,7 +250,11 @@ namespace BotHATTwaffle2.Commands
                         $"`{server.Address}` is no longer collecting feedback in game.")
                     .WithColor(new Color(55, 165, 55)).Build());
                 
-                await Context.Channel.SendFileAsync(feedbackPath);
+                if(File.Exists(feedbackPath))
+                {
+                    await Context.Channel.SendFileAsync(feedbackPath);
+                    File.Delete(feedbackPath);
+                }
             }
             else
                 await ReplyAsync(embed: new EmbedBuilder()
@@ -918,7 +956,9 @@ namespace BotHATTwaffle2.Commands
                 reply = await rconCommand;
             }
 
-
+            if (reply.Length > 1900)
+                reply = reply.Substring(0, 1900);
+            
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _dataService.Guild.IconUrl)
                 .WithDescription($"```{reply}```")

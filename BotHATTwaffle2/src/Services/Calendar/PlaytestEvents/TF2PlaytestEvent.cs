@@ -25,13 +25,13 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestCommandPre(bool replyInContext,
-            LogReceiverService logReceiverService, RconService rconService)
+            SrcdsLogService srcdsLogService, RconService rconService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestCommandPre", false, color: LOG_COLOR);
 
             //Generic setup
-            await base.PlaytestCommandPre(replyInContext, logReceiverService, rconService);
+            await base.PlaytestCommandPre(replyInContext, srcdsLogService, rconService);
 
             await rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                 $"exec {_dataService.RSettings.General.TF2Config}");
@@ -69,13 +69,13 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             PlaytestCommandRunning = false;
         }
 
-        public override async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService,
+        public override async Task PlaytestCommandPost(bool replyInContext, SrcdsLogService srcdsLogService,
             RconService rconService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestCommandPost", false, color: LOG_COLOR);
 
-            await base.PlaytestCommandPost(replyInContext, logReceiverService, rconService);
+            await base.PlaytestCommandPost(replyInContext, srcdsLogService, rconService);
 
             await rconService.RconCommand(ServerLocation, $"changelevel workshop/{PlaytestCommandInfo.WorkshopId}");
             await Task.Delay(15000); //Wait for map to change
@@ -96,27 +96,24 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 .WithDescription(
                     $"[Download Demo Here]({demoUrl}) | [Map Images]({PlaytestCommandInfo.ImageAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting/)");
 
-            //Stop getting more feedback
-            logReceiverService.DisableFeedback();
-
             await AnnouncmentChannel.SendMessageAsync(PlaytestCommandInfo.CreatorMentions, embed: embed.Build());
 
             PlaytestCommandRunning = false;
         }
 
-        public override async Task PlaytestStartingInTask(RconService rconService, LogReceiverService logReceiverService
-            , AnnouncementMessage announcementMessage)
+        public override async Task PlaytestStartingInTask(RconService rconService, SrcdsLogService srcdsLogService,
+            AnnouncementMessage announcementMessage)
         {
-            await base.PlaytestStartingInTask(rconService, logReceiverService, announcementMessage);
+            await base.PlaytestStartingInTask(rconService, srcdsLogService, announcementMessage);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestStartingInTask", false, color: LOG_COLOR);
         }
 
         public override async Task PlaytestTwentyMinuteTask(RconService rconService,
-            LogReceiverService logReceiverService)
+            SrcdsLogService srcdsLogService)
         {
-            await base.PlaytestTwentyMinuteTask(rconService, logReceiverService);
+            await base.PlaytestTwentyMinuteTask(rconService, srcdsLogService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestTwentyMinuteTask", false, color: LOG_COLOR);
@@ -127,9 +124,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestFifteenMinuteTask(RconService rconService,
-            LogReceiverService logReceiverService)
+            SrcdsLogService srcdsLogService)
         {
-            await base.PlaytestFifteenMinuteTask(rconService, logReceiverService);
+            await base.PlaytestFifteenMinuteTask(rconService, srcdsLogService);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestFifteenMinuteTask", false, color: LOG_COLOR);
@@ -155,9 +152,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public override async Task PlaytestStartingTask(RconService rconService,
-            LogReceiverService logReceiverService, AnnouncementMessage announcementMessage)
+            SrcdsLogService srcdsLogService, AnnouncementMessage announcementMessage)
         {
-            await base.PlaytestStartingTask(rconService, logReceiverService, announcementMessage);
+            await base.PlaytestStartingTask(rconService, srcdsLogService, announcementMessage);
 
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("TF2 class PlaytestStartingTask", false, color: LOG_COLOR);

@@ -125,12 +125,17 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             //If there is feedback running on this server, remove it. Also delete the file.
             var server = DatabaseUtil.GetTestServer(reservation.ServerId);
-            var filePath = _srcdsLogService.GetFeedbackFile(server).FileName;
-            if(File.Exists(filePath))
-                File.Delete(filePath);
 
-            _srcdsLogService.RemoveFeedbackFile(server);
+            var fbf = _srcdsLogService.GetFeedbackFile(server);
+            if(fbf != null)
+            {
+                var filePath = fbf.FileName;
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
 
+             _srcdsLogService.RemoveFeedbackFile(server);
+            
             DatabaseUtil.RemoveServerReservation(userId);
             return embed;
         }

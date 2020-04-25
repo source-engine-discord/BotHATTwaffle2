@@ -480,7 +480,8 @@ namespace BotHATTwaffle2.Commands
             _srcdsLogService.RemoveFeedbackFile(server);
 
             //Make a new one.
-            _srcdsLogService.CreateFeedbackFile(server, Context.User.Id.ToString());
+            _srcdsLogService.CreateFeedbackFile(server, DateTime.Now.ToString("MM_dd_yyyy") + "_" + Context.User.Id.ToString());
+
             embed.AddField("Ingame Chat Active", "You may use `>pc` in-game to send commands to the server!");
             embed.AddField("Ingame Feedback Active", "You may use `>fb` in-game to send feedback to the log! Type `>rs` to collect the log.");
 
@@ -854,18 +855,23 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            //Get their feedback file and send it, then delete it.
+            var fbf = _srcdsLogService.GetFeedbackFile(hasServer);
+
+            if (fbf != null)
+            {
+                var file = fbf.FileName;
+                if (File.Exists(file))
+                {
+                    await Context.Channel.SendFileAsync(file, "");
+                    File.Delete(file);
+                }
+            }
+
             await ReplyAsync(embed: _reservationService.ReleaseServer(Context.User.Id,
                 $"{Context.User} has released the " +
                 "server reservation manually."));
 
-            //Get their feedback file and send it, then delete it.
-            var file = _srcdsLogService.GetFeedbackFile(hasServer).FileName;
-            if(File.Exists(file))
-            {
-                await Context.Channel.SendFileAsync(file);
-                File.Delete(file);
-            }
-            
             await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually",
                 color: LOG_COLOR);
         }

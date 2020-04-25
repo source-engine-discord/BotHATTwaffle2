@@ -23,21 +23,20 @@ namespace BotHATTwaffle2.Services.SRCDS
         private readonly DataService _dataService;
         private readonly LogHandler _logHandler;
         private readonly RconService _rconService;
-        private readonly PlaytestService _playtestService;
+        private PlaytestService _playtestService;
         private LogReceiver _logReceiver;
         private Dictionary<IPEndPoint, Server> _serverIdDictionary = new Dictionary<IPEndPoint, Server>();
-        private List<FeedbackFile> _feedbackFiles = new List<FeedbackFile>();
+        private static List<FeedbackFile> _feedbackFiles = new List<FeedbackFile>();
         private readonly ushort _port;
         private int _restartCount = 0;
         private const int RESTART_LIMIT = 5;
 
-        public SrcdsLogService(DataService dataService, RconService rconService, LogHandler logHandler, PlaytestService playtestService)
+        public SrcdsLogService(DataService dataService, RconService rconService, LogHandler logHandler)
         {
             //Setup vars
             _rconService = rconService;
             _dataService = dataService;
             _logHandler = logHandler;
-            _playtestService = playtestService;
             _port = _dataService.RSettings.ProgramSettings.ListenPort;
 
             Console.WriteLine("Setting up SRCDS Log Service...");
@@ -48,7 +47,21 @@ namespace BotHATTwaffle2.Services.SRCDS
             foreach (var server in servers)
                 _serverIdDictionary.Add(GeneralUtil.GetIpEndPointFromString(server.Address), server);
 
+            var oldSessions = DatabaseUtil.GetAllFeedbackFiles();
+
+            //Re-add old sessions.
+            foreach (var session in oldSessions)
+            {
+                Console.WriteLine($"Re-adding FB sessions for: {session.ServerAddress}");
+                _feedbackFiles.Add(new FeedbackFile(session, _rconService));
+            }
+
             Start();
+        }
+
+        public void PostStartSetup(PlaytestService playtestService)
+        {
+            _playtestService = playtestService;
         }
 
         private async void Start()
@@ -352,18 +365,16 @@ namespace BotHATTwaffle2.Services.SRCDS
         public bool CreateFeedbackFile(Server server, string fileName)
         {
             //Make sure we don't have a server already
-            if (GetFeedbackFile(server) == null)
+            if (GetFeedbackFile(server) != null)
                 return false;
 
             var fbf = new FeedbackFile(server, fileName, _rconService);
-            _ = fbf.LogFeedback(new GenericCommand
-            {
-                Message = $"Log Started at {DateTime.Now} CT",
-                Player = new Player
-                {
-                    Name = "Ido",
-                    Team = "Bot"
-                }
+            _ = fbf.LogFeedback($"Log Started at {DateTime.Now} CT");
+
+            //Add to DB
+            DatabaseUtil.AddFeedbackFile(new FeedbackFileStore{
+                ServerAddress = server.Address,
+                FileName = fbf.FileName
             });
 
             _feedbackFiles.Add(fbf);
@@ -379,7 +390,13 @@ namespace BotHATTwaffle2.Services.SRCDS
         {
             var targetFile = GetFeedbackFile(server);
 
+            if (targetFile == null)
+                return false;
+
             _feedbackFiles.Remove(targetFile);
+
+            //Remove from DB
+            DatabaseUtil.RemoveFeedbackFile(server.ServerId);
             return true;
         }
 
@@ -392,9 +409,9 @@ namespace BotHATTwaffle2.Services.SRCDS
         {
             //We need a feedback file instance to work with.
             FeedbackFile feedback = null;
-            if (_feedbackFiles.Any(x => x.Server.Equals(server)))
+            if (_feedbackFiles.Any(x => x.Server.Address.Equals(server.Address)))
             {
-                feedback = _feedbackFiles.FirstOrDefault(x => x.Server.Equals(server));
+                feedback = _feedbackFiles.FirstOrDefault(x => x.Server.Address.Equals(server.Address));
             }
 
             return feedback;
