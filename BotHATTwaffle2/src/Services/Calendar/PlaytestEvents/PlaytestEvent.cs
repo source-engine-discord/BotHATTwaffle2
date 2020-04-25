@@ -52,8 +52,11 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             EndDateTime = playtestEvent.End.DateTime;
             Description = playtestEvent.Description;
             CleanedTitle = Title.Substring(Title.IndexOf('|') + 1).Trim();
+
+            server = DatabaseUtil.GetTestServer(ServerLocation);
         }
 
+        private Server server;
         public bool IsValid { get; private set; }
         public DateTime? EventEditTime { get; set; } //What is the last time the event was edited?
         public DateTime? StartDateTime { get; set; }
@@ -177,7 +180,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public virtual async Task PlaytestCommandPre(bool replyInContext,
-            LogReceiverService logReceiverService, RconService rconService)
+            SrcdsLogService srcdsLogService, RconService rconService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestCommandPre", false, color: LOG_COLOR);
@@ -209,11 +212,16 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             };
 
 
-            //Start receiver if it isn't already
-            logReceiverService.StartLogReceiver(PlaytestCommandInfo.ServerAddress);
+            var fbf = srcdsLogService.GetFeedbackFile(server);
 
-            //Start feedback capture
-            logReceiverService.EnableFeedback(GetFeedbackFileName());
+            //If somehow the session does not exist...
+            if (fbf == null)
+            {
+                srcdsLogService.CreateFeedbackFile(server, GetFeedbackFileName());
+                fbf = srcdsLogService.GetFeedbackFile(server);
+            }
+
+            await fbf.LogFeedback($"Playtest starting feedback started at: {DateTime.Now} CT");
 
             //Write to the DB so we can restore this info next boot
             DatabaseUtil.StorePlaytestCommandInfo(PlaytestCommandInfo);
@@ -264,7 +272,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             });
         }
 
-        public virtual async Task PlaytestCommandPost(bool replyInContext, LogReceiverService logReceiverService,
+        public virtual async Task PlaytestCommandPost(bool replyInContext, SrcdsLogService srcdsLogService,
             RconService rconService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
@@ -282,20 +290,21 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                                      $"\nWorkshop ID **{PlaytestCommandInfo.WorkshopId}**" +
                                      $"\nDemo Name **{PlaytestCommandInfo.DemoName}**").Build());
 
-            if (File.Exists(logReceiverService.GetFilePath()))
+            var fbf = srcdsLogService.GetFeedbackFile(server);
+            if (fbf != null && File.Exists(fbf.FileName))
             {
                 Directory.CreateDirectory(
                     $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{PlaytestCommandInfo.StartDateTime:yyyy}" +
                     $"\\{PlaytestCommandInfo.StartDateTime:MM} - {PlaytestCommandInfo.StartDateTime:MMMM}" +
                     $"\\{PlaytestCommandInfo.DemoName}");
 
-                File.Copy(logReceiverService.GetFilePath(),
+                File.Copy(fbf.FileName,
                     $"{_dataService.RSettings.ProgramSettings.PlaytestDemoPath}\\{PlaytestCommandInfo.StartDateTime:yyyy}" +
                     $"\\{PlaytestCommandInfo.StartDateTime:MM} - {PlaytestCommandInfo.StartDateTime:MMMM}" +
                     $"\\{PlaytestCommandInfo.DemoName}\\{PlaytestCommandInfo.DemoName}.txt"
                     , true);
 
-                await AnnouncmentChannel.SendFileAsync(logReceiverService.GetFilePath(), "");
+                await AnnouncmentChannel.SendFileAsync(fbf.FileName, "");
             }
 
             _ = Task.Run(async () =>
@@ -314,8 +323,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             });
 
             //Stop getting more feedback
-            logReceiverService.DisableFeedback();
-            logReceiverService.SetNotActive();
+            srcdsLogService.RemoveFeedbackFile(server);
         }
 
         public async Task PlaytestcommandGenericAction(bool replyInContext, string command, RconService rconService,
@@ -356,7 +364,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             AnnouncementMessage = message;
         }
 
-        public virtual async Task PlaytestStartingInTask(RconService rconService, LogReceiverService logReceiverService,
+        public virtual async Task PlaytestStartingInTask(RconService rconService, SrcdsLogService srcdsLogService,
             AnnouncementMessage announcementMessage)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
@@ -421,7 +429,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public virtual async Task PlaytestTwentyMinuteTask(RconService rconService,
-            LogReceiverService logReceiverService)
+            SrcdsLogService srcdsLogService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestTwentyMinuteTask", false, color: LOG_COLOR);
@@ -435,7 +443,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
         }
 
         public virtual async Task PlaytestFifteenMinuteTask(RconService rconService,
-            LogReceiverService logReceiverService)
+            SrcdsLogService srcdsLogService)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestFifteenMinuteTask", false, color: LOG_COLOR);
@@ -444,27 +452,29 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             //Ensure server is awake and RCON connection is established. Run other things while waking server
             _ = rconService.WakeRconServer(ServerLocation);
+            
+            //Get rid of the old log file if one exists. Just scrap it.
+            srcdsLogService.RemoveFeedbackFile(server);
 
-            //Setup the log receiver for this test.
-            _ = Task.Run(async () =>
+            //Make a feedback file.
+            var logResult = srcdsLogService.CreateFeedbackFile(server, GetFeedbackFileName());
+
+            if (logResult)
             {
-                logReceiverService.StopLogReceiver();
+                await _log.LogMessage($"Log file created: {GetFeedbackFileName()}");
 
-                //Log receiver takes time to stop before it can be restarted.
-                await Task.Delay(15000);
-                logReceiverService.StartLogReceiver(ServerLocation);
-            });
+                var fbf = srcdsLogService.GetFeedbackFile(server);
+                await fbf.LogFeedback($"Pre-test feedback started at: {DateTime.Now} CT");
+            }
         }
 
-        public virtual async Task PlaytestStartingTask(RconService rconService, LogReceiverService logReceiverService,
+        public virtual async Task PlaytestStartingTask(RconService rconService, SrcdsLogService srcdsLogService,
             AnnouncementMessage announcementMessage)
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage("Base class PlaytestStartingTask", false, color: LOG_COLOR);
 
             _ = rconService.WakeRconServer(ServerLocation);
-
-            logReceiverService.StartLogReceiver(ServerLocation);
 
             var mentionRole = TesterRole;
             //Handle comp or casual

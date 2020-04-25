@@ -14,11 +14,9 @@ namespace BotHATTwaffle2.Handlers
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
-        private readonly LogReceiverService _logReceiverService;
         private readonly ScheduleHandler _schedule;
 
-        public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule,
-            LogReceiverService logReceiverService)
+        public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule)
         {
             Console.WriteLine("Setting up GuildHandler...");
 
@@ -26,8 +24,7 @@ namespace BotHATTwaffle2.Handlers
             _dataService = data;
             _client = client;
             _schedule = schedule;
-            _logReceiverService = logReceiverService;
-
+            
             _client.GuildAvailable += GuildAvailableEventHandler;
             _client.GuildUnavailable += GuildUnavailableEventHandler;
             _client.Ready += ReadyEventHandler;
@@ -43,8 +40,6 @@ namespace BotHATTwaffle2.Handlers
             _schedule.RemoveAllJobs();
 
             _schedule.AddRequiredJobs();
-
-            await _logReceiverService.RestartLogAfterDisconnect();
 
             await ResetTesterRoleMentions();
         }

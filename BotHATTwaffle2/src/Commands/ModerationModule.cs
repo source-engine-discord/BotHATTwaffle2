@@ -31,7 +31,7 @@ namespace BotHATTwaffle2.Commands
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
-        private readonly LogReceiverService _logReceiverService;
+        private readonly SrcdsLogService _srcdsLogService;
         private readonly PlaytestService _playtestService;
         private readonly Random _random;
         private readonly RconService _rconService;
@@ -39,7 +39,7 @@ namespace BotHATTwaffle2.Commands
 
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
-            Random random, RconService rconService, LogReceiverService logReceiverService)
+            Random random, RconService rconService, SrcdsLogService srcdsLogService)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -49,7 +49,7 @@ namespace BotHATTwaffle2.Commands
             _reservationService = reservationService;
             _random = random;
             _rconService = rconService;
-            _logReceiverService = logReceiverService;
+            _srcdsLogService = srcdsLogService;
         }
 
 //        [Command("Test")]
@@ -156,78 +156,111 @@ namespace BotHATTwaffle2.Commands
         [Command("StartFeedback", RunMode = RunMode.Async)]
         [Alias("startfb")]
         [Summary("Starts server listening for in game feedback")]
+        [Remarks("If all parameters are left empty, the next playtest event will be used.\nOtherwise specify" +
+                 "a server and a name for the file to be created. When feedback is stopped, the file will be delivered.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task StartServerFeedbackAsync()
+        public async Task StartServerFeedbackAsync(string serverId = null, string fileName = null)
         {
-            var testEvent = _calendar.GetNextPlaytestEvent();
+            string fName = fileName;
+            var server = DatabaseUtil.GetTestServer(serverId);
 
-            if (!_logReceiverService.EnableLog)
-                _logReceiverService.StartLogReceiver(testEvent.ServerLocation);
+            //If null, get the not PT event.
+            if(serverId == null)
+            {
+                var ptEvent = _calendar.GetNextPlaytestEvent();
+                fName = _calendar.GetNextPlaytestEvent().GetFeedbackFileName();
+                server = DatabaseUtil.GetTestServer(ptEvent.ServerLocation);
+            }
+
+            if (server == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"Server {serverId} not found!")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
+
+            if(fileName == null)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"You must provide a file name if you provide a server.")
+                    .WithColor(new Color(165, 55, 55)).Build());
+                return;
+            }
 
             //Should build the name inside the test event and just get that back instead of saving it each time.
-            var result = _logReceiverService.EnableFeedback(testEvent.GetFeedbackFileName());
+            var result = _srcdsLogService.CreateFeedbackFile(server, fName);
 
             if (result)
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Started new feedback listener")
                     .WithDescription(
-                        $"`{_logReceiverService.ActiveServer.Address}` is now listening for feedback in game.")
+                        $"`{server.Address}` is now listening for feedback in game.")
                     .WithColor(new Color(55, 165, 55)).Build());
             else
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor("Unable to start feedback listening")
-                    .WithDescription("The server is already listening for feedback.")
+                    .WithDescription("The server may already be listening for feedback.")
                     .WithColor(new Color(165, 55, 55)).Build());
         }
 
-        [Command("StartListen", RunMode = RunMode.Async)]
-        [Alias("startl")]
-        [Summary("Starts server listening to allow ingame chat to call certain bot functions.")]
-        [Remarks("If you have been added to the Steam ID whitelist, you can use `>rcon [command]` in the server to " +
-                 "send RCON commands to it. Regular users can use `>feedback [message]` to leave feedback on the map.")]
+        [Command("StopFeedback", RunMode = RunMode.Async)]
+        [Alias("stopfb")]
+        [Summary("Stops server listening for in game feedback")]
+        [Remarks("If all parameters are left empty, the next playtest event will be used. Otherwise specify a server.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task StartServerListenAsync([Summary("Server to start listening on")]
-            string server)
+        public async Task StopServerFeedbackAsync(string serverId = null)
         {
-            if (_logReceiverService.EnableLog)
+            var server = DatabaseUtil.GetTestServer(serverId);
+
+            //If null, get the not PT event.
+            if (serverId == null)
+                server = DatabaseUtil.GetTestServer(_calendar.GetNextPlaytestEvent().ServerLocation);
+
+            if (server == null)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor("Unable to start new listener")
-                    .WithDescription("You cannot start another log session until the existing session on " +
-                                     $"`{_logReceiverService.ActiveServer.Address}` is ended")
-                    .WithColor(new Color(55, 55, 165)).Build());
+                    .WithAuthor($"Server {serverId} not found!")
+                    .WithColor(new Color(165, 55, 55)).Build());
                 return;
             }
 
-            _logReceiverService.StartLogReceiver(server);
-            await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor("Started new Listener")
-                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is now listening to ingame chat.")
-                .WithColor(new Color(55, 165, 55)).Build());
-        }
+            var fbf = _srcdsLogService.GetFeedbackFile(server);
 
-        [Command("StopListen", RunMode = RunMode.Async)]
-        [Alias("stopl")]
-        [Summary("Stops server listening to disallow ingame chat to call certain bot functions.")]
-        [RequireContext(ContextType.Guild)]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task StopServerListenAsync()
-        {
-            if (!_logReceiverService.EnableLog)
+            if (fbf == null)
             {
                 await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor("A listener isn't started")
-                    .WithColor(new Color(55, 55, 165)).Build());
+                    .WithAuthor($"Server {server.Address} did not have a feedback session!")
+                    .WithColor(new Color(165, 55, 55)).Build());
                 return;
             }
 
-            _logReceiverService.StopLogReceiver();
-            await ReplyAsync(embed: new EmbedBuilder()
-                .WithAuthor("Stopped Listener")
-                .WithDescription($"`{_logReceiverService.ActiveServer.Address}` is no longer listening to ingame chat.")
-                .WithColor(new Color(165, 55, 55)).Build());
+            var feedbackPath = fbf.FileName;
+
+            //Should build the name inside the test event and just get that back instead of saving it each time.
+            var result = _srcdsLogService.RemoveFeedbackFile(server);
+
+            if (result)
+            {
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Stopped feedback listener")
+                    .WithDescription(
+                        $"`{server.Address}` is no longer collecting feedback in game.")
+                    .WithColor(new Color(55, 165, 55)).Build());
+                
+                if(File.Exists(feedbackPath))
+                {
+                    await Context.Channel.SendFileAsync(feedbackPath);
+                    File.Delete(feedbackPath);
+                }
+            }
+            else
+                await ReplyAsync(embed: new EmbedBuilder()
+                    .WithAuthor("Unable to stop feedback listening")
+                    .WithDescription("The server may not have been listening for feedback.")
+                    .WithColor(new Color(165, 55, 55)).Build());
         }
 
         [Command("Mute")]
@@ -923,7 +956,9 @@ namespace BotHATTwaffle2.Commands
                 reply = await rconCommand;
             }
 
-
+            if (reply.Length > 1900)
+                reply = reply.Substring(0, 1900);
+            
             await ReplyAsync(embed: new EmbedBuilder()
                 .WithAuthor($"Command sent to {targetServer}", _dataService.Guild.IconUrl)
                 .WithDescription($"```{reply}```")

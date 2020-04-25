@@ -267,5 +267,33 @@ namespace BotHATTwaffle2.Util
         {
             return string.Concat(filename.Split(Path.GetInvalidFileNameChars()));
         }
+
+        /// <summary>
+        /// Takes a string formatted as www.server.com:12345
+        /// </summary>
+        /// <param name="address">Domain address</param>
+        /// <param name="serverPort">Optional port to use if not provided in string</param>
+        /// <returns>IPEndPoint for string</returns>
+        public static IPEndPoint GetIpEndPointFromString(string address, ushort serverPort = 27015)
+        {
+            ushort sPort = serverPort;
+            var targetDns = address;
+
+            //Does the address contain a port? If so we need to split it and our queries
+            if (address.Contains(':'))
+            {
+                var splitServer = address.Split(':');
+                targetDns = splitServer[0];
+
+                if (!ushort.TryParse(splitServer[1], out sPort))
+                    throw new NullReferenceException(
+                        "Malformed server port in address. Verify that it is stored as: subDomain.Domain.TLD:port");
+            }
+
+            var ip = GetIPHost(targetDns).AddressList.FirstOrDefault();
+
+            return new IPEndPoint(ip, sPort);
+
+        }
     }
 }

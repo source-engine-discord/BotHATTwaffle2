@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -27,7 +28,7 @@ namespace BotHATTwaffle2.Commands
         private readonly DataService _dataService;
         private readonly InteractiveService _interactive;
         private readonly LogHandler _log;
-        private readonly LogReceiverService _logReceiverService;
+        private readonly SrcdsLogService _srcdsLogService;
         private readonly PlaytestService _playtestService;
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
@@ -36,7 +37,7 @@ namespace BotHATTwaffle2.Commands
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService, RconService rconService,
             InteractiveService interactive, LogHandler log, GoogleCalendar calendar, PlaytestService playtestService,
-            ScheduleHandler scheduleHandler, LogReceiverService logReceiverService)
+            ScheduleHandler scheduleHandler, SrcdsLogService srcdsLogService)
         {
             _playtestService = playtestService;
             _client = client;
@@ -47,7 +48,7 @@ namespace BotHATTwaffle2.Commands
             _calendar = calendar;
             _rconService = rconService;
             _scheduleHandler = scheduleHandler;
-            _logReceiverService = logReceiverService;
+            _srcdsLogService = srcdsLogService;
         }
 
         [Command("FeedbackQueue", RunMode = RunMode.Async)]
@@ -475,12 +476,14 @@ namespace BotHATTwaffle2.Commands
             embed.AddField("View Remaining Time", "`>SR` or\n`>ShowReservations`", true);
             embed.AddField("End Reservation Early", "`>RS` or\n`>ReleaseServer`", true);
 
-            //Attempt to start listener only if one isn't started
-            if (!_logReceiverService.EnableLog)
-            {
-                _logReceiverService.StartLogReceiver(server.ServerId);
-                embed.AddField("Ingame Chat Active", "You may use `>pc` in-game to send commands to the server!");
-            }
+            //Remove a file if it needs to be.
+            _srcdsLogService.RemoveFeedbackFile(server);
+
+            //Make a new one.
+            _srcdsLogService.CreateFeedbackFile(server, DateTime.Now.ToString("MM_dd_yyyy") + "_" + Context.User.Id.ToString());
+
+            embed.AddField("Ingame Chat Active", "You may use `>pc` in-game to send commands to the server!");
+            embed.AddField("Ingame Feedback Active", "You may use `>fb` in-game to send feedback to the log! Type `>rs` to collect the log.");
 
             await ReplyAsync(embed: embed.Build());
 
@@ -852,10 +855,22 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
+            //Get their feedback file and send it, then delete it.
+            var fbf = _srcdsLogService.GetFeedbackFile(hasServer);
+
+            if (fbf != null)
+            {
+                var file = fbf.FileName;
+                if (File.Exists(file))
+                {
+                    await Context.Channel.SendFileAsync(file, "");
+                    File.Delete(file);
+                }
+            }
+
             await ReplyAsync(embed: _reservationService.ReleaseServer(Context.User.Id,
                 $"{Context.User} has released the " +
                 "server reservation manually."));
-
 
             await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually",
                 color: LOG_COLOR);
