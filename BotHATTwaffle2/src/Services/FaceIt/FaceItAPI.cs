@@ -262,68 +262,50 @@ namespace BotHATTwaffle2.Services.FaceIt
         {
             /*
              *Master list, this is really some shit.
-             * Hub1
+             * Tag1
              *  Map1
              *   Game1
              *   Game2
              *  Map2
              *   Game1
-             * Hub2
+             * Tag1
              *  Map1
              *   Game1
              *   Game2
              *  Map2
              *   Game1
              */
-            var hubMapGameList = new List<List<List<FaceItGameInfo>>>();
+            var tagMapGameList = new List<List<List<FaceItGameInfo>>>();
 
+            //Get unique tags from all matches.
+            var uniqueTags = _gameInfo.GroupBy(x => x.Tag.TagName).Select(x => x.First()).Select(x => x.Tag).ToList();
 
-            var uniqueTags = new List<FaceItHubTag>();
-            //Discover unique hub tags
-            foreach (var game in _gameInfo)
-            {
-                if(!uniqueTags.Contains(game.Tag))
-                    uniqueTags.Add(game.Tag);
-            }
-
-            /*
-             * Hub1
-             *  Game1
-             *  Game2
-             * Hub2
-             *  Game1
-             */
-            var gamesByHubList = new List<List<FaceItGameInfo>>();
-
-            //Put all games into a list based onto their unique hub tag
             foreach (var tag in uniqueTags)
             {
-                gamesByHubList.Add(_gameInfo.Where(x => x.Tag.TagName.Equals(tag.TagName)).ToList());
-            }
+                //This list will store a list of maps, that contains a list of matches
+                var mapGameList = new List<List<FaceItGameInfo>>();
 
-            //Now that all the games are sorted by hub, we need to sort them by map.
-            foreach (var hubGames in gamesByHubList)
-            {
-                //Figure out what maps are in the list, by name.
-                List<string> uniqueMaps = new List<string>();
-                foreach (var game in hubGames)
+                //Findout what unique maps we have, based on each tag
+                var uniqueMapsPerTag = _gameInfo.GroupBy(x => x.GetMapName()).Select(x => x.First()).ToList();
+
+                foreach (var map in uniqueMapsPerTag)
                 {
-                    if(!uniqueMaps.Contains(game.GetMapName()))
-                        uniqueMaps.Add(game.GetMapName());
+                    //Get each match that matches the unique tag + map we are currently on.
+                    var matchesPerMapByTag = _gameInfo.Where(x =>
+                        x.Tag.TagName.Equals(tag.TagName, StringComparison.CurrentCulture) &&
+                        x.GetMapName().Equals(map.GetMapName())).ToList();
+
+                    //Make sure we only add lists with content.
+                    if(matchesPerMapByTag.Count != 0 )
+                        //Now take the list that has matches by map, and add them to the list of tags.
+                        mapGameList.Add(matchesPerMapByTag);
                 }
 
-                //Now have to get a list of matches on each map, then put that list into this one.
-                List<List<FaceItGameInfo>> sortedMatchesByHubAndMap = new List<List<FaceItGameInfo>>();
-                foreach (var uniqueMap in uniqueMaps)
-                {
-                    sortedMatchesByHubAndMap.Add(hubGames.Where(x => x.GetMapName().Equals(uniqueMap) && !x.Skip).ToList());
-                }
-                
-                //Put our 2D array of 'sortedMatchesByHubAndMap' into the master 3d array
-                hubMapGameList.Add(sortedMatchesByHubAndMap);
+                //Add to the 3d list.
+                tagMapGameList.Add(mapGameList);
             }
 
-            var listFiles = await HeatmapGenerator.CreateListFiles(hubMapGameList);
+            var listFiles = await HeatmapGenerator.CreateListFiles(tagMapGameList);
 
             string lists = "";
             foreach (var listFile in listFiles)
@@ -471,6 +453,11 @@ namespace BotHATTwaffle2.Services.FaceIt
                 foreach (var game in _gameInfo)
                 {
                     SetHubTagOnGame(game);
+
+
+                    //TODO: REMOVE AFTER TESTING
+                    game.SetDownloadSuccess(true);
+                    game.SetUnzipSuccess(true);
                 }
             }
         }
