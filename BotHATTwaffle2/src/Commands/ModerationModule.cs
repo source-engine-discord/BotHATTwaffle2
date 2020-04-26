@@ -1243,7 +1243,7 @@ namespace BotHATTwaffle2.Commands
 
         [Command("ModifyTools")]
         [Alias("mt")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         [Summary("Command for manipulating tool prompts.")]
         [Remarks("`>mt delete [toolCommand]` removes a tool from the DB." +
                  "\n`>mt get [toolCommand]` gets the back end info for the tool. Useful for re-adding or seeing what" +
