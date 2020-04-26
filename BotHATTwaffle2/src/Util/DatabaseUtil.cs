@@ -24,6 +24,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_PREVIOUS_TEST = "previousTest";
         private const string COLLECTION_FACEIT_HUBS = "faceitHubs";
         private const string COLLECTION_FEEDBACK_FILE = "feedbackFile";
+        private const string COLLECTION_TOOLS = "tools";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -1223,7 +1224,6 @@ namespace BotHATTwaffle2.Util
             return null;
         }
 
-
         public static bool AddFeedbackFile(FeedbackFileStore feedbackFileStore)
         {
             try
@@ -1299,6 +1299,96 @@ namespace BotHATTwaffle2.Util
             catch (Exception e)
             {
                 _ = _log.LogMessage("Something happened removing FeedbackFile\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool AddTool(Tool tool)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var toolCol = db.GetCollection<Tool>(COLLECTION_TOOLS);
+                    toolCol.EnsureIndex(x => x.Command);
+
+                    //Make sure we don't have a tool with the same command already.
+                    var foundTool = toolCol.FindOne(x => x.Command == tool.Command);
+                    if (foundTool != null)
+                    {
+                        _ = _log.LogMessage($"Cannot insert {tool.Command} as I already " +
+                                            $"have a tool with that command.", false, color: LOG_COLOR);
+                        return false;
+                    }
+
+                    toolCol.Insert(tool);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Inserting new Tool into DB", false, color: LOG_COLOR);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened adding Tool\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+            }
+
+            return true;
+        }
+
+        public static IEnumerable<Tool> GetAllTools()
+        {
+            IEnumerable<Tool> tools = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var toolCol = db.GetCollection<Tool>(COLLECTION_TOOLS);
+                    tools = toolCol.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting all tools\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return tools;
+            }
+
+            return tools;
+        }
+
+        public static bool RemoveTool(string command)
+        {
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var toolsCol = db.GetCollection<Tool>(COLLECTION_TOOLS);
+
+                    var foundTool = toolsCol.FindOne(x => x.Command == command);
+
+                    if (foundTool == null)
+                    {
+                        if (_dataService.RSettings.ProgramSettings.Debug)
+                            _ = _log.LogMessage("No tool found, so cannot remove it.", false, color: LOG_COLOR);
+                        return false;
+                    }
+
+                    toolsCol.Delete(x => x.Command == foundTool.Command);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage(foundTool + " removed from the DB.", false, color: LOG_COLOR);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened removing Tool\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
                 return false;
             }

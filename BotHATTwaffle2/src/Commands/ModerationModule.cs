@@ -36,10 +36,11 @@ namespace BotHATTwaffle2.Commands
         private readonly Random _random;
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
+        private readonly ToolsService _toolsService;
 
         public ModerationModule(DataService data, LogHandler log, GoogleCalendar calendar,
             PlaytestService playtestService, InteractiveService interactive, ReservationService reservationService,
-            Random random, RconService rconService, SrcdsLogService srcdsLogService)
+            Random random, RconService rconService, SrcdsLogService srcdsLogService, ToolsService toolsService)
         {
             _playtestService = playtestService;
             _calendar = calendar;
@@ -50,6 +51,7 @@ namespace BotHATTwaffle2.Commands
             _random = random;
             _rconService = rconService;
             _srcdsLogService = srcdsLogService;
+            _toolsService = toolsService;
         }
 
 //        [Command("Test")]
@@ -1236,6 +1238,136 @@ namespace BotHATTwaffle2.Commands
                 await _dataService.DeserializeConfig();
                 await Context.Channel.SendMessageAsync(
                     "Deserializing configuration...");
+            }
+        }
+
+        [Command("ModifyTools")]
+        [Alias("mt")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Command for manipulating tool prompts.")]
+        [Remarks("`>mt delete [toolCommand]` removes a tool from the DB." +
+                 "\n`>mt get [toolCommand]` gets the back end info for the tool. Useful for re-adding or seeing what" +
+                 "is currently set for that tool. Can also be used as an example of expected input." +
+                 "\n`>mt add [command]`" +
+                 "\n`[toolName]`" +
+                 "\n`[url]`" +
+                 "\n`[ThumbnailUrl]`" +
+                 "\n`[Color]`" +
+                 "\n`[Description]`" +
+                 "\n\nWhen adding new tools, the command is splitting on new line. So the description cannot have any " +
+                 "line breaks. To see what you should provide type `>mt get [existingTool]`")]
+        public async Task ModifyToolsAsync(string action, [Remainder] string values = null)
+        {
+            //Make sure we at least have values in the params
+            if (values == null)
+            {
+                await ReplyAsync("You must provide a Tool Command. Check `>help mt`");
+                return;
+            }
+
+            if (action.StartsWith("d", StringComparison.OrdinalIgnoreCase))
+            {
+                var result = DatabaseUtil.RemoveTool(values);
+
+                if (result)
+                {
+                    await ReplyAsync($"I've removed the Tool `{values}`");
+                    //Reload the tools since we have changed something.
+                    _toolsService.LoadTools();
+                }
+                else
+                {
+                    await ReplyAsync($"Could not remove `{values}`, does it even exist?");
+                }
+            }
+            else if (action.StartsWith("g", StringComparison.OrdinalIgnoreCase))
+            {
+                var tool = _toolsService.GetTool(values);
+
+                if (tool == null)
+                {
+                    await ReplyAsync($"Could not find `{values}`, does it even exist?");
+                    return;
+                }
+
+                string backendText = $"{tool.Command}" +
+                                     $"\n{tool.AuthorName}" +
+                                     $"\n{tool.Url}" +
+                                     $"\n{tool.ThumbnailUrl}" +
+                                     $"\n{tool.Color}" +
+                                     $"\n{tool.Description}";
+
+                await ReplyAsync($"The backend for this tool is in the code block below. This is what you'd " +
+                                 $"give me to add the same tool into the DB." +
+                                 $"```>mt add {backendText}```");
+            }
+            else if (action.StartsWith("a", StringComparison.OrdinalIgnoreCase))
+            {
+                var toolValues = values.Split("\n");
+
+                //Make sure all the data is present, as all values are required
+                if (toolValues.Length != 6)
+                {
+                    await ReplyAsync("Adding a tool requires all 6 tool values.");
+                    return;
+                }
+
+                //Data validate
+                var uri = GeneralUtil.ValidateUri(toolValues[2]);
+                if (uri == null)
+                {
+                    await ReplyAsync($"`{toolValues[2]}` is not a valid URL.");
+                    return;
+                }
+                uri = GeneralUtil.ValidateUri(toolValues[3]);
+                if (uri == null)
+                {
+                    await ReplyAsync($"`{toolValues[3]}` is not a valid URL.");
+                    return;
+                }
+
+                var colorSplit = toolValues[4].Split(" ");
+                if (colorSplit.Length != 3)
+                {
+                    await ReplyAsync($"{toolValues[4]} is not a valid color format. Format as `R G B` Ex: `128 50 20`");
+                    return;
+                }
+
+                foreach (var s in colorSplit)
+                {
+                    int i;
+                    var result = int.TryParse(s, out i);
+
+                    if (!result || i < 0 || i > 255)
+                    {
+                        await ReplyAsync($"`{s}` in color is not an integer between 0 and 255.");
+                        return;
+                    }
+                }
+
+                if (DatabaseUtil.AddTool(new Tool
+                {
+                    Command = toolValues[0],
+                    AuthorName = toolValues[1],
+                    Url = toolValues[2],
+                    ThumbnailUrl = toolValues[3],
+                    Color = toolValues[4],
+                    Description = toolValues[5]
+                }))
+                {
+                    await ReplyAsync("Tool added!");
+                    //Reload the tools since we have changed something.
+                    _toolsService.LoadTools();
+                }
+                else
+                {
+                    await ReplyAsync("Failed adding tool. A tool with that command may already exist.");
+                }
+
+            }
+            else
+            {
+                await ReplyAsync("Unknown parameters. Check `>help mt`");
             }
         }
     }

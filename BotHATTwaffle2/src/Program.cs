@@ -53,6 +53,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<RconService>()
                 .AddSingleton<SrcdsLogService>()
                 .AddSingleton<VoiceChannelHandler>()
+                .AddSingleton<ToolsService>()
                 .AddSingleton<IHelpService, HelpService>()
                 .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(10)))
                 .BuildServiceProvider();
@@ -65,6 +66,7 @@ namespace BotHATTwaffle2
             _services.GetRequiredService<UserHandler>();
             _services.GetRequiredService<VoiceChannelHandler>();
             _services.GetRequiredService<SrcdsLogService>();
+            _services.GetRequiredService<ToolsService>();
 
             //Google APIs
             _services.GetRequiredService<GoogleCalendar>();
