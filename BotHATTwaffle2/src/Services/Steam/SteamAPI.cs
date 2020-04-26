@@ -237,7 +237,18 @@ namespace BotHATTwaffle2.Services.Steam
                     // Save our overview files into the Overviews folder
                     var savePath = string.Concat(validatedSavePath, name);
 
-                    File.WriteAllBytes(savePath, ret); // Write byte array to file
+                    for (int i = 0; i < 4; i++)
+                    {
+                        try
+                        {
+                            File.WriteAllBytes(savePath, ret); // Write byte array to file
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            await Task.Delay(5000);
+                        }
+                    }
                 }
             }
 

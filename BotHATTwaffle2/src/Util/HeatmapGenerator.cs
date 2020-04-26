@@ -66,7 +66,7 @@ namespace BotHATTwaffle2.Util
         /// <param name="masterList">2D list where the top list represents a map, and the bottom list contains
         ///  full paths to each file to be parsed</param>
         /// <returns>List of text file lists the heat map generator will use</returns>
-        public static List<FileInfo> CreateListFiles(List<List<List<FaceItGameInfo>>> masterList)
+        public static async Task<List<FileInfo>> CreateListFiles(List<List<List<FaceItGameInfo>>> masterList)
         {
             //Create the dir, or delete the old files if needed.
             Directory.CreateDirectory(listsDir);
@@ -95,14 +95,19 @@ namespace BotHATTwaffle2.Util
                         continue;
 
                     string outputFile = $"{listsDir}\\{map[0].Tag.TagName}_{map[0].GetMapName()}.txt";
-                    //Get the full json path for each map, and place it in the tag folder
-                    try
+
+                    for (int i = 0; i < 4; i++)
                     {
-                        File.WriteAllLines(outputFile, map.Select(x => x.GetRealJsonLocation().FullName));
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
+                        //Get the full json path for each map, and place it in the tag folder
+                        try
+                        {
+                            File.WriteAllLines(outputFile, map.Select(x => x.GetRealJsonLocation().FullName));
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            await Task.Delay(5000);
+                        }
                     }
 
                     listFiles.Add(new FileInfo(outputFile));

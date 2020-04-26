@@ -510,7 +510,18 @@ namespace BotHATTwaffle2.Commands
 
                     //Send the text file before the interactive embed
                     Directory.CreateDirectory("Mutes");
-                    File.WriteAllText($"Mutes\\AllMutes_{user.Id}.txt", fullListing);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        try
+                        {
+                            File.WriteAllText($"Mutes\\AllMutes_{user.Id}.txt", fullListing);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            await Task.Delay(5000);
+                        }
+                    }
                     await Context.Channel.SendFileAsync($"Mutes\\AllMutes_{user.Id}.txt");
 
                     //Paged reply

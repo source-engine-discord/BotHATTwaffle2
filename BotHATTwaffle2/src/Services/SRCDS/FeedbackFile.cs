@@ -49,19 +49,31 @@ namespace BotHATTwaffle2.Services.SRCDS
         {
             string message =
                 $"{DateTime.Now} - {genericCommand.Player.Name} ({genericCommand.Player.Team}): {genericCommand.Message}";
-            if (!File.Exists(FileName))
-                // Create a file to write to.
-                using (var sw = File.CreateText(FileName))
+
+            for (int i = 0; i < 4; i++)
+            {
+                try
                 {
-                    sw.WriteLine(message);
+                    if (!File.Exists(FileName))
+                        // Create a file to write to.
+                        using (var sw = File.CreateText(FileName))
+                        {
+                            sw.WriteLine(message);
+                        }
+                    else
+                        // This text is always added, making the file longer over time
+                        // if it is not deleted.
+                        using (var sw = File.AppendText(FileName))
+                        {
+                            sw.WriteLine(message);
+                        }
                 }
-            else
-                // This text is always added, making the file longer over time
-                // if it is not deleted.
-                using (var sw = File.AppendText(FileName))
+                catch (Exception e)
                 {
-                    sw.WriteLine(message);
+                    Console.WriteLine(e);
+                    await Task.Delay(5000);
                 }
+            }
 
             await _rconService.RconCommand(Server.ServerId, $"say Feedback from {genericCommand.Player.Name} captured!",
                 false);

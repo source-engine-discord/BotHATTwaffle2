@@ -323,7 +323,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                 hubMapGameList.Add(sortedMatchesByHubAndMap);
             }
 
-            var ListFiles = HeatmapGenerator.CreateListFiles(hubMapGameList);
+            var ListFiles = await HeatmapGenerator.CreateListFiles(hubMapGameList);
 
             var generatedFiles = new List<List<FileInfo>>();
             //List of tasks that we'll use to spawn multiple parsers.
@@ -554,10 +554,21 @@ namespace BotHATTwaffle2.Services.FaceIt
                     if (radarFiles != null)
                         foreach (var radarFile in radarFiles)
                         {
-                            if (File.Exists($"{localRadarDir}\\{radarFile.Name}"))
-                                File.Delete($"{localRadarDir}\\{radarFile.Name}");
+                            for (int i = 0; i < 4; i++)
+                            {
+                                try
+                                {
+                                    if (File.Exists($"{localRadarDir}\\{radarFile.Name}"))
+                                        File.Delete($"{localRadarDir}\\{radarFile.Name}");
 
-                            File.Move(radarFile.FullName, $"{localRadarDir}\\{radarFile.Name}");
+                                    File.Move(radarFile.FullName, $"{localRadarDir}\\{radarFile.Name}");
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine(e);
+                                    await Task.Delay(5000);
+                                }
+                            }
 
                             //Add to list of dict to upload
                             _uploadDictionary.Add(new FileInfo($"{localRadarDir}\\{radarFile.Name}"), remoteDirectory);
