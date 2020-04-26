@@ -185,10 +185,10 @@ namespace BotHATTwaffle2.Services.FaceIt
             await HandleHeatmapGeneration();
 
             //Send the files to the uploader
-            //_uploadSuccessCount = await DemoParser.UploadFaceitDemosAndRadars(_uploadDictionary);
+            _uploadSuccessCount = await DemoParser.UploadFaceitDemosAndRadars(_uploadDictionary);
 
             //Delete the old .dem files, we don't need them anymore
-            //DeleteOldFiles();
+            DeleteOldFiles();
 
             //Update the files on the website
             await UpdateWebsiteFiles();

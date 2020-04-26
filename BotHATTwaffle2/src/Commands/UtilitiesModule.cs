@@ -20,11 +20,13 @@ namespace BotHATTwaffle2.Commands
     {
         private readonly DataService _dataService;
         private readonly LogHandler _log;
+        private readonly ToolsService _toolsService;
 
-        public UtilitiesModule(LogHandler log, DataService dataService)
+        public UtilitiesModule(LogHandler log, DataService dataService, ToolsService toolsService)
         {
             _log = log;
             _dataService = dataService;
+            _toolsService = toolsService;
         }
 
         /// <summary>
@@ -378,6 +380,39 @@ namespace BotHATTwaffle2.Commands
                     .WithAuthor($"No link found for {target}!")
                     .WithColor(165, 55, 55).Build());
             }
+        }
+
+        [Command("Tools")]
+        [Summary("Lists all dev tools in our database")]
+        public async Task ToolsAsync()
+        {
+            string description = "";
+            
+            foreach (var tool in _toolsService.GetTools())
+            {
+                string shortDesc = tool.Description;
+                if (shortDesc.Length > 110)
+                    shortDesc = shortDesc.Substring(0, 100) + "...";
+
+                description += $"{tool.AuthorName} `>{tool.Command}`\n*{shortDesc}*\n\n";
+            }
+
+            //If the description gets too long, just remove the descriptions.
+            if (description.Length > 2000)
+            {
+                description = "";
+                foreach (var tool in _toolsService.GetTools())
+                {
+                    description += $"{tool.AuthorName} `>{tool.Command}`\n\n";
+                }
+            }
+
+            var embed = new EmbedBuilder()
+                .WithAuthor("List of Tools:")
+                .WithDescription(description.Trim())
+                .WithColor(55, 55, 165);
+
+            await ReplyAsync(embed: embed.Build());
         }
 
         [Command("Convert")]

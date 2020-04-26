@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
 using BotHATTwaffle2.TypeReader;
@@ -21,13 +22,14 @@ namespace BotHATTwaffle2.Handlers
         private readonly LogHandler _log;
         private readonly char _prefix;
         private readonly IServiceProvider _service;
+        private readonly ToolsService _toolsService;
 
         public CommandHandler(
             DiscordSocketClient client,
             CommandService commands,
             IServiceProvider service,
             DataService data,
-            LogHandler log)
+            LogHandler log, ToolsService toolsService)
         {
             Console.WriteLine("Setting up CommandHandler...");
             _commands = commands;
@@ -35,7 +37,9 @@ namespace BotHATTwaffle2.Handlers
             _service = service;
             _dataService = data;
             _log = log;
+            _toolsService = toolsService;
             _prefix = _dataService.RSettings.ProgramSettings.CommandPrefix[0];
+
         }
 
         /// <summary>
@@ -76,12 +80,6 @@ namespace BotHATTwaffle2.Handlers
             // Ignore users who are inside interactive sessions.
             if (_dataService.IgnoreListenList.Contains(message.Author.Id))
                 return;
-
-//            if (message.Attachments.Count != 0 && message.Attachments.FirstOrDefault().Filename.Equals("message.txt"))
-//            {
-//                var attachment = message.Attachments.FirstOrDefault();
-//                Console.WriteLine();
-//            }
 
             // Create a number to track where the prefix ends and the command begins.
             var argPos = 0;
@@ -124,7 +122,7 @@ namespace BotHATTwaffle2.Handlers
             ICommandContext context,
             IResult result)
         {
-            if (result.Error is null || result.Error == CommandError.UnknownCommand)
+            if (result.Error is null)
             {
                 _dataService.CommandCount++;
                 return; // Ignores successful executions and unknown commands.
@@ -139,6 +137,12 @@ namespace BotHATTwaffle2.Handlers
 
             switch (result.Error)
             {
+                case CommandError.UnknownCommand:
+                    //Let's check if the requested command was "tools" command.
+                    var tool = _toolsService.GetTool(context.Message.Content.Substring(1));
+                    if (tool != null)
+                        await HandleTools(context, tool);
+                    return;
                 case CommandError.BadArgCount:
                     var determiner = result.ErrorReason == "The input text has too many parameters." ? "many" : "few";
                     var commandName = info.IsSpecified ? info.Value.Name : "";
@@ -186,6 +190,26 @@ namespace BotHATTwaffle2.Handlers
             }
 
             await _log.LogMessage(logMessage, alert: alert);
+        }
+
+        private async Task HandleTools(ICommandContext context, Tool tool)
+        {
+            var embed = new EmbedBuilder
+            {
+                Author = new EmbedAuthorBuilder
+                {
+                    Name = tool.AuthorName,
+                    IconUrl = _dataService.Guild.IconUrl,
+                    Url = tool.Url
+                },
+                Title = "Click Here",
+                Url = tool.Url,
+                ThumbnailUrl = tool.ThumbnailUrl,
+                Color = tool.GetColor(),
+                Description = tool.Description
+            };
+
+            await context.Message.Channel.SendMessageAsync(embed: embed.Build());
         }
 
 
