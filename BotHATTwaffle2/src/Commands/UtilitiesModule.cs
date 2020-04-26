@@ -390,21 +390,7 @@ namespace BotHATTwaffle2.Commands
             
             foreach (var tool in _toolsService.GetTools())
             {
-                string shortDesc = tool.Description;
-                if (shortDesc.Length > 110)
-                    shortDesc = shortDesc.Substring(0, 100) + "...";
-
-                description += $"{tool.AuthorName} `>{tool.Command}`\n*{shortDesc}*\n\n";
-            }
-
-            //If the description gets too long, just remove the descriptions.
-            if (description.Length > 2000)
-            {
-                description = "";
-                foreach (var tool in _toolsService.GetTools())
-                {
-                    description += $"{tool.AuthorName} `>{tool.Command}`\n\n";
-                }
+                description += $"{tool.AuthorName} `>{tool.Command}`\n";
             }
 
             var embed = new EmbedBuilder()
