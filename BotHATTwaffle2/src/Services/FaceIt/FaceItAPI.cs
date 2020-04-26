@@ -385,12 +385,10 @@ namespace BotHATTwaffle2.Services.FaceIt
             //Call the combiner and list URLs but only once for each distinct tag.
             foreach (var tag in uniqueCombineCalls.Distinct())
             {
-                var tagSub = tag.Substring(0, tag.IndexOf("_", StringComparison.Ordinal));
-
-                combineResult += $"Combine URL for `{tagSub}`: `" +
-                                 web.DownloadString(combineUrl + tagSub).Trim() + "`";
-                combineResult += $"\nlistCreator URL for `{tagSub}`: `" +
-                                 web.DownloadString(listCreatorUrl + tagSub).Trim() + "`\n\n";
+                combineResult += $"Combine URL for `{tag}`: `" +
+                                 web.DownloadString(combineUrl + tag).Trim() + "`";
+                combineResult += $"\nlistCreator URL for `{tag}`: `" +
+                                 web.DownloadString(listCreatorUrl + tag).Trim() + "`\n\n";
             }
 
             await _log.LogMessage("Demo Combiner Results:\n" + combineResult.Trim(), color: LOG_COLOR);
