@@ -102,6 +102,7 @@ namespace BotHATTwaffle2.Util
                         try
                         {
                             File.WriteAllLines(outputFile, map.Select(x => x.GetRealJsonLocation().FullName));
+                            break;
                         }
                         catch (Exception e)
                         {

@@ -242,6 +242,7 @@ namespace BotHATTwaffle2.Services.Steam
                         try
                         {
                             File.WriteAllBytes(savePath, ret); // Write byte array to file
+                            break;
                         }
                         catch (Exception e)
                         {

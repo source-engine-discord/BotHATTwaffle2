@@ -135,8 +135,8 @@ namespace BotHATTwaffle2.Services.FaceIt
             }
 
             return $"Start Time: `{_runStartTime}` | Ran for `{DateTime.Now.Subtract(_runStartTime).ToString()}`\n" +
-                   $"Total Matches: {_gameInfo.Count}\n" +
-                   $"Total New Matches (Not Previously Seen): {_gameInfo.Count(x => !x.Skip)}\n" +
+                   $"Total Matches: `{_gameInfo.Count}`\n" +
+                   $"Total New Matches (Not Previously Seen): `{_gameInfo.Count(x => !x.Skip)}`\n" +
                    $"Demos Downloaded: `{_gameInfo.Count(x => x.DownloadSuccess && !x.Skip)}`\n" +
                    $"Demos Unzipped: `{_gameInfo.Count(x => x.UnzipSuccess && !x.Skip)}`\n" +
                    $"Failed Downloads: `{_gameInfo.Count(x => !x.DownloadSuccess && !x.Skip)}`\n" +
@@ -323,12 +323,20 @@ namespace BotHATTwaffle2.Services.FaceIt
                 hubMapGameList.Add(sortedMatchesByHubAndMap);
             }
 
-            var ListFiles = await HeatmapGenerator.CreateListFiles(hubMapGameList);
+            var listFiles = await HeatmapGenerator.CreateListFiles(hubMapGameList);
+
+            string lists = "";
+            foreach (var listFile in listFiles)
+            {
+                lists += $"`{listFile.FullName}` added to the heat map generation list!\n";
+            }
+
+            await _log.LogMessage($"Generating heatmaps for the following lists:\n{lists}");
 
             var generatedFiles = new List<List<FileInfo>>();
             //List of tasks that we'll use to spawn multiple parsers.
             var heatmapTasks = new List<Task<List<FileInfo>>>();
-            foreach (var listFile in ListFiles)
+            foreach (var listFile in listFiles)
             {
                 string seasonTag = listFile.Name.Substring(0, listFile.Name.IndexOf('_'));
                 string radarLocation = _dataService.RSettings.ProgramSettings.FaceItDemoPath + "\\Radars\\" + seasonTag;
@@ -560,6 +568,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                                         File.Delete($"{localRadarDir}\\{radarFile.Name}");
 
                                     File.Move(radarFile.FullName, $"{localRadarDir}\\{radarFile.Name}");
+
+                                    break;
                                 }
                                 catch (Exception e)
                                 {

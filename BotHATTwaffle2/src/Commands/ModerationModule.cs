@@ -515,6 +515,7 @@ namespace BotHATTwaffle2.Commands
                         try
                         {
                             File.WriteAllText($"Mutes\\AllMutes_{user.Id}.txt", fullListing);
+                            break;
                         }
                         catch (Exception e)
                         {

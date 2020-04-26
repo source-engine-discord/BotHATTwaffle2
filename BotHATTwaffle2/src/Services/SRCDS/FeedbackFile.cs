@@ -67,6 +67,8 @@ namespace BotHATTwaffle2.Services.SRCDS
                         {
                             sw.WriteLine(message);
                         }
+
+                    break;
                 }
                 catch (Exception e)
                 {
