@@ -328,7 +328,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             string lists = "";
             foreach (var listFile in listFiles)
             {
-                lists += $"`{listFile.FullName}` added to the heat map generation list!\n";
+                lists += $"`{listFile.Name}`\n";
             }
 
             await _log.LogMessage($"Generating heatmaps for the following lists:\n{lists}");
