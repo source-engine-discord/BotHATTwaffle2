@@ -359,6 +359,10 @@ namespace BotHATTwaffle2.Services.FaceIt
 
             foreach (var tag in _siteUpdateCalls)
             {
+                //Don't do anything with the unknowns
+                if (tag.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
                 _siteUpdateResponses.Add($"{tag}: `{reply}`");
 
