@@ -228,7 +228,19 @@ namespace BotHATTwaffle2.Services.Calendar
                     numOfPlaytests[numDaysSeparate]++;
                 }
 
-                image.Save("renderedCalendar.png");
+                //Loop and retry a few times for image creation.
+                for (int i = 0; i < 4; i++)
+                {
+                    try
+                    {
+                        image.Save("renderedCalendar.png");
+                        return;
+                    }
+                    catch
+                    {
+                        await Task.Delay(3000);
+                    }
+                }
             }
         }
     }
