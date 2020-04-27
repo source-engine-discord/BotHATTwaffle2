@@ -360,7 +360,7 @@ namespace BotHATTwaffle2.Services.FaceIt
             foreach (var tag in _siteUpdateCalls)
             {
                 //Don't do anything with the unknowns
-                if (tag.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+                if (tag.Contains("unknown", StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 var reply = await web.DownloadStringTaskAsync(UPDATE_BASE_URL + tag);
@@ -537,6 +537,12 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                     var wsId = DemoParser.GetWorkshopIdFromJasonFile(targetFile);
 
+                    if (wsId != null)
+                    {
+                        await _log.LogMessage($"Failed to get workshop ID for `{game.GetGameUid()}` Skipping radar for this match.");
+                        goto addFilesToDict;
+                    }
+
                     var steamApi = new SteamAPI(_dataService, _log);
 
                     //Handle radar files
@@ -573,7 +579,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     if (_dataService.RSettings.ProgramSettings.Debug)
                         await _log.LogMessage($"Skipping radar files for {targetFile}", false, color: LOG_COLOR);
                 }
-
+                addFilesToDict:
                 //Add the tag to be called later
                 if (!_siteUpdateCalls.Contains(remoteDirectory))
                     _siteUpdateCalls.Add(remoteDirectory);

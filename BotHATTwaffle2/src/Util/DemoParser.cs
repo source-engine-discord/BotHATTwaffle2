@@ -41,11 +41,19 @@ namespace BotHATTwaffle2.Util
         /// <returns></returns>
         public static string GetWorkshopIdFromJasonFile(FileInfo jasonFile)
         {
-            using (var reader = new StreamReader(jasonFile.FullName))
+            try
             {
-                var jason = reader.ReadToEnd();
-                var jasonObject = (JObject) JsonConvert.DeserializeObject(jason);
-                return jasonObject["mapInfo"]["WorkshopID"].Value<string>();
+                using (var reader = new StreamReader(jasonFile.FullName))
+                {
+                    var jason = reader.ReadToEnd();
+                    var jasonObject = (JObject) JsonConvert.DeserializeObject(jason);
+                    return jasonObject["mapInfo"]["WorkshopID"].Value<string>();
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage($"Failed getting workshop ID from a file.\n{e}");
+                return null;
             }
         }
 
