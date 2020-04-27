@@ -96,13 +96,27 @@ namespace BotHATTwaffle2.Util
 
                     string outputFile = $"{listsDir}\\{map[0].Tag.TagName}_{map[0].GetMapName()}.txt";
 
-                    for (int i = 0; i < 4; i++)
+                    var lines = new List<string>();
+                    foreach (var m in map)
                     {
                         //Get the full json path for each map, and place it in the tag folder
                         try
                         {
+                            lines.Add(m.GetRealJsonLocation().FullName);
+                        }
+                        catch (Exception e)
+                        {
+                            await _log.LogMessage($"Unable to GetRealJsonLocation for Game UID: `{m.GetGameUid()}`\n{e}");
+                        }
+                    }
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        
+                        try
+                        {
                             await _log.LogMessage($"Attempting file write for {outputFile}", false);
-                            File.WriteAllLines(outputFile, map.Select(x => x.GetRealJsonLocation().FullName));
+                            File.WriteAllLines(outputFile, lines);
                             break;
                         }
                         catch (Exception e)
