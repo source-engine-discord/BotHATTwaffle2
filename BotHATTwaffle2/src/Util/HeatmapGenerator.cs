@@ -99,6 +99,10 @@ namespace BotHATTwaffle2.Util
                     var lines = new List<string>();
                     foreach (var m in map)
                     {
+                        //Ignored skipped matches
+                        if (m.Skip)
+                            continue;
+
                         //Get the full json path for each map, and place it in the tag folder
                         try
                         {

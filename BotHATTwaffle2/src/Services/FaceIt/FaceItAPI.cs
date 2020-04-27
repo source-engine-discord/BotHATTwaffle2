@@ -489,9 +489,6 @@ namespace BotHATTwaffle2.Services.FaceIt
                 //Get the json file to be sent to the server
                 var jsonDir = Path.GetDirectoryName(game.GetPathLocalJson());
 
-                Console.WriteLine($"\nGetting JSON File for {game.GetGameUid()}\n" +
-                                  $"Looking inside `{jsonDir}` for `{game.GetGameUid()}`\n");
-
                 FileInfo targetFile;
                 try
                 {
