@@ -101,6 +101,7 @@ namespace BotHATTwaffle2.Util
                         //Get the full json path for each map, and place it in the tag folder
                         try
                         {
+                            await _log.LogMessage($"Attempting file write for {outputFile}", false);
                             File.WriteAllLines(outputFile, map.Select(x => x.GetRealJsonLocation().FullName));
                             break;
                         }
