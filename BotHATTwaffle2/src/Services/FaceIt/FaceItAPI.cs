@@ -457,11 +457,6 @@ namespace BotHATTwaffle2.Services.FaceIt
                 foreach (var game in _gameInfo)
                 {
                     SetHubTagOnGame(game);
-
-
-                    //TODO: REMOVE AFTER TESTING
-                    game.SetDownloadSuccess(true);
-                    game.SetUnzipSuccess(true);
                 }
             }
         }
@@ -498,9 +493,8 @@ namespace BotHATTwaffle2.Services.FaceIt
                 {
                     targetFile = new FileInfo(
                         Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid())
-                                                                        && !x.Contains("playerpositions")));
-                    Console.WriteLine(targetFile.FullName);
-
+                                                                        && !x.Contains("playerpositions", StringComparison.OrdinalIgnoreCase)
+                                                                        && !x.Contains("conflicted", StringComparison.OrdinalIgnoreCase)));
                     game.SetRealJsonLocation(targetFile);
                 }
                 catch (Exception e)
