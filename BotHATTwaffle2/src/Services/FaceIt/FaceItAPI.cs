@@ -488,13 +488,17 @@ namespace BotHATTwaffle2.Services.FaceIt
             {
                 //Get the json file to be sent to the server
                 var jsonDir = Path.GetDirectoryName(game.GetPathLocalJson());
+
+                Console.WriteLine($"\nGetting JSON File for {game.GetGameUid()}\n" +
+                                  $"Looking inside `{jsonDir}` for `{game.GetGameUid()}`\n");
+
                 FileInfo targetFile;
                 try
                 {
                     targetFile = new FileInfo(
                         Directory.GetFiles(jsonDir).FirstOrDefault(x => x.Contains(game.GetGameUid())
-                                                                        && !x.Contains("playerpositions", StringComparison.OrdinalIgnoreCase)
-                                                                        && !x.Contains("conflicted", StringComparison.OrdinalIgnoreCase)));
+                               && !x.Contains("playerpositions", StringComparison.OrdinalIgnoreCase)));
+
                     game.SetRealJsonLocation(targetFile);
                 }
                 catch (Exception e)
