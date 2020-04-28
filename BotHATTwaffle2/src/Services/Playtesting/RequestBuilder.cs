@@ -50,7 +50,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             "Example: `111939018500890624, 560667510580576266`",
             "Please provide the imgur album containing your level images.\n" +
             "Example: `https://imgur.com/a/2wJaI`",
-            "Please provide the workshop URL for your level.\n" +
+            "Please provide the workshop URL for your level. **The level must be approved and public on Steam before submitting.**\n" +
             "Example: `https://steamcommunity.com/sharedfiles/filedetails/?id=267340686`",
             "Please type `Casual` or `Competitive` for the type of test.\n" +
             "Example: `Casual`",
@@ -410,12 +410,19 @@ namespace BotHATTwaffle2.Services.Playtesting
                 string mentions = null;
                 _testRequest.CreatorsDiscord.ForEach(x => mentions += $"{_dataService.GetSocketGuildUser(x).Mention} ");
 
-                await mentionChannel.SendMessageAsync($"{mentions} has submitted a playtest request!",
-                    embed:
-                    (await _workshop.HandleWorkshopEmbeds(_context.Message,
-                        $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
-                        _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL)))
-                    .Build());
+                var embed = await _workshop.HandleWorkshopEmbeds(_context.Message,
+                    $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
+                    _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
+
+                if(embed != null)
+                {
+                    await mentionChannel.SendMessageAsync($"{mentions} has submitted a playtest request!",
+                        embed: embed.Build());
+                }
+                else
+                {
+
+                }
 
                 await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest}", color: LOG_COLOR);
             }

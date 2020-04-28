@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
@@ -52,14 +53,23 @@ namespace BotHATTwaffle2.Services.Steam
                 workshopLink =
                     $"https://steamcommunity.com/sharedfiles/filedetails/?id={workshopJsonItem.response.publishedfiledetails[0].publishedfileid}";
 
+            EmbedBuilder workshopItemEmbed;
             // Finally we can build the embed after too many HTTP requests
-            var workshopItemEmbed = new EmbedBuilder()
-                .WithAuthor($"{workshopJsonItem.response.publishedfiledetails[0].title}",
-                    workshopJsonAuthor.response.players[0].avatar, workshopLink)
-                .WithTitle($"Creator: {workshopJsonAuthor.response.players[0].personaname}")
-                .WithUrl(workshopJsonAuthor.response.players[0].profileurl)
-                .WithImageUrl(workshopJsonItem.response.publishedfiledetails[0].preview_url)
-                .WithColor(new Color(71, 126, 159));
+            try
+            {
+                workshopItemEmbed = new EmbedBuilder()
+                    .WithAuthor($"{workshopJsonItem.response.publishedfiledetails[0].title}",
+                        workshopJsonAuthor.response.players[0].avatar, workshopLink)
+                    .WithTitle($"Creator: {workshopJsonAuthor.response.players[0].personaname}")
+                    .WithUrl(workshopJsonAuthor.response.players[0].profileurl)
+                    .WithImageUrl(workshopJsonItem.response.publishedfiledetails[0].preview_url)
+                    .WithColor(new Color(71, 126, 159));
+            }
+            catch
+            {
+                //We end up here if we get a response from an unlisted object.
+                return null;
+            }
 
 
             //Try to get games, if null don't embed a game field
