@@ -555,20 +555,17 @@ namespace BotHATTwaffle2.Commands
                 embed = await new Workshop(_dataService, _log).HandleWorkshopEmbeds(Context.Message,
                     inputId: result[1]);
 
+                string message = $"{mention} {Context.User.Mention} " +
+                                 $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
+                                 "\nType `>roleme Community Tester` to get this role.";
+
                 if (embed != null)
                 {
-                    await testingChannel.SendMessageAsync($"{mention} {Context.User.Mention} " +
-                                                          $"needs players to help test `{result[2]}`\nYou can join using: `connect {server.Address}; password {_dataService.RSettings.General.CasualPassword}`" +
-                                                          "\nType `>roleme Community Tester` to get this role.",
-                        embed: embed.Build());
+                    await testingChannel.SendMessageAsync(message,embed: embed.Build());
                 }
-                else //Workshop builder returned bad / no data. Don't send an embed.
+                else //No embed cause the workshop level is likely private
                 {
-                    await ReplyAsync("I attempted to get the running level from the server, but the response did not" +
-                                     " make any sense. I have not announced for your level. Please try again in a moment.");
-
-                    await _dataService.CommunityTesterRole.ModifyAsync(x => { x.Mentionable = false; });
-                    return;
+                    await testingChannel.SendMessageAsync(message);
                 }
             }
             else
