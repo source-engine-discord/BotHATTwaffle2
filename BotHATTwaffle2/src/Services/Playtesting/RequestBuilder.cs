@@ -157,6 +157,14 @@ namespace BotHATTwaffle2.Services.Playtesting
                 //User's input
                 _userMessage = await _interactive.NextMessageAsync(_context);
 
+                //Exiting
+                if (_userMessage == null ||
+                    _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                {
+                    await CancelRequest();
+                    return;
+                }
+
                 //We want to schedule the event
                 if (_userMessage.Content.Equals("schedule", StringComparison.OrdinalIgnoreCase))
                 {
@@ -190,14 +198,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                         await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
                     }
 
-                    return;
-                }
-
-                //Exiting
-                if (_userMessage == null ||
-                    _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
-                {
-                    await CancelRequest();
                     return;
                 }
 

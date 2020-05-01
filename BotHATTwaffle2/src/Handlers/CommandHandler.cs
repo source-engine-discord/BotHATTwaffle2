@@ -128,6 +128,10 @@ namespace BotHATTwaffle2.Handlers
                 return; // Ignores successful executions and unknown commands.
             }
 
+            //If we hit an exception, make sure to remove the user from the list of ignored.
+            if (_dataService.IgnoreListenList.Contains(context.User.Id))
+                _dataService.IgnoreListenList.Remove(context.User.Id);
+
             var alert = false;
             var logMessage =
                 $"Command: {context.Message}\n" +
