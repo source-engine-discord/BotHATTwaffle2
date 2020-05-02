@@ -537,7 +537,7 @@ namespace BotHATTwaffle2.Services.FaceIt
 
                     var wsId = DemoParser.GetWorkshopIdFromJasonFile(targetFile);
 
-                    if (wsId != null)
+                    if (wsId == null)
                     {
                         await _log.LogMessage($"Failed to get workshop ID for `{game.GetGameUid()}` Skipping radar for this match.");
                         goto addFilesToDict;
