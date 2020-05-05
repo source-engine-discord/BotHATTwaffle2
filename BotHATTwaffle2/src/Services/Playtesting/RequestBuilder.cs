@@ -313,6 +313,13 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await Display(
                     "Type the ID of the field you want to edit or type `Submit` to submit your playtest request.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
+                if (_userMessage == null ||
+                    _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                {
+                    await CancelRequest();
+                    return;
+                }
+
                 if (_userMessage.Content.Equals("submit", StringComparison.OrdinalIgnoreCase))
                 {
                     if (_testRequest.Preferredserver != "No preference" && !_testRequest.Game.Equals(
@@ -326,13 +333,6 @@ namespace BotHATTwaffle2.Services.Playtesting
                     {
                         break;
                     }
-                }
-
-                if (_userMessage == null ||
-                    _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
-                {
-                    await CancelRequest();
-                    return;
                 }
 
                 if (!isValid)
