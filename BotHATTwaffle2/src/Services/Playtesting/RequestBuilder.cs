@@ -48,7 +48,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             "To add yourself as the creator, mention yourself.\n" +
             "Please provide creators in a comma separated list.\n <https://support.discordapp.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->\n" +
             "Example: `111939018500890624, 560667510580576266`",
-            "Please provide the imgur album containing your level images.\n" +
+            "Please provide the imgur album containing your level images. **A radar image is required.**\n" +
             "Example: `https://imgur.com/a/2wJaI`",
             "Please provide the workshop URL for your level. **The level must be approved and public on Steam before submitting.**\n" +
             "Example: `https://steamcommunity.com/sharedfiles/filedetails/?id=267340686`",
