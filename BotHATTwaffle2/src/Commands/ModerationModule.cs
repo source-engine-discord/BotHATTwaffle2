@@ -876,7 +876,7 @@ namespace BotHATTwaffle2.Commands
             if (command.StartsWith("set", StringComparison.OrdinalIgnoreCase))
             {
                 //Set user's mode to Auto, which is really just removing a user from the dictionary
-                if (command.Substring(3).StartsWith("auto", StringComparison.OrdinalIgnoreCase))
+                if (command.Substring(3).Trim().StartsWith("auto", StringComparison.OrdinalIgnoreCase))
                 {
                     if (ServerDictionary.ContainsKey(Context.User.Id)) ServerDictionary.Remove(Context.User.Id);
                     await ReplyAsync(embed: new EmbedBuilder()
