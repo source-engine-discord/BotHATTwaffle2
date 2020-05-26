@@ -89,10 +89,9 @@ namespace BotHATTwaffle2.Handlers
                 $"any of the relevant channels you see. Just try to keep things on topic. Please spend a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
                 "\n\nAdditionally, you've been given a role called `CSGO Playtester` and `TF2 Playtester`. These roles are used to notify you when we have a playtest starting. You can remove yourself from the " +
                 "notifications by typing: `>playtester` in a DM with me, or in any channel. You can use `>pt csgo` and `>pt tf2` to remove just one of the roles." +
-                "\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!" +
                 "\n\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme`" +
-                " in a DM with me, or in any channel." +
-                "\n\nGLHF, and enjoy your stay.";
+                "\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!" +
+                " in a DM with me, or in any channel.";
 
             var embed = new EmbedBuilder()
                 .WithAuthor($"Welcome, {user.Username}, to the Source Engine Discord!", user.GetAvatarUrl())
