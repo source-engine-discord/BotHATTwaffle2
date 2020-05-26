@@ -76,7 +76,7 @@ namespace BotHATTwaffle2.Handlers
             {
                 await _log.LogMessage(
                     $"Attempted to send welcome message to `{user.Username}` `{user.Id}`, but failed. " +
-                    "They might have DMs of - I'll try in the BotChannel.");
+                    "They might have DMs off - I'll try in the BotChannel.");
 
                 await _dataService.BotChannel.SendMessageAsync(user.Mention, embed: WelcomeEmbed(user));
             }

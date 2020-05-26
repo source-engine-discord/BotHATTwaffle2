@@ -875,6 +875,18 @@ namespace BotHATTwaffle2.Commands
             //Set server mode
             if (command.StartsWith("set", StringComparison.OrdinalIgnoreCase))
             {
+                //Set user's mode to Auto, which is really just removing a user from the dictionary
+                if (command.Substring(3).StartsWith("auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (ServerDictionary.ContainsKey(Context.User.Id)) ServerDictionary.Remove(Context.User.Id);
+                    await ReplyAsync(embed: new EmbedBuilder()
+                        .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
+                        .WithDescription(
+                            "will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
+                        .WithColor(new Color(55, 165, 55)).Build());
+                    return;
+                }
+
                 var server = DatabaseUtil.GetTestServer(command.Substring(3).Trim());
 
                 if (server == null)
@@ -892,18 +904,6 @@ namespace BotHATTwaffle2.Commands
                 await ReplyAsync(embed: new EmbedBuilder()
                     .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
                     .WithDescription($"will be sent to `{ServerDictionary[Context.User.Id]}`")
-                    .WithColor(new Color(55, 165, 55)).Build());
-                return;
-            }
-
-            //Set user's mode to Auto, which is really just removing a user from the dictionary
-            if (command.StartsWith("auto", StringComparison.OrdinalIgnoreCase))
-            {
-                if (ServerDictionary.ContainsKey(Context.User.Id)) ServerDictionary.Remove(Context.User.Id);
-                await ReplyAsync(embed: new EmbedBuilder()
-                    .WithAuthor($"RCON commands sent by {Context.User}", _dataService.Guild.IconUrl)
-                    .WithDescription(
-                        "will be sent using `Auto mode`. Which is the active playtest server, if there is one.")
                     .WithColor(new Color(55, 165, 55)).Build());
                 return;
             }
