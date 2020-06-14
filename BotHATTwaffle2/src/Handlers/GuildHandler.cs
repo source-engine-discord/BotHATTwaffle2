@@ -15,6 +15,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly DataService _dataService;
         private readonly LogHandler _log;
         private readonly ScheduleHandler _schedule;
+        private bool started = false;
 
         public GuildHandler(DataService data, DiscordSocketClient client, LogHandler log, ScheduleHandler schedule)
         {
@@ -36,10 +37,12 @@ namespace BotHATTwaffle2.Handlers
             await _log.LogMessage($"Guild Available: {guild.Name}", false, color: LOG_COLOR);
             await _dataService.DeserializeConfig();
 
-            //Remove all jobs, just to make sure they are removed before they get re-added
-            _schedule.RemoveAllJobs();
-
-            _schedule.AddRequiredJobs();
+            //Only add required jobs one time.
+            if(!started)
+            {
+                _schedule.AddRequiredJobs();
+                started = true;
+            }
 
             await ResetTesterRoleMentions();
         }
@@ -86,8 +89,6 @@ namespace BotHATTwaffle2.Handlers
         private async Task GuildUnavailableEventHandler(SocketGuild guild)
         {
             await _log.LogMessage($"GUILD UNAVAILABLE: {guild.Name}", false, color: ConsoleColor.Red);
-
-            _schedule.RemoveAllJobs();
         }
 
         private Task ReadyEventHandler()

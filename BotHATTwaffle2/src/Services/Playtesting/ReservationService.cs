@@ -60,7 +60,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     userName = user.ToString();
                 }
 
-                await _dataService.CSGOTestingChannel.SendMessageAsync(mention, embed: BuildServerReleaseEmbed(userName,
+                await _dataService.BotChannel.SendMessageAsync(mention, embed: BuildServerReleaseEmbed(userName,
                     reservation,
                     "All server reservations have been cleared. This happens when a scheduled playtest starts soon."));
             }
@@ -100,7 +100,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <param name="userId">userId of server to release</param>
         /// <param name="reason">Reason for release</param>
         /// <returns>A prebuilt embed message containing the reason</returns>
-        public Embed ReleaseServer(ulong userId, string reason)
+        public Embed ReleaseServer(ulong userId, string reason, SocketTextChannel channel)
         {
             var reservation = DatabaseUtil.GetServerReservation(userId);
             var userName = "" + reservation.UserId;
@@ -123,19 +123,37 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (job != null)
                 JobManager.RemoveJob(job.Name);
 
-            //If there is feedback running on this server, remove it. Also delete the file.
-            var server = DatabaseUtil.GetTestServer(reservation.ServerId);
+            var hasServer = DatabaseUtil.GetTestServer(reservation.ServerId);
 
-            var fbf = _srcdsLogService.GetFeedbackFile(server);
-            if(fbf != null)
+            //Get their feedback file and send it, then delete it.
+            var fbf = _srcdsLogService.GetFeedbackFile(hasServer);
+
+            if (fbf != null)
             {
-                var filePath = fbf.FileName;
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
+                var file = fbf.FileName;
+                if (File.Exists(file))
+                {
+                    channel.SendFileAsync(file, "");
+
+                    _ = Task.Run(async () =>
+                    {
+                        //Give some time to send the file before deletion.
+                        await Task.Delay(5000);
+                        try
+                        {
+                            File.Delete(file);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                        }
+                    });
+                }
             }
 
-             _srcdsLogService.RemoveFeedbackFile(server);
-            
+            _srcdsLogService.RemoveFeedbackFile(hasServer);
+
+            //If there is feedback running on this server, remove it. Also delete the file.
             DatabaseUtil.RemoveServerReservation(userId);
             return embed;
         }

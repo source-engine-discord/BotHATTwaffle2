@@ -1020,8 +1020,9 @@ namespace BotHATTwaffle2.Commands
 
                         if (reservation != null)
                         {
-                            await ReplyAsync(embed: _reservationService.ReleaseServer(reservation.UserId,
-                                "A moderator has cleared your reservation."));
+                            await _dataService.BotChannel.SendMessageAsync($"{_dataService.GetSocketGuildUser(reservation.UserId).Mention}"
+                                ,embed: _reservationService.ReleaseServer(reservation.UserId,
+                                "A moderator has cleared your reservation.", _dataService.BotChannel));
 
                             await ReplyAsync(embed: new EmbedBuilder()
                                 .WithAuthor($"{DatabaseUtil.GetTestServer(command).Address} has been released.",

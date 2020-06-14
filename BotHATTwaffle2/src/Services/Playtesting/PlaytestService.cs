@@ -107,7 +107,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             string message = null)
         {
             var testEvent = _calendar.GetNextPlaytestEvent();
-            await testEvent.PlaytestcommandGenericAction(replyInContext, command, _rconService, message);
+            await testEvent.PlaytestCommandGenericAction(replyInContext, command, _rconService, message);
             return testEvent.PlaytestCommandInfo;
         }
 
@@ -350,7 +350,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        ///     WTF is this method name. God you suck.
+        ///     Stops asking the server for player counts. Also allows reservations again.
         /// </summary>
         /// <returns></returns>
         private void AllowReservationsStopCount()

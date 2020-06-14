@@ -60,11 +60,15 @@ namespace BotHATTwaffle2.Util
                 return null;
             }
 
+            string ftpAddress = server.Address;
+            if (ftpAddress.Contains(':'))
+                ftpAddress = ftpAddress.Substring(0, ftpAddress.IndexOf(':'));
+
             switch (server.FtpType.ToLower())
             {
                 case "ftps":
                 case "ftp":
-                    using (var client = new FtpClient(server.Address, server.FtpUser, server.FtpPassword))
+                    using (var client = new FtpClient(ftpAddress, server.FtpUser, server.FtpPassword))
                     {
                         if (server.FtpType == "ftps")
                         {
@@ -79,7 +83,7 @@ namespace BotHATTwaffle2.Util
                         }
                         catch (Exception e)
                         {
-                            await _log.LogMessage($"Failed to connect to FTP server. {server.Address}\n {e.Message}",
+                            await _log.LogMessage($"Failed to connect to FTP server. {ftpAddress}\n {e.Message}",
                                 alert: true, color: LOG_COLOR);
                             return null;
                         }
@@ -97,7 +101,7 @@ namespace BotHATTwaffle2.Util
                         catch (Exception e)
                         {
                             await _log.LogMessage(
-                                $"Failed to download file from playtest server. {server.Address}\n{e.Message}",
+                                $"Failed to download file from playtest server. {ftpAddress}\n{e.Message}",
                                 color: LOG_COLOR);
                         }
 
@@ -110,7 +114,7 @@ namespace BotHATTwaffle2.Util
 
                     break;
                 case "sftp":
-                    using (var client = new SftpClient(server.Address, server.FtpUser, server.FtpPassword))
+                    using (var client = new SftpClient(ftpAddress, server.FtpUser, server.FtpPassword))
                     {
                         try
                         {
@@ -118,7 +122,7 @@ namespace BotHATTwaffle2.Util
                         }
                         catch (Exception e)
                         {
-                            await _log.LogMessage($"Failed to connect to SFTP server. {server.Address}\n {e.Message}",
+                            await _log.LogMessage($"Failed to connect to SFTP server. {ftpAddress}\n {e.Message}",
                                 alert: true, color: LOG_COLOR);
                             return null;
                         }
@@ -142,7 +146,7 @@ namespace BotHATTwaffle2.Util
                         catch (Exception e)
                         {
                             await _log.LogMessage(
-                                $"Failed to download file from playtest server. {server.Address}\n{e.Message}",
+                                $"Failed to download file from playtest server. {ftpAddress}\n{e.Message}",
                                 color: LOG_COLOR);
                         }
 
@@ -156,7 +160,7 @@ namespace BotHATTwaffle2.Util
                     break;
                 default:
                     await _log.LogMessage(
-                        $"The FTP type on the server is incorrectly set. {server.Address} is using {server.FtpType}",
+                        $"The FTP type on the server is incorrectly set. {ftpAddress} is using {server.FtpType}",
                         alert: true, color: LOG_COLOR);
                     break;
             }

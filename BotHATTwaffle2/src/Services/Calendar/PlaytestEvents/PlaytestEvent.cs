@@ -187,6 +187,8 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             PlaytestCommandRunning = true;
 
+            _dataService.SetStartAlert(false);
+
             await _log.LogMessage("Running Playtest Pre Tasks!", color: LOG_COLOR);
 
             //Store test information for later use. Will be written to the DB.
@@ -326,7 +328,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             srcdsLogService.RemoveFeedbackFile(server);
         }
 
-        public async Task PlaytestcommandGenericAction(bool replyInContext, string command, RconService rconService,
+        public async Task PlaytestCommandGenericAction(bool replyInContext, string command, RconService rconService,
             string message = null)
         {
             if (!replyInContext)
@@ -456,7 +458,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Get rid of the old log file if one exists. Just scrap it.
             srcdsLogService.RemoveFeedbackFile(server);
 
-            //Make a feedback file.
+            //Make a feedback file
             var logResult = srcdsLogService.CreateFeedbackFile(server, GetFeedbackFileName());
 
             if (logResult)

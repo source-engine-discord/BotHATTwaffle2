@@ -51,12 +51,6 @@ namespace BotHATTwaffle2.Handlers
             JobManager.JobException += FluentJobException;
         }
 
-        public void RemoveAllJobs()
-        {
-            _ = _log.LogMessage("Removing all scheduled jobs", false, color: ConsoleColor.Red);
-            JobManager.RemoveAllJobs();
-        }
-
         /// <summary>
         ///     Adds required jobs on startup
         /// </summary>
@@ -175,22 +169,22 @@ namespace BotHATTwaffle2.Handlers
                 }
 
                 //Send welcome message right away, or wait?
-                if (DateTime.Now > reservation.StartTime.AddHours(2))
+                if (DateTime.Now > reservation.StartTime.AddHours(3))
                     //Timer expired, schedule now
-                    JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention}",
+                    JobManager.AddJob(async () => await _dataService.BotChannel.SendMessageAsync($"{mention}",
                             embed: _reservationService.ReleaseServer(reservation.UserId,
-                                "The reservation has expired.")),
+                                "The reservation has expired.", _dataService.BotChannel)),
                         s => s.WithName(
                                 $"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]")
                             .ToRunOnceIn(15).Seconds());
                 else
                     //Not passed, scheduled ahead
-                    JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync($"{mention}",
+                    JobManager.AddJob(async () => await _dataService.BotChannel.SendMessageAsync($"{mention}",
                             embed: _reservationService.ReleaseServer(reservation.UserId,
-                                "The reservation has expired.")),
+                                "The reservation has expired.", _dataService.BotChannel)),
                         s => s.WithName(
                                 $"[TSRelease_{GeneralUtil.GetServerCode(reservation.ServerId)}_{reservation.UserId}]")
-                            .ToRunOnceAt(reservation.StartTime.AddHours(2)));
+                            .ToRunOnceAt(reservation.StartTime.AddHours(3)));
             }
 
             DisplayScheduledJobs();

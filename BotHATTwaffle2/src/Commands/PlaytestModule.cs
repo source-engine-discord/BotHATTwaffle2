@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -446,12 +447,12 @@ namespace BotHATTwaffle2.Commands
 
             //Since we've inserted, get the new entry.
             server = DatabaseUtil.GetTestServerFromReservationUserId(Context.User.Id);
-
+            
             //Add the job to release the server
-            JobManager.AddJob(async () => await _dataService.CSGOTestingChannel.SendMessageAsync(
+            JobManager.AddJob(async () => await _dataService.BotChannel.SendMessageAsync(
                     $"{Context.User.Mention}",
-                    embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.")),
-                s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(2).Hours());
+                    embed: _reservationService.ReleaseServer(Context.User.Id, "The reservation has expired.", Context.Channel as SocketTextChannel)),
+                s => s.WithName($"[TSRelease_{formattedServer}_{Context.User.Id}]").ToRunOnceIn(3).Hours());
 
             var rconCommand = $"sv_password {_dataService.RSettings.General.CasualPassword}";
 
@@ -461,7 +462,7 @@ namespace BotHATTwaffle2.Commands
             _ = _rconService.RconCommand(server.Address, rconCommand);
 
             var embed = new EmbedBuilder()
-                .WithAuthor($"{server.Address} is reserved for 2 hours!",
+                .WithAuthor($"{server.Address} is reserved for 3 hours!",
                     Context.User.GetAvatarUrl())
                 .WithDescription("Use the commands below to run your community test!" +
                                  "\nIf you didn't include a workshop ID, change to your level using:" +
@@ -852,22 +853,8 @@ namespace BotHATTwaffle2.Commands
                 return;
             }
 
-            //Get their feedback file and send it, then delete it.
-            var fbf = _srcdsLogService.GetFeedbackFile(hasServer);
-
-            if (fbf != null)
-            {
-                var file = fbf.FileName;
-                if (File.Exists(file))
-                {
-                    await Context.Channel.SendFileAsync(file, "");
-                    File.Delete(file);
-                }
-            }
-
             await ReplyAsync(embed: _reservationService.ReleaseServer(Context.User.Id,
-                $"{Context.User} has released the " +
-                "server reservation manually."));
+                $"{Context.User} has released the server reservation manually.", Context.Channel as SocketTextChannel));
 
             await _log.LogMessage($"`{Context.User}` `{Context.User.Id}` has released `{hasServer.Address}` manually",
                 color: LOG_COLOR);
