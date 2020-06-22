@@ -282,6 +282,9 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
 
             PlaytestCommandRunning = true;
 
+            //Force the next alert to true
+            _dataService.SetStartAlert(true);
+
             await _log.LogMessage("Running Playtest Post Tasks!", color: LOG_COLOR);
             //No context to send these messages to - default them
             if (!replyInContext)

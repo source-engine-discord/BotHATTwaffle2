@@ -934,7 +934,7 @@ namespace BotHATTwaffle2.Commands
                     break;
 
                 case "comp":
-                    if (user.Roles.Any(x => x.Id == _dataService.CommunityTesterRole.Id))
+                    if (user.Roles.Any(x => x.Id == _dataService.CompetitiveTesterRole.Id))
                     {
                         await user.RemoveRoleAsync(_dataService.CompetitiveTesterRole);
                         compStatus = 0;
