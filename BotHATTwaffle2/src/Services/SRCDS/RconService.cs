@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Util;
 using CoreRCON;
+using Discord.Commands;
 
 namespace BotHATTwaffle2.Services.SRCDS
 {
@@ -93,6 +94,26 @@ namespace BotHATTwaffle2.Services.SRCDS
             var reply = "";
             RCON client = null;
             var reconnectCount = 0;
+
+            //Special case to slip the chat unicode colors into a "say" command
+            if (command.StartsWith("say ", StringComparison.OrdinalIgnoreCase))
+            {
+                /*Chop off the old "say" command and slip in our new one
+                There is a HEX CODE that Visual Studio won't display in the "say " code.
+                Copy and paste the below it into NP++ to see the hex codes
+                white
+                red
+                lightred
+                blue
+                orchid
+                gold
+                lightgreen
+                green
+                lime
+                grey
+                */
+                command = "say " + command.Substring(3).Trim();
+            }
 
             //start the task, so we can wait on it later with a timeout timer.
             var t = Task.Run(async () =>
