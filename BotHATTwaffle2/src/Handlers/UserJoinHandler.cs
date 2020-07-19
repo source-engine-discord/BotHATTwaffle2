@@ -34,7 +34,7 @@ namespace BotHATTwaffle2.Handlers
             message = message.Replace("[USER]", user.Mention)
                 .Replace("[WELCOME]", _dataService.WelcomeChannel.Mention);
 
-            await _dataService.GeneralChannel.SendMessageAsync(message);
+            await _dataService.BotChannel.SendMessageAsync(message);
 
             await _log.LogMessage($"USER JOINED {user}\nI will apply a roles at {DateTime.Now.AddMinutes(10)}." +
                                   " They will then have playtester and can talk." +
