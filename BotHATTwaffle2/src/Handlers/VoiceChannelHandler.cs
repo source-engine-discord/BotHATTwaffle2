@@ -11,22 +11,29 @@ namespace BotHATTwaffle2.Handlers
         private readonly DiscordSocketClient _client;
         private readonly DataService _dataService;
         private readonly PlaytestService _playtestService;
+        private readonly LogHandler _log;
 
-        public VoiceChannelHandler(DataService dataService, DiscordSocketClient client, PlaytestService playtestService)
+        public VoiceChannelHandler(DataService dataService, DiscordSocketClient client, PlaytestService playtestService,
+            LogHandler log)
         {
             Console.WriteLine("Setting up VoiceChannelHandler...");
             _dataService = dataService;
             _client = client;
             _playtestService = playtestService;
+            _log = log;
 
             _client.UserVoiceStateUpdated += UserVoiceStateUpdated;
         }
 
-        private Task UserVoiceStateUpdated(SocketUser user, SocketVoiceState lefState, SocketVoiceState joinedState)
+        private Task UserVoiceStateUpdated(SocketUser user, SocketVoiceState leftState, SocketVoiceState joinedState)
         {
             //If leftState and joinedState are the same, the event was fired from a modified user event.
-            if (lefState.VoiceChannel == joinedState.VoiceChannel)
+            if (leftState.VoiceChannel == joinedState.VoiceChannel)
                 return Task.CompletedTask;
+
+            _ = _log.LogMessage($"{user} - `{user.Id}`" +
+                                $"\nleftState: `{leftState}`" +
+                                $"\njoinedState: `{joinedState}`",console:false, color:ConsoleColor.Red);
 
             var guildUser = _dataService.GetSocketGuildUser(user.Id);
 

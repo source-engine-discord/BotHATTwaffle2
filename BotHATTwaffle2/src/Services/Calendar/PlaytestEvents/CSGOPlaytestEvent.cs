@@ -141,8 +141,17 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                         _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress,
                             "script ScriptPrintMessageCenterAll(\"Please join the level testing voice channel for feedback!\");",
                             false);
+                        
                         await Task.Delay(3000);
                     }
+                });
+
+                //Enable the no damage script, cause Thomas is a real one.
+                _ = Task.Run(async () =>
+                {
+                    //Short delay to ensure that mp_restart game already happened.
+                    await Task.Delay(5000);
+                    _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "script_execute nodamage.nut");
                 });
 
                 var demoPath = await DownloadHandler.DownloadPlaytestDemo(PlaytestCommandInfo);
