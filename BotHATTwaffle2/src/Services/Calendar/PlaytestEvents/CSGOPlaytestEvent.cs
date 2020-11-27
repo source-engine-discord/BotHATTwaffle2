@@ -151,7 +151,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 {
                     //Short delay to ensure that mp_restart game already happened.
                     await Task.Delay(5000);
-                    _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "script_execute nodamage.nut");
+                    _ = rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "script_execute nodamage");
                 });
 
                 var demoPath = await DownloadHandler.DownloadPlaytestDemo(PlaytestCommandInfo);
