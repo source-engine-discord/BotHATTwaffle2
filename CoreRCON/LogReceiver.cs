@@ -106,14 +106,14 @@ namespace CoreRCON
 				var result = await _udp.ReceiveAsync();
 
 				// If the packet did not come from an accepted source, throw it out
-				if (!_sources.Contains(result.RemoteEndPoint))
+				if (!_sources.Select(x => x.Address).Contains(result.RemoteEndPoint.Address))
                 {
-                    Console.WriteLine($"Packet from {result.RemoteEndPoint.Address} not in allowed list!");
+                    Console.WriteLine($"Packet from {result.RemoteEndPoint} not in allowed list!");
                     continue;
                 }
 
                 //Set the last server we got a packet on.
-                lastServer = result.RemoteEndPoint;
+                lastServer = _sources.FirstOrDefault(x => Equals(x.Address, result.RemoteEndPoint.Address));//result.RemoteEndPoint;
 
 				// Parse out the LogAddress packet
 				LogAddressPacket packet = LogAddressPacket.FromBytes(result.Buffer);
