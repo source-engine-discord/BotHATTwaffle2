@@ -329,7 +329,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             await Task.Delay(10000);
             await rconService.RconCommand(ServerLocation,
                 $"exec {_dataService.RSettings.General.PostgameConfig}; bot_stop 1");
-            await rconService.RconCommand(PlaytestCommandInfo.ServerAddress, "say No damage activated!; script_execute nodamage");
+            await rconService.RconCommand(ServerLocation, "say No damage activated!; script_execute nodamage");
 
             await TestingChannel.SendMessageAsync(embed: embed.Build());
         }
