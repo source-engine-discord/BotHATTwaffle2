@@ -459,7 +459,15 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
             else
             {
-                await _display.DeleteAsync();
+                try
+                {
+                    await _display.DeleteAsync();
+                }
+                catch
+                {
+                    // ignored
+                }
+
                 _display = await _dataService.CSGOTestingChannel.SendMessageAsync(embed: embed.Build());
             }
         }
