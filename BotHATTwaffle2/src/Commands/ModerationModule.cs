@@ -360,6 +360,10 @@ namespace BotHATTwaffle2.Commands
                 {
                     await user.AddRoleAsync(_dataService.MuteRole);
 
+                    //disconnect user from voice
+                    if(user.VoiceChannel != null)
+                        await user.ModifyAsync(x => x.Channel = null);
+
                     JobManager.AddJob(async () => await _dataService.UnmuteUser(user.Id), s => s
                         .WithName($"[UnmuteUser_{user.Id}]")
                         .ToRunOnceAt(DateTime.Now.AddMinutes(duration + oldMuteTime)));

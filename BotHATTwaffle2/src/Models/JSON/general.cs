@@ -22,6 +22,7 @@
         public string VoidChannel { get; set; }
         public string BotChannel { get; set; }
         public ulong LevelTestingVoice { get; set; }
+        public ulong AfkVoice { get; set; }
         public int FeedbackDuration { get; set; }
         public string AdminBotsChannel { get; set; }
     }
