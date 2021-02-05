@@ -30,7 +30,7 @@ namespace BotHATTwaffle2.Services
 
         public DataService(DiscordSocketClient client)
         {
-            StartTime = DateTime.Now;
+            StartTime = DateTime.Now.AddMinutes(-1);
             _client = client;
             // Some settings are needed before the client connects (e.g. token).
             ReadConfig();
