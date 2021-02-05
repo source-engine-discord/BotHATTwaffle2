@@ -158,7 +158,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
                 Description != null && ServerLocation != null)
             {
                 //Can we use the gallery images?
-                if (GalleryImages.Count > 1)
+                if (GalleryImages != null && GalleryImages.Count > 1)
                 {
                     CanUseGallery = true;
 
