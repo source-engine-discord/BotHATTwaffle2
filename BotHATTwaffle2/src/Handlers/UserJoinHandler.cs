@@ -36,8 +36,7 @@ namespace BotHATTwaffle2.Handlers
 
             await _dataService.BotChannel.SendMessageAsync(message);
 
-            await _log.LogMessage($"USER JOINED {user}\nI will apply a roles at {DateTime.Now.AddMinutes(10)}." +
-                                  " They will then have playtester and can talk." +
+            await _log.LogMessage($"USER JOINED {user}" +
                                   $"\nCreated At: {user.CreatedAt}" +
                                   $"\nJoined At: {user.JoinedAt}" +
                                   $"\nUser ID: {user.Id}");
@@ -68,8 +67,9 @@ namespace BotHATTwaffle2.Handlers
             {
                 await _log.LogMessage(
                     $"Welcomed `{user.Username}` `{user.Id}` at `{DateTime.Now}`, and assigning them the Playtester role!");
-                await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
-                await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
+                //await user.AddRoleAsync(_dataService.CSGOPlayTesterRole);
+                //await user.AddRoleAsync(_dataService.TF2PlayTesterRole);
+                
                 await user.SendMessageAsync(embed: WelcomeEmbed(user));
             }
             catch
@@ -86,10 +86,9 @@ namespace BotHATTwaffle2.Handlers
         {
             var description =
                 "Now that the verification time has ended, there are a few things I wanted to tell you! Feel free to ask a question in " +
-                $"any of the relevant channels you see. Just try to keep things on topic. Please spend a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
-                "\n\nAdditionally, you've been given a role called `CSGO Playtester` and `TF2 Playtester`. These roles are used to notify you when we have a playtest starting. You can remove yourself from the " +
-                "notifications by typing: `>playtester` in a DM with me, or in any channel. You can use `>pt csgo` and `>pt tf2` to remove just one of the roles." +
-                "\n\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme` in a DM with me, or in any channel." +
+                $"any of the relevant channels you see. Just try to keep things on topic. Please take a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
+                "\n\n**Playtesting**\nWe run playtest for CSGO and TF2. You can manage notifications for these playtests by using the `>playtester` command. Type `>help playtester` for more details." +
+                "\n\n**Skill Roles**\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme` in a DM with me, or in any channel." +
                 "\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!";
 
             var embed = new EmbedBuilder()

@@ -416,7 +416,7 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             await TesterRole.ModifyAsync(x => { x.Mentionable = true; });
             await TestingChannel.SendMessageAsync($"Heads up {mentionRole.Mention}! " +
                                                   $"There is a playtest starting in {countdownString}." +
-                                                  $"\nType `>playtester {unsubInfo}` to stop getting {unsubInfo} playtest notifications.",
+                                                  $"\nType `>playtester {unsubInfo}` to manage {unsubInfo} playtest notifications.",
                 embed: announcementMessage.CreatePlaytestEmbed(this, true, AnnouncementMessage.Id));
             await TesterRole.ModifyAsync(x => { x.Mentionable = false; });
 
