@@ -464,10 +464,13 @@ namespace BotHATTwaffle2.Services.FaceIt
         private void SetHubTagOnGame(FaceItGameInfo game)
         {
             //Get the hub with the desired date and season tags.
+            //Ensure that we don't place any games into a "subscriber" tag.
+            //Subscriber tags run on the same hub GUID, but are their own response tag from FaceIt. We want to group all games into 1 tag.
             var targetTag = _hubTags.FirstOrDefault(x =>
                                 x.StartDate < game.GetStartDate()
                                 && x.EndDate > game.GetStartDate()
-                                && x.HubGuid.Equals(game.Hub.HubGUID, StringComparison.OrdinalIgnoreCase)) ??
+                                && x.HubGuid.Equals(game.Hub.HubGUID, StringComparison.OrdinalIgnoreCase)
+                                && !x.TagName.Contains("subscriber", StringComparison.OrdinalIgnoreCase)) ??
                             new FaceItHubTag(); //Makes a default, unknown tag.
 
             game.SetHubTag(targetTag);
