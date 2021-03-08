@@ -485,6 +485,7 @@ namespace BotHATTwaffle2.Commands
 
             embed.AddField("Ingame Chat Active", "You may use `>pc` in-game to send commands to the server!");
             embed.AddField("Ingame Feedback Active", "You may use `>fb` in-game to send feedback to the log! Type `>rs` to collect the log.");
+            embed.AddField("Playtest Demo", "You may use `>pd start` to start recording a GOTV demo, then `>pd stop` to finish. See `>help pd` for more info.");
 
             await ReplyAsync(embed: embed.Build());
 
