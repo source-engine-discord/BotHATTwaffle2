@@ -33,6 +33,11 @@ namespace BotHATTwaffle2
                 AlwaysDownloadUsers = true
             };
 
+            var interactiveConfig = new InteractiveServiceConfig
+            {
+                DefaultTimeout = TimeSpan.FromMinutes(10)
+            };
+
             // Dependency injection. All objects use constructor injection.
             _client = new DiscordSocketClient(config);
             _commands = new CommandService();
@@ -55,7 +60,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<VoiceChannelHandler>()
                 .AddSingleton<ToolsService>()
                 .AddSingleton<IHelpService, HelpService>()
-                .AddSingleton(s => new InteractiveService(_client, TimeSpan.FromMinutes(10)))
+                .AddSingleton(s => new InteractiveService(_client, interactiveConfig))
                 .BuildServiceProvider();
 
             _dataService = _services.GetRequiredService<DataService>();

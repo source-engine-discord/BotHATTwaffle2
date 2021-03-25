@@ -67,7 +67,7 @@ namespace BotHATTwaffle2.Services.SRCDS
         private async void Start()
         {
             //Let's start the listener on our listen port. Allow all IPs from the server list.
-            _ = _logHandler.LogMessage($"Starting LogService on {_port}");
+            _ = _logHandler.LogMessage($"Starting SRCDSLogService on {_port}", channel: false);
             _logReceiver = new LogReceiver(_port, CreateIpEndPoints());
 
             await Task.Run(() =>

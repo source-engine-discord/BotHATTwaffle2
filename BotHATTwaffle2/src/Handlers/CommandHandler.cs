@@ -249,7 +249,6 @@ namespace BotHATTwaffle2.Handlers
                     StringComparison.OrdinalIgnoreCase) || message.Content.Contains(
                     "://steamcommunity.com/workshop/filedetails/", StringComparison.OrdinalIgnoreCase))
             {
-                // The two empty strings here are for image album and test type (for when the bot sends the "playtest submitted" message)
                 var workshop = new Workshop(_dataService, _log);
                 await workshop.SendWorkshopEmbed(message);
                 return;

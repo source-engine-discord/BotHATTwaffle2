@@ -444,6 +444,15 @@ namespace BotHATTwaffle2.Services.Calendar.PlaytestEvents
             //Ensure server is awake and RCON connection is established.
             await rconService.WakeRconServer(ServerLocation);
 
+            try
+            {
+                await Moderator.SendMessageAsync($"You're running the {CleanedTitle} playtest in 20 minutes!");
+            }
+            catch
+            {
+                //Ignored
+            }
+
             await _log.LogMessage("Running playtesting starting in 20 minutes task...", true, color: LOG_COLOR);
         }
 

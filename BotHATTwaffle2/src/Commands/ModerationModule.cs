@@ -54,19 +54,16 @@ namespace BotHATTwaffle2.Commands
             _toolsService = toolsService;
         }
 
-//        [Command("Test")]
-//        [Summary("Used to debug. This should not go live")]
-//        [RequireUserPermission(GuildPermission.KickMembers)]
-//        public async Task TestAsync()
-//        {
-//            var sapi = new SteamAPI(_dataService,_log);
-//            var r = await sapi.GetWorkshopMapRadarFiles(@"C:\support\test", "1811247004");
-//
-//            foreach (var fileInfo in r)
-//            {
-//                await ReplyAsync(fileInfo.FullName);
-//            }
-//        }
+        /*
+        [Command("Test")]
+        [Summary("Used to debug. This should not go live")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task TestAsync()
+        {
+            await ReplyAsync("yup");
+            _dataService.thing();
+        }
+        */
 
         [Command("MatchMaking", RunMode = RunMode.Async)]
         [Alias("mm")]

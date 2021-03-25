@@ -9,6 +9,7 @@ using BotHATTwaffle2.Handlers;
 using BotHATTwaffle2.Models.JSON;
 using BotHATTwaffle2.Util;
 using Discord;
+using Discord.Net.Queue;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 
@@ -111,18 +112,45 @@ namespace BotHATTwaffle2.Services
             IncludePlayerCount = includeCount;
         }
 
+
+        public void thing()
+        {
+            AlertUser = GetSocketUser(RSettings.ProgramSettings.AlertUser);
+        }
+
         public async Task DeserializeConfig()
         {
             ReadConfig();
             await DeserializeChannels();
             GetRoles();
-
             IncludePlayerCount = false;
             PlayerCount = "0";
-
             try
             {
-                AlertUser = _client.GetUser(RSettings.ProgramSettings.AlertUser);
+                AlertUser = GetSocketUser(RSettings.ProgramSettings.AlertUser);
+                if (AlertUser == null)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        while(true)//for (int i = 0; i < 10; i++)
+                        {
+                            if (AlertUser != null)
+                            {
+                                Console.WriteLine("WE DID IT REDDIT");
+                                Console.WriteLine("WE DID IT REDDIT");
+                                Console.WriteLine("WE DID IT REDDIT");
+                                Console.WriteLine("WE DID IT REDDIT");
+                                return;
+                            }
+
+                            Console.WriteLine("Client did not return a user for AlertUser. Will try again in 5 seconds...");
+                            await Task.Delay(3000);
+                            AlertUser = GetSocketUser(RSettings.ProgramSettings.AlertUser);
+                        }
+
+                        throw new NullReferenceException("Alert user null!");
+                    });
+                }
             }
             catch
             {

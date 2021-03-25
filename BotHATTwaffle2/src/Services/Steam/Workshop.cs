@@ -74,9 +74,8 @@ namespace BotHATTwaffle2.Services.Steam
 
             //Try to get games, if null don't embed a game field
             var wsGames = await steamApi.GetWorkshopGames();
-            var gameId = wsGames?.applist.apps.SingleOrDefault(x =>
-                x.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id);
-
+            var gameId = wsGames?.applist.apps.FirstOrDefault(x => x.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id);
+            
             if (gameId != null)
                 workshopItemEmbed.AddField("Game", gameId.name, true);
 

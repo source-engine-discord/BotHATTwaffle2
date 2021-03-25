@@ -760,8 +760,11 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                     if (data.Contains("tf2", StringComparison.OrdinalIgnoreCase))
                     {
-                        _testRequest.Game = "TF2";
-                        return true;
+                        await Display("**We are not currently running TF2 playtests. Sorry for the inconvenience!\n" +
+                                      "Type `exit` to abort the playtest request.**");
+                        //_testRequest.Game = "TF2";
+                        //return true;
+                        return false;
                     }
 
                     await Display($"Invalid game.\nYou provided `{data}`\n" +

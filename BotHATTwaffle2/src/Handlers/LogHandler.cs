@@ -48,6 +48,12 @@ namespace BotHATTwaffle2.Handlers
                 Console.ResetColor();
             }
 
+            if(channel && _dataService.LogChannel == null)
+            {
+                Console.WriteLine($"Attempted to log:\n[{msg}]\nto the log channel, but log channel is not yet set.");
+                return;
+            }
+
             if (channel)
                 await _dataService.LogChannel.SendMessageAsync(alertUser, embed: new EmbedBuilder()
                     .WithDescription(msg)

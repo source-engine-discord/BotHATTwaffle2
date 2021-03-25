@@ -63,7 +63,7 @@ namespace BotHATTwaffle2.Services.FaceIt
                     if (failedMessagePostCount == 5)
                     {
                         await _log.LogMessage(
-                            "To prevent spam, channel logging is now disabled, see bot console for more logs", true,
+                            "To prevent spam, channel logging for faceit downloads is now disabled, see bot console for more logs", true,
                             alert: true, color: LOG_COLOR);
                         channelLog = false;
                     }

@@ -200,21 +200,25 @@ namespace BotHATTwaffle2.Commands
             string thanksTo = null;
 
             var users = _dataService.PatreonsRole.Members.ToArray();
-            GeneralUtil.Shuffle(users);
-            var tick = true;
-            foreach (var user in users)
-                if (tick)
-                {
-                    thanksTo += $"`{user}`,    ";
-                    tick = false;
-                }
-                else
-                {
-                    thanksTo += $"`{user}`\n";
-                    tick = true;
-                }
 
-            embed.AddField("Thanks to support from these Patreons", thanksTo.TrimEnd(',', ' '), true);
+            if(users.Length != 0)
+            {
+                GeneralUtil.Shuffle(users);
+                var tick = true;
+                foreach (var user in users)
+                    if (tick)
+                    {
+                        thanksTo += $"`{user}`,    ";
+                        tick = false;
+                    }
+                    else
+                    {
+                        thanksTo += $"`{user}`\n";
+                        tick = true;
+                    }
+
+                embed.AddField("Thanks to support from these Patreons", thanksTo.TrimEnd(',', ' '), true);
+            }
 
             await ReplyAsync(string.Empty, false, embed.Build());
         }
