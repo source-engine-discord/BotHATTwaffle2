@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -34,6 +35,8 @@ namespace BotHATTwaffle2.Commands
         private readonly RconService _rconService;
         private readonly ReservationService _reservationService;
         private readonly ScheduleHandler _scheduleHandler;
+        private static List<ulong> AIdoUserList = new List<ulong>();
+        private Random AIdoGroupRandom = new Random();
 
         public PlaytestModule(DiscordSocketClient client, DataService dataService,
             ReservationService reservationService, RconService rconService,
@@ -225,6 +228,245 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
+        
+        [Command("AIdo", RunMode = RunMode.Async)]
+        [Alias("AI")]
+        [RequireContext(ContextType.Guild)]
+        [Summary("Analyzes your level using the Ido Neural Network.")]
+        [Remarks("Uses a Neural Network that has been trained using dozens of previous playtest demos and maps. " +
+                 "Provide a workshop URL to your level to have Ido analyze the level and provide feedback.\n" +
+                 "Example: `>aido https://steamcommunity.com/sharedfiles/filedetails/?id=804710334`")]
+        public async Task AIdoAsync(string workshopLink)
+        {
+            //Lets guard uses by users and total uses.
+            if (AIdoUserList.Contains(Context.User.Id))
+            {
+                await ReplyAsync("You cannot analyze more than 1 map at a time.");
+                return;
+            }
+
+            if (AIdoUserList.Count >= 5)
+            {
+                await ReplyAsync("I'm already analyzing 5 levels. Give AIdo a break, AIdo works for free.");
+                return;
+            }
+
+            AIdoUserList.Add(Context.User.Id);
+
+            var message = await ReplyAsync($"Getting AI Analysis ready for {Context.Message.Author.Username}...");
+
+            //Get from the workshop
+            var workshopId = GeneralUtil.GetWorkshopIdFromFqdn(workshopLink);
+            var steamApi = new SteamAPI(_dataService, _log);
+            var workshopJsonItem = await steamApi.GetWorkshopItem(workshopId);
+            int wsIdAsInt = 0;
+            if (!int.TryParse(workshopId.Trim(), out wsIdAsInt))
+                try
+                {
+                    //Workshop IDs can overflow an INT32, so lets just substring out the first 9 digits and use those instead.
+                    int.TryParse(workshopId.Substring(0,9), out wsIdAsInt);
+                }
+                catch
+                {
+                    //Heck, I don't know man.
+                    await ReplyAsync("Failed to properly parse workshop ID. Check your URL, and try again.");
+                    AIdoUserList.Remove(Context.User.Id);
+                    return;
+                }
+
+            //Sometimes Steam API sucks...
+            if (workshopJsonItem == null || wsIdAsInt == 0)
+            {
+                await message.ModifyAsync(x =>
+                    x.Content = "Unable get workshop item from Steam API. Check your URL, and try again.");
+                AIdoUserList.Remove(Context.User.Id);
+                return;
+            }
+
+            var wsGames = await steamApi.GetWorkshopGames();
+            var gameId = wsGames?.applist.apps.SingleOrDefault(x =>
+                x.appid == workshopJsonItem.response.publishedfiledetails[0].creator_app_id);
+
+            string tags = null;
+            try
+            {
+                tags = string.Join(", ",
+                    workshopJsonItem.response.publishedfiledetails[0].tags.Select(x => x.tag));
+            } catch 
+            { 
+                //Ignored
+            }
+
+            //Validate that we have a valid API response for CSGO that is classic game mode
+            if (gameId == null || gameId.appid != 730 || tags == null || !tags.Contains("Classic", StringComparison.OrdinalIgnoreCase))
+            {
+                await message.ModifyAsync(x =>
+                    x.Content = "**I can only analyze CS:GO levels with a classic game mode.**\nUnlisted maps cannot be analyzed.");
+                AIdoUserList.Remove(Context.User.Id);
+                return;
+            }
+
+            var workshopJsonAuthor = await steamApi.GetWorkshopAuthor(workshopJsonItem);
+            EmbedBuilder workshopItemEmbed;
+            // Finally we can build the embed after too many HTTP requests
+            try
+            {
+                workshopItemEmbed = new EmbedBuilder()
+                    .WithAuthor($"Running AI analysis on {workshopJsonItem.response.publishedfiledetails[0].title}",
+                        workshopJsonAuthor.response.players[0].avatar, workshopLink)
+                    .WithTitle($"Creator: {workshopJsonAuthor.response.players[0].personaname}")
+                    .WithUrl(workshopJsonAuthor.response.players[0].profileurl)
+                    .WithThumbnailUrl(workshopJsonItem.response.publishedfiledetails[0].preview_url)
+                    .WithColor(new Color(71, 126, 159));
+            }
+            catch
+            {
+                //We end up here if we get a response from an unlisted object.
+                await message.ModifyAsync(x =>
+                    x.Content = "Unable get workshop item from Steam API. Check your URL, and try again.");
+                AIdoUserList.Remove(Context.User.Id);
+                return;
+            }
+
+            string statusReason = "Initializing...";
+            await message.DeleteAsync();
+            message = await ReplyAsync($"`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░` 0%\nStatus: `{statusReason}`", embed: workshopItemEmbed.Build());
+
+            //Ensure that we use the same random each time if the same map is submitted more than once. This ensures the same "results"
+            var seededRandom = new Random(wsIdAsInt);
+
+            var delay = seededRandom.Next(8, 60);
+            //Why tf did I use i + 2? Could have just used + 1, but I guess I'm stupid.
+            for (int i = 0; delay > i; i = i + 2)
+            {
+                string progress = "";
+                decimal count = i / (decimal)delay * 50;
+
+                //Progress bar stuff
+                for (int j = 0; j < count; j++)
+                {
+                    progress += "█";
+                }
+
+                for (int j = progress.Length; j < 50; j++)
+                {
+                    progress += "░";
+                }
+
+                if(count < 9)
+                {
+                    statusReason = "Downloading map from Steam Workshop...";
+                }
+                else if(count < 14)
+                {
+                    statusReason = "Setting up Neural Network...";
+                }
+                else if (count < 44)
+                {
+                    statusReason = "Analyzing level...";
+                }
+                else if (count < 50)
+                {
+                    statusReason = "Finishing up...";
+                }
+
+                //Get a RNG based for each map
+                var rngDelayOffset = seededRandom.Next(6,15);
+
+                //Add even more delay based on a shared random, for variance.
+                //Then add more delay for each concurrent run - this simulates server load. kek
+                await Task.Delay((rngDelayOffset * 100) + (AIdoGroupRandom.Next(2,10) * 100) + (AIdoUserList.Count * 750));
+                await message.ModifyAsync(x => x.Content = $"`{progress}` {Math.Round(count * 2, 0)}%\nStatus: `{statusReason}`");
+            }
+
+            //Make em wait to finish, Windows file transfer style
+            await Task.Delay(4 * 1000);
+            await message.ModifyAsync(x => x.Content = $"`██████████████████████████████████████████████████` 100%\nStatus: `Complete!`");
+
+            string[] feedbackArray = { "Multiple sight lines in middle are too long.",
+                "Sight lines at B site are too long.",
+                "A site cover too heavily favors CTs.",
+                "A site will be difficult to retake post plant.",
+                "B site is impossible to take without more utility options.",
+                "Middle contains some 'janky' head shot angles that would be unfun to play against.",
+                "B site has too few utility options.",
+                "Too much of the level favors close quarters combat, making rifle play difficult.",
+                "If CTs get too aggressive they flank the T side too easily.",
+                "T side is required to bait too much utility before they are able to take any map control.",
+                "Middle feels meaningless to take.",
+                "Once you lose middle, it will become impossible to rotate.",
+                "There is no safe plant at A site.",
+                "There is no safe plant at B site.",
+                "CT spawn has menacing angles.",
+                "Too many headshot angles.",
+                "The color of the floor at B does not match the walls.",
+                "Rotate timings are off.",
+                "You can do a 4-man boost out of the map in mid.",
+                "Initial timings are bad.",
+                "Map lacks interesting verticality.",
+                "Not enough chickens in the level.",
+                "Stairs are not clipped properly.",
+                "Map is lacking proper clipping.",
+                "Too much verticality.",
+                "Bomb sites could use more cover.",
+                "Bomb sites have too much cover.",
+                "Unreadable radar. Make it with Terri's Auto Radar here: https://github.com/18swenskiq/CS-GO-Auto-Radar",
+                "Needs more spawns.",
+                "After the round starts, T spawn serves no purpose.",
+                "CTs spawn too close the A site.",
+                "Map is lacking proper optimization.",
+                "Brush ID " + seededRandom.Next(400, 18999) + " has bad lighting.",
+                "A main is too CT sided.",
+                "B main is too T sided.",
+                "Map was found to have a " + seededRandom.Next(60,96) + "% similarity to de_dust2",
+                "Map was detected to have been a decompiled version of an existing map, please do not steal other peoples work.",
+                "A site is very small.",
+                "Middle to B opens into too many angles at once.",
+                "Middle to A pathing is too large.",
+                "Map favors snipers too much.",
+                "CT rotate times are too fast compared to T rotate times.",
+                "Brush geometry created by carve detected on map. Please do not use carve.",
+                "Railings should have collisions disabled.",
+                "Navmesh is corrupt, please rebuild and resubmit.",
+                "Map has many dark areas with bad visibility.",
+                "Map is too cluttered.",
+                "Very awkward head shot angles from short B to T entrance at middle.",
+                "Eco rounds are always a loss.",
+                "Bomb is able to fall though a displacement floor.",
+                "Long A is too much risk for too little reward.",
+                "It might be best to remake the map from scratch."
+            };
+
+            int feedbackCount = seededRandom.Next(6, 14) + 4;
+            List<string> feedBackList = new List<string>();
+
+            //Lets get UNIQUE feedback for this map.
+            for (int i = 0; i < feedbackCount; i++)
+            {
+                while (22 == 22)//Don't ask
+                {
+                    var choice = feedbackArray[seededRandom.Next(0, feedbackArray.Length)];
+                    if (!feedBackList.Contains(choice))
+                    {
+                        feedBackList.Add(choice);
+                        break;
+                    }
+                }
+            }
+
+            string output = "";
+
+            //Build the output and give fake confidence values.
+            for (int i = 0; i < feedBackList.Count; i++)
+            {
+                output += $"(Confidence {seededRandom.Next(70, 101)}%) - {i + 1}: {feedBackList[i]}\n";
+            }
+
+            //Output
+            await ReplyAsync($"{Context.Message.Author.Mention} Analyzed Feedback for {workshopJsonItem.response.publishedfiledetails[0].title}:\n```{output}```");
+            AIdoUserList.Remove(Context.User.Id);
+        }
+        
         [Command("Queue", RunMode = RunMode.Async)]
         [Alias("q")]
         [RequireContext(ContextType.Guild)]
@@ -622,7 +864,8 @@ namespace BotHATTwaffle2.Commands
             {
                 DemoName = $"{levelInfo[2]}_Community",
                 WorkshopId = levelInfo[1],
-                ServerAddress = reservation.ServerId
+                ServerAddress = reservation.ServerId,
+                Game = "csgo"
             };
 
             switch (command.ToLower())
