@@ -9,6 +9,7 @@ namespace BotHATTwaffle2.Util
         //temps
         private static readonly string PatternCelsius = @"(^| )[+-]?(\d*\.)?\d+c(( )|($)|(\r\n|\r|\n))";
         private static readonly string PatternFahrenheit = @"(^| )[+-]?(\d*\.)?\d+f(( )|($)|(\r\n|\r|\n))";
+        private static readonly string PatternRankine = @"(^| )[+]?(\d*\.)?\d+r(( )|($)|(\r\n|\r|\n))";
 
         //Metric
         private static readonly string PatternMilimeters = @"(^| )[+-]?(\d*\.)?\d+mm(( )|($)|(\r\n|\r|\n))";
@@ -30,6 +31,9 @@ namespace BotHATTwaffle2.Util
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex RegExF = new Regex(PatternFahrenheit,
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            
+        private static readonly Regex RegExR = new Regex(PatternRankine,
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex RegExMm =
@@ -69,7 +73,7 @@ namespace BotHATTwaffle2.Util
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
                     if (!dictionary.ContainsKey(match.Value.Trim()))
-                        dictionary.Add(match.Value.Trim(), $"{CelsiusToFahrenheit(value)}f");
+                        dictionary.Add(match.Value.Trim(), $"{CelsiusToRankine(value)}r");
                 }
 
             matches = RegExF.Matches(input);
@@ -78,7 +82,16 @@ namespace BotHATTwaffle2.Util
                 {
                     double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
                     if (!dictionary.ContainsKey(match.Value.Trim()))
-                        dictionary.Add(match.Value.Trim(), $"{FahrenheitToCelsius(value)}c");
+                        dictionary.Add(match.Value.Trim(), $"{FahrenheitToRankine(value)}r");
+                }
+                
+            matches = RegExR.Matches(input);
+            if (matches.Count > 0)
+                foreach (Match match in matches)
+                {
+                    double.TryParse(RegExNumbersonly.Match(match.Value).Value, out var value);
+                    if (!dictionary.ContainsKey(match.Value.Trim()))
+                        dictionary.Add(match.Value.Trim(), $"{RankineToKelvin(value)}k");
                 }
 
             matches = RegExMm.Matches(input);
@@ -173,6 +186,21 @@ namespace BotHATTwaffle2.Util
         public static double FahrenheitToCelsius(double f)
         {
             return Math.Round(5.0 / 9.0 * (f - 32), 2);
+        }
+        
+        public static double FahrenheitToRankine(double f)
+        {
+            return Math.Round(f + 459.67, 2);
+        }
+        
+        public static double CelsiusToRankine(double c)
+        {
+            return Math.Round((9.0 / 5.0) * c + 491.67, 2);
+        }
+        
+        public static double RankineToKelvin(double r)
+        {
+            return Math.Round((5.0 / 9.0) * r);
         }
 
         public static double MilesToKilometers(double mi)
