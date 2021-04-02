@@ -153,10 +153,10 @@ namespace BotHATTwaffle2.Handlers
                         }
                     }
 
-                    if(context.Message.Content.StartsWith(_prefix))
+                    if(toolRequest == null && context.Message.Content.StartsWith(_prefix))
                         toolRequest = context.Message.Content.Substring(1);
 
-                    if (context.Message.Content.StartsWith(_client.CurrentUser.Mention))
+                    if (toolRequest == null && context.Message.Content.StartsWith(_client.CurrentUser.Mention))
                         toolRequest = context.Message.Content.Substring(_client.CurrentUser.Mention.Length);
 
                     if (toolRequest != null)
