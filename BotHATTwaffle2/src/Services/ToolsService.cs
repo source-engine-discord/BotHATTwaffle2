@@ -27,6 +27,9 @@ namespace BotHATTwaffle2.Services
 
         public Tool GetTool(string command)
         {
+            if (command == null)
+                return null;
+
             return _tools.FirstOrDefault(x => x.Command.Equals(command, StringComparison.OrdinalIgnoreCase));
         }
     }

@@ -136,10 +136,6 @@ namespace BotHATTwaffle2.Services
                         {
                             if (AlertUser != null)
                             {
-                                Console.WriteLine("WE DID IT REDDIT");
-                                Console.WriteLine("WE DID IT REDDIT");
-                                Console.WriteLine("WE DID IT REDDIT");
-                                Console.WriteLine("WE DID IT REDDIT");
                                 return;
                             }
 

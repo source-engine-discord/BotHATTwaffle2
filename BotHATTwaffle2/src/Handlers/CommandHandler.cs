@@ -23,6 +23,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly char _prefix;
         private readonly IServiceProvider _service;
         private readonly ToolsService _toolsService;
+        private readonly string[] _prefixStrings;
 
         public CommandHandler(
             DiscordSocketClient client,
@@ -39,7 +40,7 @@ namespace BotHATTwaffle2.Handlers
             _log = log;
             _toolsService = toolsService;
             _prefix = _dataService.RSettings.ProgramSettings.CommandPrefix[0];
-
+            _prefixStrings = new[] {"okay ido, " , "<:botido:592644736029032448> " };
         }
 
         /// <summary>
@@ -87,8 +88,8 @@ namespace BotHATTwaffle2.Handlers
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands.
             if (!(message.HasCharPrefix(_prefix, ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
-                  message.HasStringPrefix("okay ido, ", ref argPos, StringComparison.OrdinalIgnoreCase) ||
-                  message.HasStringPrefix("<:botido:592644736029032448> ", ref argPos,
+                  message.HasStringPrefix(_prefixStrings[0], ref argPos, StringComparison.OrdinalIgnoreCase) ||
+                  message.HasStringPrefix(_prefixStrings[1], ref argPos,
                       StringComparison.OrdinalIgnoreCase)) ||
                 message.Author.IsBot)
             {
@@ -143,9 +144,29 @@ namespace BotHATTwaffle2.Handlers
             {
                 case CommandError.UnknownCommand:
                     //Let's check if the requested command was "tools" command.
-                    var tool = _toolsService.GetTool(context.Message.Content.Substring(1));
-                    if (tool != null)
-                        await HandleTools(context, tool);
+                    string toolRequest = null;
+                    foreach (string s in _prefixStrings)
+                    {
+                        if(context.Message.Content.StartsWith(s, StringComparison.OrdinalIgnoreCase))
+                        {
+                            toolRequest = context.Message.Content.Substring(s.Length);
+                        }
+                    }
+
+                    if(context.Message.Content.StartsWith(_prefix))
+                        toolRequest = context.Message.Content.Substring(1);
+
+                    if (context.Message.Content.StartsWith(_client.CurrentUser.Mention))
+                        toolRequest = context.Message.Content.Substring(_client.CurrentUser.Mention.Length);
+
+                    if (toolRequest != null)
+                    {
+                        var tool = _toolsService.GetTool(toolRequest.Trim());
+
+                        if (tool != null)
+                            await HandleTools(context, tool);
+                    }
+
                     return;
                 case CommandError.BadArgCount:
                     var determiner = result.ErrorReason == "The input text has too many parameters." ? "many" : "few";
@@ -231,6 +252,8 @@ namespace BotHATTwaffle2.Handlers
             if (message.Author.IsBot) return;
 
             //Handle Pastebin Message
+            /*
+            Disabled since Discord added large message embeds
             if (message.Attachments.Count == 1)
             {
                 var file = message.Attachments.FirstOrDefault();
@@ -242,7 +265,7 @@ namespace BotHATTwaffle2.Handlers
                 if (file.Filename.Equals("message.txt", StringComparison.OrdinalIgnoreCase) ||
                     file.Filename.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
                     await LargeMessage(file);
-            }
+            }*/
 
             // Embed Steam workshop links
             if (message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/",
