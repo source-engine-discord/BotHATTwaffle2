@@ -16,6 +16,10 @@ namespace BotHATTwaffle2.Services.SRCDS
         private static bool _running;
         private readonly DataService _dataService;
         private readonly LogHandler _log;
+        private enum RconColors
+        {
+            
+        }
 
         public RconService(DataService dataService, LogHandler log)
         {
@@ -99,19 +103,23 @@ namespace BotHATTwaffle2.Services.SRCDS
             if (command.StartsWith("say ", StringComparison.OrdinalIgnoreCase))
             {
                 /*Chop off the old "say" command and slip in our new one
-                There is a HEX CODE that Visual Studio won't display in the "say " code.
-                Copy and paste the below it into NP++ to see the hex codes
-                white
-                red
-                lightred
-                blue
-                orchid
-                gold
-                lightgreen
-                green
-                lime
-                grey
-                */
+				There is a HEX CODE that Visual Studio won't display in the "say " code.
+				Copy and paste the below it into NP++ to see the hex codes
+				"" White
+				"" Red
+				"" Light Red
+				"" Dark Red
+				"" Blue
+				"" Dark Blue
+				"" Orchid
+				" " Yellow
+				"" Gold
+				"" Light Green
+				"" Lime
+				"" Green
+				"" Grey
+				"" Pale Red
+				*/
                 command = "say " + command.Substring(3).Trim();
             }
 
