@@ -119,7 +119,29 @@ namespace BotHATTwaffle2.Services.SRCDS
 				"" Green
 				"" Grey
 				"" Pale Red
+
+				Alternative method, escape the chars
+				\x01 <- White
+				\x02 <- DarkRed
+				\x03 <- Purple
+				\x04 <- Green
+				\x05 <- BrightGreen
+				\x06 <- Lime
+				\x07 <- Red
+				\x08 <- Silver
+				\x09 <- BrightYellow
+				\x0A <- BrightSilver
+				\x0B <- Blue
+				\x0C <- DarkBlue
+				\x0D <- DarkSilver
+				\x0E <- PurplePinkish
+				\x0F <- BrightRed
+				\x10 <- Yellow
+
+				How to use, note the the color char CANNOT be the first char in the string. Add a space before it.
+				ScriptPrintMessageChatAll(" \x10 This message will be red \x06 This one will be green")
 				*/
+
                 command = "say " + command.Substring(3).Trim();
             }
 
@@ -204,6 +226,9 @@ namespace BotHATTwaffle2.Services.SRCDS
             if (log && recursiveRetryCount == 0)
                 await _log.LogMessage($"**Sending:** `{command}`\n**To:** `{serverId}`\n**Response Was:** `{reply}`",
                     color: LOG_COLOR);
+
+            if (reply != null && reply.Length > 2000)
+                reply = reply.Substring(0, 1950) + "...[Output truncated]";
 
             return reply;
         }

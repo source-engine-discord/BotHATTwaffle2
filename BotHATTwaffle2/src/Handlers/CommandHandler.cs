@@ -123,16 +123,15 @@ namespace BotHATTwaffle2.Handlers
             ICommandContext context,
             IResult result)
         {
+            //Remove the user from the ignore list when the command finished
+            if(_dataService.IgnoreListenList.Contains(context.User.Id))
+                _dataService.IgnoreListenList.Remove(context.User.Id);
+
             if (result.Error is null)
             {
                 _dataService.CommandCount++;
                 return; // Ignores successful executions and unknown commands.
             }
-
-            //If we hit an exception, make sure to remove the user from the list of ignored.
-            if (_dataService.IgnoreListenList.Contains(context.User.Id))
-                _dataService.IgnoreListenList.Remove(context.User.Id);
-
             var alert = false;
             var logMessage =
                 $"Command: {context.Message}\n" +
@@ -384,6 +383,7 @@ namespace BotHATTwaffle2.Handlers
                 await message.Channel.SendMessageAsync(embed: wallWormEmbed.Build());
             }
 
+            /*
             async Task LargeMessage(Attachment file)
             {
                 //Limit size
@@ -410,6 +410,7 @@ namespace BotHATTwaffle2.Handlers
                     }
                 }
             }
+            */
         }
     }
 }

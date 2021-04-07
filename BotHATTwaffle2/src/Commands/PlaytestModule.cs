@@ -576,7 +576,8 @@ namespace BotHATTwaffle2.Commands
         [Summary("Requests a playtest event.")]
         [Remarks("Creates a playtest request using an interactive system. To start, type `>Request`\n\n" +
                  "If you have a filled out template, you can send that with the command to skip the interactive builder. " +
-                 "An example of the filled out template is on the playtesting webpage.\n\nTemplate:" +
+                 "You can also use this command to edit an existing request." +
+                 "\nAn example of the filled out template is on the playtesting webpage.\n\nTemplate:" +
                  "```>Request Date:\nEmails:\nMapName:\nDiscord:\nImgur:\nWorkshop:\nType:\nDescription:\nSpawns:\nPreviousTest:\nServer:```")]
         public async Task PlaytestRequestAsync(
             [Summary("A pre-built playtest event based on the template.")] [Optional] [Remainder]
@@ -587,7 +588,14 @@ namespace BotHATTwaffle2.Commands
             var requestBuilder =
                 new RequestBuilder(Context, _interactive, _dataService, _log, _calendar, _playtestService);
 
-            if (playtestInformation != null)
+            var existingTests = DatabaseUtil.GetAllPlaytestRequests()
+                .FirstOrDefault(x => x.CreatorsDiscord.Contains(Context.User.Id.ToString()));
+
+            if (existingTests != null)
+            {
+                await requestBuilder.UserEditRequest(existingTests);
+            }
+            else if (playtestInformation != null)
             {
                 //If we are here from a full dump, split it to handle
                 var split = playtestInformation.Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);

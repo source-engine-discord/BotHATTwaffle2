@@ -75,6 +75,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         private Events _scheduledTests;
         private PlaytestRequest _testRequest;
         private SocketMessage _userMessage;
+        private bool _wasEdit;
 
         public RequestBuilder(SocketCommandContext context, InteractiveService interactive, DataService data,
             LogHandler log,
@@ -138,6 +139,46 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
+        /// Updates an existing playtest request in the database
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> UpdateRequest()
+        {
+            var saveResult = DatabaseUtil.UpdatePlaytestRequests(_testRequest);
+            var saveEmbed = RebuildEmbed();
+            if (saveResult)
+            {
+                saveEmbed.WithColor(55, 55, 165);
+                await _instructionsMessage.ModifyAsync(x => x.Content = "Request saved!");
+                await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
+                return true;
+            }
+
+            saveEmbed.WithColor(165, 55, 55);
+            await _instructionsMessage.ModifyAsync(x =>
+                x.Content = "There was an issue saving the request");
+            await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
+            return false;
+        }
+
+        /// <summary>
+        /// Deletes a playtest request from the database
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> DeleteRequest()
+        {
+            var status = DatabaseUtil.RemovePlaytestRequest(_testRequest);
+
+            if(_embedMessage != null)
+                await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
+
+            await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
+            await _userMessage.DeleteAsync();
+
+            return status;
+        }
+
+        /// <summary>
         ///     Allows moderator to update or delete a playtest request. If confirmed, the event is added to the calendar.
         /// </summary>
         /// <returns></returns>
@@ -182,32 +223,14 @@ namespace BotHATTwaffle2.Services.Playtesting
 
                 if (_userMessage.Content.Equals("save", StringComparison.OrdinalIgnoreCase))
                 {
-                    var saveResult = DatabaseUtil.UpdatePlaytestRequests(_testRequest);
-                    var saveEmbed = RebuildEmbed();
-                    if (saveResult)
-                    {
-                        saveEmbed.WithColor(55, 55, 165);
-                        await _instructionsMessage.ModifyAsync(x => x.Content = "Request saved!");
-                        await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
-                    }
-                    else
-                    {
-                        saveEmbed.WithColor(165, 55, 55);
-                        await _instructionsMessage.ModifyAsync(x =>
-                            x.Content = "There was an issue saving the request");
-                        await _embedMessage.ModifyAsync(x => x.Embed = saveEmbed.Build());
-                    }
-
+                    await UpdateRequest();
                     return;
                 }
 
                 //Deleting test
                 if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
                 {
-                    DatabaseUtil.RemovePlaytestRequest(_testRequest);
-                    await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
-                    await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
-                    await _userMessage.DeleteAsync();
+                    await DeleteRequest();
                     return;
                 }
 
@@ -296,8 +319,43 @@ namespace BotHATTwaffle2.Services.Playtesting
             finalEmbed.WithColor(new Color(20, 20, 20));
             await _embedMessage.ModifyAsync(x => x.Embed = finalEmbed.Build());
             await _instructionsMessage.ModifyAsync(x => x.Content =
-                "An error occured working with the Google APIs, consult the logs.\n" +
+                "An error occurred working with the Google APIs, consult the logs.\n" +
                 "The playtest event may still have been created.");
+        }
+
+        public async Task UserEditRequest(PlaytestRequest existingRequest)
+        {
+            _testRequest = existingRequest;
+
+            while (true)
+            {
+                _instructionsMessage = await _context.Message.Channel.SendMessageAsync(
+                    $"I found an existing playtest request for `{_testRequest.MapName}`." +
+                    $"\nType `edit` to edit this request." +
+                    $"\nType `delete` to delete this request." +
+                    $"\nType `exit` to abort.");
+                _userMessage = await _interactive.NextMessageAsync(_context);
+
+                if (_userMessage == null ||
+                    _userMessage.Content.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                {
+                    await CancelRequest();
+                    return;
+                }
+                else if (_userMessage.Content.Equals("edit", StringComparison.OrdinalIgnoreCase))
+                {
+                    _wasEdit = true;
+                    await _instructionsMessage.DeleteAsync();
+                    _instructionsMessage = null;
+                    await ConfirmRequest();
+                    return;
+                }
+                else if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
+                {
+                    await DeleteRequest();
+                    return;
+                }
+            }
         }
 
         /// <summary>
@@ -355,6 +413,12 @@ namespace BotHATTwaffle2.Services.Playtesting
                         }
                     }
                 }
+            }
+
+            if(_wasEdit)
+            {
+                await UpdateRequest();
+                return;
             }
 
             //Avoid rate limiting
@@ -562,6 +626,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         /// <returns></returns>
         private async Task Display(string instructions)
         {
+            await Task.Delay(1250);
             if (_embedMessage == null || _isDms)
                 _embedMessage = await _context.Channel.SendMessageAsync("Type `exit` to abort at any time.",
                     embed: RebuildEmbed().Build());
@@ -688,8 +753,11 @@ namespace BotHATTwaffle2.Services.Playtesting
             else
                 await _context.Channel.SendMessageAsync("Interactive builder timed out!");
 
-            await _embedMessage.DeleteAsync();
-            await _instructionsMessage.DeleteAsync();
+            if(_embedMessage != null)
+                await _embedMessage.DeleteAsync();
+
+            if(_instructionsMessage != null)
+                await _instructionsMessage.DeleteAsync();
         }
 
         /// <summary>
