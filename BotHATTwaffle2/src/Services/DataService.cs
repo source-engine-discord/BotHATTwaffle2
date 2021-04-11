@@ -56,6 +56,8 @@ namespace BotHATTwaffle2.Services
         public SocketVoiceChannel LevelTestVoiceChannel { get; private set; }
         public SocketVoiceChannel AfkVoice { get; private set; }
         public SocketTextChannel AdminBotsChannel { get; private set; }
+        public SocketTextChannel VerificationChannel { get; private set; }
+        public SocketTextChannel VerificationRulesChannel { get; private set; }
 
 
         // Roles
@@ -73,6 +75,7 @@ namespace BotHATTwaffle2.Services
         public SocketUser AlertUser { get; private set; }
         public SocketRole CSGOPlaytestAdmin { get; private set; }
         public SocketRole TF2PlaytestAdmin { get; private set; }
+        public SocketRole Unverified { get; private set; }
         public static bool IncludePlayerCount { get; set; }
         public static string PlayerCount { get; set; }
 
@@ -258,6 +261,12 @@ namespace BotHATTwaffle2.Services
             Console.WriteLine(
                 $"CompetitiveTestingChannel ID:{CompetitiveTestingChannel.Id} Discovered Name:{CompetitiveTestingChannel.Name}");
 
+            VerificationChannel = await ParseChannel(RSettings.General.VerificationChannel);
+            Console.WriteLine($"VerificationChannel ID:{VerificationChannel.Id} Discovered Name:{VerificationChannel.Name}");
+
+            VerificationRulesChannel = await ParseChannel(RSettings.General.VerificationRulesChannel);
+            Console.WriteLine($"VerificationRulesChannel ID:{VerificationRulesChannel.Id} Discovered Name:{VerificationRulesChannel.Name}");
+
             Console.ResetColor();
 
             async Task<SocketTextChannel> ParseChannel(string key)
@@ -324,6 +333,9 @@ namespace BotHATTwaffle2.Services
 
             TF2PlaytestAdmin = Guild.GetRole(RSettings.UserRoles.TF2PlaytestAdmin);
             Console.WriteLine($"TF2PlaytestAdmin ID:{TF2PlaytestAdmin.Id} Discovered Name:{TF2PlaytestAdmin.Name}");
+
+            Unverified = Guild.GetRole(RSettings.UserRoles.Unverified);
+            Console.WriteLine($"Unverified ID:{Unverified.Id} Discovered Name:{Unverified.Name}");
 
             Console.ResetColor();
         }

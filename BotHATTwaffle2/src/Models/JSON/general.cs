@@ -25,5 +25,7 @@
         public ulong AfkVoice { get; set; }
         public int FeedbackDuration { get; set; }
         public string AdminBotsChannel { get; set; }
+        public string VerificationChannel { get; set; }
+        public string VerificationRulesChannel { get; set; }
     }
 }

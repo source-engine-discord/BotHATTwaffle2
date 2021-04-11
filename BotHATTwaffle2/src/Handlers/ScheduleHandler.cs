@@ -114,34 +114,6 @@ namespace BotHATTwaffle2.Handlers
             JobManager.AddJob(async () => await DailyDemoRequests(), s => s
                 .WithName("[FaceitDemoRequest]").ToRunEvery(1).Days().At(0, 00));
 
-            //Re-add joined users so they get welcome message and playtester role.
-            //This would only happen if the bot restarts after someone joins, but didn't get the welcome message.
-            foreach (var user in DatabaseUtil.GetAllUserJoins())
-                try
-                {
-                    //Test getting user in a try catch, if we can't they left the server.
-                    var validUser = _dataService.Guild.GetUser(user.UserId);
-
-                    //Send welcome message right away, or wait?
-                    if (DateTime.Now > user.JoinTime.AddMinutes(10))
-                        //Timer expired, schedule now
-                        JobManager.AddJob(async () => await _userHandler.UserWelcomeMessage(validUser), s => s
-                            .WithName($"[UserJoin_{validUser.Id}]").ToRunOnceIn(10).Seconds());
-                    else
-                        //Not passed, scheduled ahead
-                        JobManager.AddJob(async () => await _userHandler.UserWelcomeMessage(validUser), s => s
-                            .WithName($"[UserJoin_{validUser.Id}]").ToRunOnceAt(user.JoinTime.AddMinutes(10)));
-                }
-                catch
-                {
-                    //If we cannot get a user, that means that user left the server. So remove them.
-                    if (_dataService.RSettings.ProgramSettings.Debug)
-                        _ = _log.LogMessage($"Cannot re-add user join for ID {user.UserId}" +
-                                            "because they left the server.", false, color: LOG_COLOR);
-
-                    DatabaseUtil.RemoveJoinedUser(user.UserId);
-                }
-
             //Re-add user mutes
             foreach (var user in DatabaseUtil.GetAllActiveUserMutes())
                 //Send welcome message right away, or wait?

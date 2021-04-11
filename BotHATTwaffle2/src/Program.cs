@@ -59,6 +59,7 @@ namespace BotHATTwaffle2
                 .AddSingleton<SrcdsLogService>()
                 .AddSingleton<VoiceChannelHandler>()
                 .AddSingleton<ToolsService>()
+                .AddSingleton<VerificationService>()
                 .AddSingleton<IHelpService, HelpService>()
                 .AddSingleton(s => new InteractiveService(_client, interactiveConfig))
                 .BuildServiceProvider();
