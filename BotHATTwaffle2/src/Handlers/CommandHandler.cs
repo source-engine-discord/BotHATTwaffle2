@@ -82,6 +82,12 @@ namespace BotHATTwaffle2.Handlers
             if (_dataService.IgnoreListenList.Contains(message.Author.Id))
                 return;
 
+
+            //Don't let people run any commands other than Verify in this channel
+            if (message.Channel.Id == _dataService.VerificationChannel.Id &&
+                !message.Content.Equals(">verify", StringComparison.OrdinalIgnoreCase))
+                return;
+
             // Create a number to track where the prefix ends and the command begins.
             var argPos = 0;
 
