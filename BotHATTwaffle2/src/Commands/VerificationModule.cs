@@ -39,6 +39,15 @@ namespace BotHATTwaffle2.Commands
 
             int var1 = random.Next(0, 10);
             int var2 = random.Next(0, 10);
+
+            //Make sure var1 is always higher
+            if (var2 > var1)
+            {
+                var temp = var1;
+                var1 = var2;
+                var2 = temp;
+            }
+
             int mathOperator = random.Next(0, 3);
             int answer = 0;
             string mathOperatorString = null;
