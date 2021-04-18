@@ -173,7 +173,10 @@ namespace BotHATTwaffle2.Services.Playtesting
                 await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
 
             await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
-            await _userMessage.DeleteAsync();
+
+            //Make sure we can actually delete.
+            if (_embedMessage != null && !_isDms)
+                await _userMessage.DeleteAsync();
 
             return status;
         }
