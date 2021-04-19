@@ -282,7 +282,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                         var mod = _dataService.GetSocketUser(description.ElementAtOrDefault(4));
 
                         embed.AddField($"{item.Summary} - {description.ElementAtOrDefault(3)}",
-                            $"`Scheduled`\nStart Time: `{item.Start.DateTime:ddd, MMM d, HH:mm}`\nEnd Time: `{item.End.DateTime:ddd, MMM d, HH:mm}`\nModerator: {mod.Mention}",
+                            $"`Scheduled`\nStart Time: `{item.Start.DateTime:ddd, MMM d, HH:mm}`\nModerator: {mod.Mention}" +
+                            $"\n[Map Images]({description.ElementAtOrDefault(1)}) - " +
+                            $"[Workshop Link]({description.ElementAtOrDefault(2)})\n",
                             true);
                     }
             }
