@@ -40,7 +40,7 @@ namespace BotHATTwaffle2.Handlers
             */
 
             //Ping the user in the rules channel and then delete it. This is just to get their attention.
-            await _dataService.VerificationChannel.SendMessageAsync($"{user} has joined the server!");
+            await _dataService.VerificationChannel.SendMessageAsync($"`{user}` | `{user.Id}` has joined the server!");
             var userMention = await _dataService.VerificationRulesChannel.SendMessageAsync(user.Mention);
             await userMention.DeleteAsync();
 
