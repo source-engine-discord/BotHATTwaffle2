@@ -314,6 +314,17 @@ namespace BotHATTwaffle2.Services.Playtesting
 
             try
             {
+                var latestMessages = await playtestEvent.AnnouncmentChannel.GetMessagesAsync(1).FlattenAsync();
+                var latestMessage = latestMessages.FirstOrDefault();
+
+                //Enforce the most recent message in the channel to be the playtest announcement.
+                if (latestMessage != null && latestMessage.Id != playtestEvent.AnnouncementMessage.Id)
+                {
+                    await playtestEvent.AnnouncmentChannel.DeleteMessageAsync(playtestEvent.AnnouncementMessage);
+                    await PostNewAnnouncement(playtestEvent);
+                    return;
+                }
+
                 //Compare the current title and the last known title.
                 if (_knownTests.ContainsKey(playtestEvent.Game) &&
                     playtestEvent.EventEditTime.Value.Equals(_knownTests[playtestEvent.Game]))
