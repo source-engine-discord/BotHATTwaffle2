@@ -67,7 +67,7 @@ namespace BotHATTwaffle2.Commands
                     break;
             }
 
-            await ReplyAsync($"{Context.User.Mention} Please answer the following question: ```{var1} {mathOperatorString} {var2}```");
+            await ReplyAsync($"{Context.User.Mention} Please answer the following question: ```{var1} {mathOperatorString} {var2} = ?```");
             var reply = await NextMessageAsync();
 
             if (reply == null)

@@ -235,7 +235,8 @@ namespace BotHATTwaffle2.Commands
         [Summary("Analyzes your level using the Ido Neural Network.")]
         [Remarks("Uses a Neural Network that has been trained using dozens of previous playtest demos and maps. " +
                  "Provide a workshop URL to your level to have Ido analyze the level and provide feedback.\n" +
-                 "Example: `>aido https://steamcommunity.com/sharedfiles/filedetails/?id=804710334`")]
+                 "Example: `>aido https://steamcommunity.com/sharedfiles/filedetails/?id=804710334`" +
+                 "\nThis command is a joke created for April Fools 2021 - but no one reads help docs.")]
         public async Task AIdoAsync(string workshopLink)
         {
             //Lets guard uses by users and total uses.
