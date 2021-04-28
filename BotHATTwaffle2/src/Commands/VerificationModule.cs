@@ -40,7 +40,7 @@ namespace BotHATTwaffle2.Commands
             int var1 = random.Next(0, 10);
             int var2 = random.Next(0, 10);
 
-            //Make sure var1 is always higher
+            //Make sure var1 is always higher because people can't handle negative numbers.
             if (var2 > var1)
             {
                 var temp = var1;
@@ -67,7 +67,7 @@ namespace BotHATTwaffle2.Commands
                     break;
             }
 
-            await ReplyAsync($"{Context.User.Mention} Please answer the following question: ```{var1} {mathOperatorString} {var2} = ?```");
+            await ReplyAsync($"{Context.User.Mention} Please answer the following question:\n```{var1} {mathOperatorString} {var2} = ?```");
             var reply = await NextMessageAsync();
 
             if (reply == null)
