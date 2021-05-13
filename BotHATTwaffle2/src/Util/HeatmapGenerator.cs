@@ -55,7 +55,17 @@ namespace BotHATTwaffle2.Util
             processStartInfo.WorkingDirectory = exeFolderName;
 
             //Start generator with a 60m timeout
-            await AsyncProcessRunner.RunAsync(processStartInfo, 60 * 60 * 1000);
+            try
+            {
+                await AsyncProcessRunner.RunAsync(processStartInfo, 60 * 60 * 1000);
+            }
+            catch (Exception e)
+            {
+                await _log.LogMessage($"Error generating heatmaps for directory:`{overviewFilesDir}`" +
+                                      $"\nJasonDir:`{heatmapJasonDir}`" +
+                                      $"\nException:" +
+                                      $"\n{e}",color:LOG_COLOR);
+            }
 
             return GeneralUtil.GetFilesInDirectory(output);
         }
