@@ -112,7 +112,7 @@ namespace BotHATTwaffle2.Handlers
 
             //Daily Faceit Demo Fetching
             JobManager.AddJob(async () => await DailyDemoRequests(), s => s
-                .WithName("[FaceitDemoRequest]").ToRunEvery(1).Days().At(0, 00));
+                .WithName("[FaceitDemoRequest]").ToRunEvery(1).Days().At(1, 00));
 
             //Re-add user mutes
             foreach (var user in DatabaseUtil.GetAllActiveUserMutes())
@@ -221,10 +221,23 @@ namespace BotHATTwaffle2.Handlers
             await _client.SetGameAsync(playing);
         }
 
+        //Holy shit did you really just declare a new class right here just for this shit? Unreal...
+        private class TimeoutWebClient : WebClient
+        {
+            public int Timeout { get; set; }
+            protected override WebRequest GetWebRequest(Uri uri)
+            {
+                WebRequest w = base.GetWebRequest(uri);
+                w.Timeout = Timeout * 1000;
+                return w;
+            }
+        }
+
         private async Task UpdatePlayerbase()
         {
             const string playerbaseUrl = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
-            var response = new WebClient().DownloadString(playerbaseUrl).Trim();
+            var webClient = new TimeoutWebClient { Timeout = 120};
+            var response = webClient.DownloadString(playerbaseUrl).Trim();
 
             await _log.LogMessage($"Got the following response when updating playerbase: `{response}`",
                 color: LOG_COLOR);
