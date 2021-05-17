@@ -22,21 +22,17 @@ namespace BotHATTwaffle2.Services
             _client = client;
             _log = log;
         }
-        
-        public async Task GiveUnverifiedRole(SocketGuildUser user)
-        {
-            await user.AddRoleAsync(_dataService.Unverified);
-        }
 
         public async Task UserVerified(SocketGuildUser user)
         {
-            await user.RemoveRoleAsync(_dataService.Unverified);
+            await user.AddRoleAsync(_dataService.Verified);
             await UserWelcomeMessage(user);
         }
 
         private async Task UserWelcomeMessage(SocketGuildUser user)
         {
-            DatabaseUtil.RemoveJoinedUser(user.Id);
+            //No longer used.
+            //DatabaseUtil.RemoveJoinedUser(user.Id);
 
             if (_dataService.GetSocketGuildUser(user.Id) == null)
             {

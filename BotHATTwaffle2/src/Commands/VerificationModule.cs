@@ -32,9 +32,17 @@ namespace BotHATTwaffle2.Commands
 
         [Command("Verify", RunMode = RunMode.Async)]
         [Summary("User verification")]
-        [RequireRole("Unverified")]
         public async Task VerifyAsync()
         {
+            if (Context.Message.Channel.Id != _dataService.VerificationChannel.Id)
+            {
+                await Context.Message.DeleteAsync();
+                var display = await ReplyAsync("You cannot use this command outside of the verfication channel.");
+                await Task.Delay(5000);
+                await display.DeleteAsync();
+                return;
+            }
+
             Random random = new Random();
 
             int var1 = random.Next(0, 10);

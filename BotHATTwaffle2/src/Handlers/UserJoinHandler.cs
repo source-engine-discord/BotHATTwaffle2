@@ -30,8 +30,6 @@ namespace BotHATTwaffle2.Handlers
 
         private async Task UserJoinedEventHandler(SocketGuildUser user)
         {
-            await _verificationService.GiveUnverifiedRole(user);
-
             /* Welcome message no longer used when we enabled the role gate.
             var message = _dataService.RSettings.General.WelcomeMessage;
             //Replace placeholders
@@ -49,7 +47,8 @@ namespace BotHATTwaffle2.Handlers
                                   $"\nJoined At: {user.JoinedAt}" +
                                   $"\nUser ID: {user.Id}");
 
-            DatabaseUtil.AddJoinedUser(user.Id);
+            //No longer used when manual verification is used.
+            //DatabaseUtil.AddJoinedUser(user.Id);
         }
 
 //        private async Task UserLeftEventHandler(SocketGuildUser user)

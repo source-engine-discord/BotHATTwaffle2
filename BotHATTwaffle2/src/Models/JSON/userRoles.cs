@@ -15,6 +15,6 @@
         public ulong CSGOPlaytestAdmin { get; set; }
         public ulong TF2PlaytestAdmin { get; set; }
         public ulong ComptesterPlaytestCreator { get; set; }
-        public ulong Unverified { get; set; }
+        public ulong Verified { get; set; }
     }
 }
