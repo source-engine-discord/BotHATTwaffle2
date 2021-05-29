@@ -244,7 +244,11 @@ namespace CoreRCON
             {
                 // Failed auth responses return with an ID of -1
                 if (packet.Id == -1)
-                    throw new AuthenticationException($"Authentication failed for {_tcp.RemoteEndPoint}.");
+                {
+                    Console.WriteLine($"Authentication failed for {_tcp.RemoteEndPoint}.");
+                    Dispose();
+                    return;
+                }
 
                 // Tell Connect that authentication succeeded
 
