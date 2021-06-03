@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -48,6 +49,33 @@ namespace BotHATTwaffle2.Util
 
             result = ((1 + (1 << 20) + x) << 32) | (y + z);
             return result;
+        }
+
+        /// <summary>
+        /// Takes an email address and masks all characters except for the first letter and domain.
+        /// </summary>
+        /// <param name="email">Email address to mask</param>
+        /// <returns>Masked email address. Returns null if invalid email address is provided.</returns>
+        public static string MaskEmail(string email)
+        {
+            if (!new EmailAddressAttribute().IsValid(email))
+            {
+                return null;
+            }
+
+            string hidden = null;
+            for (int i = 0; i < email.Length; i++)
+            {
+                if (i == 0)
+                    hidden += email[i];
+                else if (email[i] == '@')
+                    break;
+                else
+                    hidden += "-";
+            }
+
+            hidden += email.Substring(email.IndexOf('@'));
+            return hidden;
         }
 
         public static string TranslateSteamId3ToSteamId(string steamId)

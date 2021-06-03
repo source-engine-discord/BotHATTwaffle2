@@ -139,7 +139,7 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Updates an existing playtest request in the database
+        ///     Updates an existing playtest request in the database
         /// </summary>
         /// <returns></returns>
         private async Task<bool> UpdateRequest()
@@ -162,14 +162,14 @@ namespace BotHATTwaffle2.Services.Playtesting
         }
 
         /// <summary>
-        /// Deletes a playtest request from the database
+        ///     Deletes a playtest request from the database
         /// </summary>
         /// <returns></returns>
         private async Task<bool> DeleteRequest()
         {
             var status = DatabaseUtil.RemovePlaytestRequest(_testRequest);
 
-            if(_embedMessage != null)
+            if (_embedMessage != null)
                 await _embedMessage.ModifyAsync(x => x.Embed = RebuildEmbed().WithColor(25, 25, 25).Build());
 
             await _instructionsMessage.ModifyAsync(x => x.Content = "Request Deleted!");
@@ -334,9 +334,9 @@ namespace BotHATTwaffle2.Services.Playtesting
             {
                 _instructionsMessage = await _context.Message.Channel.SendMessageAsync(
                     $"I found an existing playtest request for `{_testRequest.MapName}`." +
-                    $"\nType `edit` to edit this request." +
-                    $"\nType `delete` to delete this request." +
-                    $"\nType `exit` to abort.");
+                    "\nType `edit` to edit this request." +
+                    "\nType `delete` to delete this request." +
+                    "\nType `exit` to abort.");
                 _userMessage = await _interactive.NextMessageAsync(_context);
 
                 if (_userMessage == null ||
@@ -345,7 +345,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await CancelRequest();
                     return;
                 }
-                else if (_userMessage.Content.Equals("edit", StringComparison.OrdinalIgnoreCase))
+
+                if (_userMessage.Content.Equals("edit", StringComparison.OrdinalIgnoreCase))
                 {
                     _wasEdit = true;
                     await _instructionsMessage.DeleteAsync();
@@ -353,7 +354,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                     await ConfirmRequest();
                     return;
                 }
-                else if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
+
+                if (_userMessage.Content.Equals("delete", StringComparison.OrdinalIgnoreCase))
                 {
                     await DeleteRequest();
                     return;
@@ -384,8 +386,8 @@ namespace BotHATTwaffle2.Services.Playtesting
                 if (_userMessage.Content.Equals("submit", StringComparison.OrdinalIgnoreCase))
                 {
                     if (_testRequest.Preferredserver != "No preference" && !_testRequest.Game.Equals(
-                            DatabaseUtil.GetTestServer(_testRequest.Preferredserver).Game,
-                            StringComparison.OrdinalIgnoreCase))
+                        DatabaseUtil.GetTestServer(_testRequest.Preferredserver).Game,
+                        StringComparison.OrdinalIgnoreCase))
                     {
                         index = 11;
                         isValid = true;
@@ -418,7 +420,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 }
             }
 
-            if(_wasEdit)
+            if (_wasEdit)
             {
                 await UpdateRequest();
                 return;
@@ -445,7 +447,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                 {
                     //Just reply instead
                     await _context.Channel.SendMessageAsync(
-                        $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest}```");
+                        $"Here is a quick request for your test to quickly submit again if something happens with this test.```>Request {_testRequest.ToStringMaskedEmails()}```");
                 }
 
                 var schedule = await _playtestService.GetUpcomingEvents(true, false);
@@ -481,15 +483,9 @@ namespace BotHATTwaffle2.Services.Playtesting
                     $"[Map Images]({_testRequest.ImgurAlbum}) | [Playtesting Information](https://www.tophattwaffle.com/playtesting)",
                     _testRequest.TestType, GeneralUtil.GetWorkshopIdFromFqdn(_testRequest.WorkshopURL));
 
-                if(embed != null)
-                {
+                if (embed != null)
                     await mentionChannel.SendMessageAsync($"{mentions} has submitted a playtest request!",
                         embed: embed.Build());
-                }
-                else
-                {
-
-                }
 
                 await _log.LogMessage($"{_context.User} has requested a playtest!\n{_testRequest}", color: LOG_COLOR);
             }
@@ -661,8 +657,17 @@ namespace BotHATTwaffle2.Services.Playtesting
                     .WithColor(new Color(0xa53737));
 
             if (_testRequest.Emails.Count > 0)
-                embed.AddField("[1] Emails", string.Join("\n", _testRequest.Emails), true)
+            {
+                List<string> currentAddresses;
+                if (_isDms)
+                    currentAddresses = _testRequest.Emails;
+                else //Special case to mask email addresses for output.
+                    currentAddresses = _testRequest.GetMaskedEmails();
+
+                embed.AddField("[1] Emails", string.Join("\n", currentAddresses), true)
                     .WithColor(new Color(0x9a4237));
+            }
+
 
             if (!string.IsNullOrWhiteSpace(_testRequest.Game))
                 embed.AddField("[2] Game", _testRequest.Game, true)
@@ -756,10 +761,10 @@ namespace BotHATTwaffle2.Services.Playtesting
             else
                 await _context.Channel.SendMessageAsync("Interactive builder timed out!");
 
-            if(_embedMessage != null)
+            if (_embedMessage != null)
                 await _embedMessage.DeleteAsync();
 
-            if(_instructionsMessage != null)
+            if (_instructionsMessage != null)
                 await _instructionsMessage.DeleteAsync();
         }
 

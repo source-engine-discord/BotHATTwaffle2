@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using BotHATTwaffle2.Util;
 
 namespace BotHATTwaffle2.Models.LiteDB
 {
@@ -26,10 +27,31 @@ namespace BotHATTwaffle2.Models.LiteDB
         public string Preferredserver { get; set; }
         public string Game { get; set; }
 
+        private bool _returnMaskedEmails = false;
+
+        public List<string> GetMaskedEmails()
+        {
+            List<string> masked = new List<string>();
+
+            foreach (var email in Emails)
+            {
+                masked.Add(GeneralUtil.MaskEmail(email));
+            }
+
+            return masked;
+        }
+
+        public string ToStringMaskedEmails()
+        {
+            _returnMaskedEmails = true;
+            string result = ToString();
+            _returnMaskedEmails = false;
+            return result;
+        }
         public override string ToString()
         {
             return $"Date:{TestDate}" +
-                   $"\nEmails:{string.Join(", ", Emails)}" +
+                   $"\nEmails:{string.Join(", ", _returnMaskedEmails ? GetMaskedEmails() : Emails)}" +
                    $"\nGame: {Game}" +
                    $"\nMapName:{MapName}" +
                    $"\nDiscord:{string.Join(", ", CreatorsDiscord)}" +
