@@ -659,7 +659,7 @@ namespace BotHATTwaffle2.Services.Playtesting
             if (_testRequest.Emails.Count > 0)
             {
                 List<string> currentAddresses;
-                if (_isDms)
+                if (_isDms || _context.Channel.Id == _dataService.AdminBotsChannel.Id || _context.Channel.Id == _dataService.AdminChannel.Id)
                     currentAddresses = _testRequest.Emails;
                 else //Special case to mask email addresses for output.
                     currentAddresses = _testRequest.GetMaskedEmails();
