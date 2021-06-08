@@ -556,6 +556,7 @@ namespace BotHATTwaffle2.Services
                 {
                     var guildUser = Guild.GetUser(userId);
                     await guildUser.RemoveRoleAsync(MuteRole);
+                    await guildUser.AddRoleAsync(Verified);
 
                     //If null, mute timed out
                     reason = reason ?? "The mute timed out.";

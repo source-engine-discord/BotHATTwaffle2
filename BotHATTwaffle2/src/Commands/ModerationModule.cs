@@ -356,6 +356,7 @@ namespace BotHATTwaffle2.Commands
                 try
                 {
                     await user.AddRoleAsync(_dataService.MuteRole);
+                    await user.RemoveRoleAsync(_dataService.Verified);
 
                     //disconnect user from voice
                     if(user.VoiceChannel != null)
