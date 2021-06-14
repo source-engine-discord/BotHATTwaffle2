@@ -65,7 +65,7 @@ namespace BotHATTwaffle2.Services
             var description =
                 "Now that you are verified, there are a few things I wanted to tell you! Feel free to ask a question in " +
                 $"any of the relevant channels you see. Just try to keep things on topic. Please take a few minutes to read {_dataService.WelcomeChannel.Mention} to learn all our rules." +
-                "\n\n**Playtesting**\nWe run playtest for CSGO and TF2. You can manage notifications for these playtests by using the `>playtester` command. Type `>help playtester` for more details." +
+                "\n\n**Playtesting**\nWe run playtesting sessions for CSGO. You can manage notifications for these playtests by using the `>playtester` command. Type `>help playtester` for more details." +
                 "\n\n**Skill Roles**\nThere are roles you can use to show what skills you have. To see what roles you can give yourself, type: `>roleme` in a DM with me, or in any channel." +
                 "\n\nIf you want to see any of my commands, type: `>help`. Thanks for reading, and we hope you enjoy your stay here!";
 
