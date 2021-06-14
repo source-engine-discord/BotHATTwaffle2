@@ -1184,6 +1184,27 @@ namespace BotHATTwaffle2.Commands
             }
         }
 
+        [Command("TestFTP", RunMode = RunMode.Async)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Manually tests FTP access to all servers.")]
+        public async Task TestFtp()
+        {
+            var result = await _playtestService.TestFtpAccess();
+            string output = "";
+
+            foreach (var r in result)
+            {
+                output += $"{r.Key.GetFtpAddress()}: `{r.Value}`\n";
+            }
+
+            await ReplyAsync(embed: new EmbedBuilder()
+                .WithAuthor("Server FTP test results")
+                .WithDescription(output.Trim())
+                .WithColor(new Color(55, 55, 165))
+                .WithFooter("More information in log channel")
+                .Build());
+        }
+
         [Command("ForceAnnounce")]
         [Alias("fa")]
         [RequireUserPermission(GuildPermission.KickMembers)]

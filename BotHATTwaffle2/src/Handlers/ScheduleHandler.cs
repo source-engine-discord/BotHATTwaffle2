@@ -114,6 +114,10 @@ namespace BotHATTwaffle2.Handlers
             JobManager.AddJob(async () => await DailyDemoRequests(), s => s
                 .WithName("[FaceitDemoRequest]").ToRunEvery(1).Days().At(1, 00));
 
+            //Daily FTP Test
+            JobManager.AddJob(async () => await _playtestService.TestFtpAccess(), s => s
+                .WithName("[FTP_Test]").ToRunEvery(1).Days().At(9, 00));
+
             //Re-add user mutes
             foreach (var user in DatabaseUtil.GetAllActiveUserMutes())
                 //Send welcome message right away, or wait?

@@ -578,6 +578,22 @@ namespace BotHATTwaffle2.Services.Playtesting
             }
         }
 
+        /// <summary>
+        /// Tests FTP access to all test servers in the database.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Dictionary<Server, bool>> TestFtpAccess()
+        {
+            var servers = DatabaseUtil.GetAllTestServers();
+            var results = new Dictionary<Server, bool>();
+            foreach (var server in servers)
+            {
+                var result = await DownloadHandler.TestFtpAccess(server);
+                results.Add(server, result);
+            }
+
+            return results;
+        }
 
         /// <summary>
         ///     Posts a new announcement message and alerts playtester role

@@ -13,6 +13,14 @@
         public string FtpType { get; set; }
         public string Game { get; set; }
 
+        public string GetFtpAddress()
+        {
+            if (Address.Contains(':'))
+                return Address.Substring(0, Address.IndexOf(':'));
+
+            return Address;
+        }
+
         public override string ToString()
         {
             return $"\nDatabase ID: {Id}" +

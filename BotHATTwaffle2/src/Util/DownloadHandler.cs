@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Authentication;
@@ -24,13 +25,107 @@ namespace BotHATTwaffle2.Util
             _log = log;
         }
 
+        public static async Task<bool> TestFtpAccess(Server server)
+        {
+            List<string> result = new List<string>();
+            switch (server.FtpType.ToLower())
+            {
+                case "ftps":
+                case "ftp":
+                    var ftpClient = await ConnectFtpClient(server);
+                    if (ftpClient == null)
+                    {
+                        return false;
+                    }
+
+                    result = ftpClient.GetListing(server.FtpPath).Select(x => x.Name).ToList();
+                    
+                    ftpClient.Disconnect();
+                    ftpClient.Dispose();
+
+                    break;
+
+                case "sftp":
+                    var client = await ConnectSftpClient(server);
+
+                    if (client == null)
+                    {
+                        return false;
+                    }
+
+                    result = client.ListDirectory(server.FtpPath).Select(x => x.Name).ToList();
+
+                    client.Disconnect();
+                    client.Dispose();
+
+                    break;
+
+                default:
+                    await _log.LogMessage(
+                        $"The FTP type on the server is incorrectly set. {server.GetFtpAddress()} is using {server.FtpType}",
+                        alert: true, color: LOG_COLOR);
+                    break;
+            }
+
+            string listing = string.Join("\n", result);
+
+            if (listing.Length > 300)
+                listing = listing.Substring(0, 275) + "...[OUTPUT TRUNCATED]";
+
+            await _log.LogMessage($"Connection success to `{server.GetFtpAddress()}`, with `{result.Count}` files.\nListing from server of:\n{listing}");
+            return true;
+        }
+
+        private static async Task<FtpClient> ConnectFtpClient(Server server)
+        {
+            var client = new FtpClient(server.GetFtpAddress(), server.FtpUser, server.FtpPassword);
+
+            if (server.FtpType.ToLower() == "ftps")
+            {
+                client.EncryptionMode = FtpEncryptionMode.Explicit;
+                client.SslProtocols = SslProtocols.Tls;
+                client.ValidateCertificate += (control, e) => { e.Accept = true; };
+            }
+
+            try
+            {
+                client.Connect();
+            }
+            catch (Exception e)
+            {
+                await _log.LogMessage($"Failed to connect to FTP server. {server.GetFtpAddress()}\n {e.Message}",
+                    alert: true, color: LOG_COLOR);
+                return null;
+            }
+
+            return client;
+        }
+
+        private static async Task<SftpClient> ConnectSftpClient(Server server)
+        {
+            var client = new SftpClient(server.GetFtpAddress(), server.FtpUser, server.FtpPassword);
+
+            try
+            {
+                client.Connect();
+            }
+            catch (Exception e)
+            {
+                await _log.LogMessage($"Failed to connect to SFTP server. {server.GetFtpAddress()}\n {e.Message}",
+                    alert: true, color: LOG_COLOR);
+                return null;
+            }
+
+            return client;
+        }
+
         public static async Task<string> DownloadPlaytestDemo(PlaytestCommandInfo playtestCommandInfo)
         {
             var server = DatabaseUtil.GetTestServer(playtestCommandInfo.ServerAddress);
 
             if (server == null)
                 return null;
-
+            
             var dateInsert = "";
             //Arrived from a public test, where a proper start time did not exist.
             if (playtestCommandInfo.StartDateTime == new DateTime())
@@ -60,107 +155,81 @@ namespace BotHATTwaffle2.Util
                 return null;
             }
 
-            string ftpAddress = server.Address;
-            if (ftpAddress.Contains(':'))
-                ftpAddress = ftpAddress.Substring(0, ftpAddress.IndexOf(':'));
-
             switch (server.FtpType.ToLower())
             {
                 case "ftps":
                 case "ftp":
-                    using (var client = new FtpClient(ftpAddress, server.FtpUser, server.FtpPassword))
+
+                    var ftpClient = await ConnectFtpClient(server);
+
+                    if (ftpClient == null)
+                        return null;
+
+                    try
                     {
-                        if (server.FtpType == "ftps")
-                        {
-                            client.EncryptionMode = FtpEncryptionMode.Explicit;
-                            client.SslProtocols = SslProtocols.Tls;
-                            client.ValidateCertificate += (control, e) => { e.Accept = true; };
-                        }
+                        //Download Demo
+                        ftpClient.DownloadFile($"{localPath}\\{playtestCommandInfo.DemoName}.dem",
+                            GetFile(ftpClient, server.FtpPath, playtestCommandInfo.DemoName));
 
-                        try
-                        {
-                            client.Connect();
-                        }
-                        catch (Exception e)
-                        {
-                            await _log.LogMessage($"Failed to connect to FTP server. {ftpAddress}\n {e.Message}",
-                                alert: true, color: LOG_COLOR);
-                            return null;
-                        }
-
-                        try
-                        {
-                            //Download Demo
-                            client.DownloadFile($"{localPath}\\{playtestCommandInfo.DemoName}.dem",
-                                GetFile(client, server.FtpPath, playtestCommandInfo.DemoName));
-
-                            //Download BSP
-                            var bspFile = GetFile(client, remoteBspPath, ".bsp");
-                            client.DownloadFile($"{localPath}\\{Path.GetFileName(bspFile)}", bspFile);
-                        }
-                        catch (Exception e)
-                        {
-                            await _log.LogMessage(
-                                $"Failed to download file from playtest server. {ftpAddress}\n{e.Message}",
-                                color: LOG_COLOR);
-                        }
-
-                        client.Disconnect();
-
+                        //Download BSP
+                        var bspFile = GetFile(ftpClient, remoteBspPath, ".bsp");
+                        ftpClient.DownloadFile($"{localPath}\\{Path.GetFileName(bspFile)}", bspFile);
+                    }
+                    catch (Exception e)
+                    {
                         await _log.LogMessage(
-                            $"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```",
+                            $"Failed to download file from playtest server. {server.GetFtpAddress()}\n{e.Message}",
                             color: LOG_COLOR);
                     }
+
+                    ftpClient.Disconnect();
+                    ftpClient.Dispose();
+
+                    await _log.LogMessage(
+                        $"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```",
+                        color: LOG_COLOR);
 
                     break;
                 case "sftp":
-                    using (var client = new SftpClient(ftpAddress, server.FtpUser, server.FtpPassword))
+                    var client = await ConnectSftpClient(server);
+
+                    if (client == null)
+                        return null;
+
+                    Directory.CreateDirectory(localPath);
+
+                    try
                     {
-                        try
+                        var remoteDemoFile = GetFile(client, server.FtpPath, playtestCommandInfo.DemoName);
+                        using (Stream stream = File.OpenWrite($"{localPath}\\{remoteDemoFile.Name}"))
                         {
-                            client.Connect();
-                        }
-                        catch (Exception e)
-                        {
-                            await _log.LogMessage($"Failed to connect to SFTP server. {ftpAddress}\n {e.Message}",
-                                alert: true, color: LOG_COLOR);
-                            return null;
+                            client.DownloadFile(remoteDemoFile.FullName, stream);
                         }
 
-                        Directory.CreateDirectory(localPath);
-
-                        try
+                        var remoteBspFile = GetFile(client, remoteBspPath, ".bsp");
+                        using (Stream stream = File.OpenWrite($"{localPath}\\{remoteBspFile.Name}"))
                         {
-                            var remoteDemoFile = GetFile(client, server.FtpPath, playtestCommandInfo.DemoName);
-                            using (Stream stream = File.OpenWrite($"{localPath}\\{remoteDemoFile.Name}"))
-                            {
-                                client.DownloadFile(remoteDemoFile.FullName, stream);
-                            }
-
-                            var remoteBspFile = GetFile(client, remoteBspPath, ".bsp");
-                            using (Stream stream = File.OpenWrite($"{localPath}\\{remoteBspFile.Name}"))
-                            {
-                                client.DownloadFile(remoteBspFile.FullName, stream);
-                            }
+                            client.DownloadFile(remoteBspFile.FullName, stream);
                         }
-                        catch (Exception e)
-                        {
-                            await _log.LogMessage(
-                                $"Failed to download file from playtest server. {ftpAddress}\n{e.Message}",
-                                color: LOG_COLOR);
-                        }
-
-                        client.Disconnect();
-
+                    }
+                    catch (Exception e)
+                    {
                         await _log.LogMessage(
-                            $"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```",
+                            $"Failed to download file from playtest server. {server.GetFtpAddress()}\n{e.Message}",
                             color: LOG_COLOR);
                     }
+
+                    client.Disconnect();
+                    client.Dispose();
+
+                    await _log.LogMessage(
+                        $"```Listing of test download directory:\n{string.Join("\n", Directory.GetFiles(localPath))}```",
+                        color: LOG_COLOR);
 
                     break;
                 default:
                     await _log.LogMessage(
-                        $"The FTP type on the server is incorrectly set. {ftpAddress} is using {server.FtpType}",
+                        $"The FTP type on the server is incorrectly set. {server.GetFtpAddress()} is using {server.FtpType}",
                         alert: true, color: LOG_COLOR);
                     break;
             }
