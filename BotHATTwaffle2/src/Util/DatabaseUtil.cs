@@ -25,6 +25,7 @@ namespace BotHATTwaffle2.Util
         private const string COLLECTION_FACEIT_HUBS = "faceitHubs";
         private const string COLLECTION_FEEDBACK_FILE = "feedbackFile";
         private const string COLLECTION_TOOLS = "tools";
+        private const string COLLECTION_BLACKLIST = "blacklist";
         private const ConsoleColor LOG_COLOR = ConsoleColor.Yellow;
         private static LogHandler _log;
         private static DataService _dataService;
@@ -464,6 +465,118 @@ namespace BotHATTwaffle2.Util
             return true;
         }
 
+        public static IEnumerable<Blacklist> GetAllBlacklist()
+        {
+            IEnumerable<Blacklist> allBlacklist = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var blacklist = db.GetCollection<Blacklist>(COLLECTION_BLACKLIST);
+
+                    allBlacklist = blacklist.FindAll();
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting all blacklists\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return allBlacklist;
+            }
+
+            return allBlacklist;
+        }
+
+        public static bool AddBlacklist(Blacklist blacklist)
+        {
+            if (GetBlacklist(blacklist.Word) != null)
+            {
+                _ = _log.LogMessage($"{blacklist.Word} already exists in the database!", color: LOG_COLOR);
+                return false;
+            }
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var blacklists = db.GetCollection<Blacklist>(COLLECTION_BLACKLIST);
+                    blacklists.EnsureIndex(x => x.Word);
+                    
+                    blacklists.Insert(blacklist);
+
+                    if (_dataService.RSettings.ProgramSettings.Debug)
+                        _ = _log.LogMessage("Inserting new server into DB", false, color: LOG_COLOR);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened adding blacklist\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static Blacklist GetBlacklist(string word)
+        {
+            if (word == null)
+                return null;
+
+            Blacklist foundBlacklist = null;
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var servers = db.GetCollection<Blacklist>(COLLECTION_BLACKLIST);
+
+                    foundBlacklist = servers.FindOne(Query.EQ("Word", word));
+                }
+
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened getting blacklist\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return foundBlacklist;
+            }
+
+            return foundBlacklist;
+        }
+
+        public static bool RemoveBlacklist(string word)
+        {
+            var foundBlacklist = GetBlacklist(word);
+
+            if (foundBlacklist == null)
+            {
+                if (_dataService.RSettings.ProgramSettings.Debug)
+                    _ = _log.LogMessage("No blacklist found, so cannot remove anything", false, color: LOG_COLOR);
+                return false;
+            }
+
+            try
+            {
+                using (var db = new LiteDatabase(DBPATH))
+                {
+                    //Grab our collection
+                    var servers = db.GetCollection<Blacklist>(COLLECTION_BLACKLIST);
+
+                    servers.Delete(foundBlacklist.Id);
+                }
+            }
+            catch (Exception e)
+            {
+                _ = _log.LogMessage("Something happened removing blacklist\n" +
+                                    $"{e}", false, color: ConsoleColor.Red);
+                return false;
+            }
+
+            return true;
+        }
+
         /// <summary>
         ///     Returns a IEnumerable of server objects containing all test servers in the database.
         /// </summary>
@@ -551,6 +664,7 @@ namespace BotHATTwaffle2.Util
             {
                 _ = _log.LogMessage("Something happened adding test server\n" +
                                     $"{e}", false, color: ConsoleColor.Red);
+                return false;
             }
 
             return true;

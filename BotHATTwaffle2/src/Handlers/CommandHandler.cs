@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using BotHATTwaffle2.Commands;
 using BotHATTwaffle2.Models.LiteDB;
 using BotHATTwaffle2.Services;
 using BotHATTwaffle2.Services.Steam;
@@ -82,15 +83,20 @@ namespace BotHATTwaffle2.Handlers
             if (_dataService.IgnoreListenList.Contains(message.Author.Id))
                 return;
 
-
             //Don't let people run any commands other than Verify in this channel
             if (message.Channel.Id == _dataService.VerificationChannel.Id &&
                 !message.Content.Equals(">verify", StringComparison.OrdinalIgnoreCase))
                 return;
 
+            //Don't let users in the Void do anything with the bot.
+            if (message.Channel.Id == _dataService.VoidChannel.Id
+                && ((SocketGuildUser) message.Author).Roles.All(x => x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
+                return;
+
             // Create a number to track where the prefix ends and the command begins.
             var argPos = 0;
 
+           
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands.
             if (!(message.HasCharPrefix(_prefix, ref argPos) ||
                   message.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
@@ -271,6 +277,13 @@ namespace BotHATTwaffle2.Handlers
                     file.Filename.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
                     await LargeMessage(file);
             }*/
+            //Check for blacklisting on each message. But don't check mod/admin message
+            if(((SocketGuildUser)message.Author).Roles.All(x => x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
+                if (new BlacklistHandler(_dataService.Blacklist, message, _dataService).CheckBlacklist())
+                {
+                    await message.DeleteAsync();
+                    return;
+                }
 
             // Embed Steam workshop links
             if (message.Content.Contains("://steamcommunity.com/sharedfiles/filedetails/",

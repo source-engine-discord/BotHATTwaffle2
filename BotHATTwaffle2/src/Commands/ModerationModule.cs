@@ -65,6 +65,89 @@ namespace BotHATTwaffle2.Commands
         }
         */
 
+        [Command("Blacklist")]
+        [Alias("bl")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Summary("Blacklist Management")]
+        public async Task BlacklistAsync(string command, [Optional][Remainder]string word)
+        {
+            switch (command.ToLower())
+            {
+                case "add":
+                    if (string.IsNullOrEmpty(word) || !word.Contains(" "))
+                    {
+                        await ReplyAsync("Word to add cannot be empty and must contain a duration first." +
+                                         "\nExample `>bl add 30 furry`");
+                        return;
+                    }
+
+                    var durationString = word.Substring(0, word.IndexOf(" ", StringComparison.Ordinal));
+                    var blWord = word.Substring(word.IndexOf(" ", StringComparison.Ordinal)).Trim();
+                    if (!int.TryParse(durationString, out int duration))
+                    {
+                        await ReplyAsync("Unable to parse duration. Please see `>help blacklist`");
+                        return;
+                    }
+                    
+                    var added = DatabaseUtil.AddBlacklist(new Blacklist()
+                    {
+                        Word = blWord,
+                        AutoMuteDuration = duration
+                    });
+
+                    if (added)
+                        await ReplyAsync($"Added `{blWord}` with an auto mute duration of `{duration}`");
+                    else
+                        await ReplyAsync("Failed to add new blacklist word. Please check logs.");
+
+                    _dataService.LoadBlacklist();
+
+                    break;
+                case "remove":
+                    if (string.IsNullOrEmpty(word))
+                    {
+                        await ReplyAsync("Word to remove cannot be empty.");
+                        return;
+                    }
+
+                    var removed = DatabaseUtil.RemoveBlacklist(word);
+
+                    if (removed)
+                        await ReplyAsync($"Removed {word} from blacklist!");
+                    else
+                        await ReplyAsync("Failed to remove blacklist word. Please check logs.");
+
+                    _dataService.LoadBlacklist();
+
+                    break;
+                case "list":
+                    if (_dataService.Blacklist.Count == 0)
+                    {
+                        await ReplyAsync("No blacklist entries to display");
+                        return;
+                    }
+
+                    string reply = $"```Blacklist contains [{_dataService.Blacklist.Count}] items.``````";
+                    foreach (var blacklist in _dataService.Blacklist.OrderBy(x=>x.Word))
+                    {
+                        reply += $"{blacklist.Word} [{blacklist.AutoMuteDuration}]\n";
+
+                        if (reply.Length > 1800)
+                        {
+                            await ReplyAsync(reply.Trim() + "```");
+                            reply = "```";
+                        }
+                    }
+
+                    await ReplyAsync(reply.Trim() + "```");
+
+                    break;
+                default:
+                    await ReplyAsync("Unknown command, please consult `>help blacklist`");
+                    return;
+            }
+        }
+
         [Command("MatchMaking", RunMode = RunMode.Async)]
         [Alias("mm")]
         [RequireUserPermission(GuildPermission.KickMembers)]
@@ -262,7 +345,7 @@ namespace BotHATTwaffle2.Commands
                     .WithColor(new Color(165, 55, 55)).Build());
         }
 
-        [Command("Mute")]
+        [Command("Mute", RunMode = RunMode.Async)]
         [Alias("Banish", "Yeet")]
         [Summary("Mutes a user.")]
         [Remarks("Mutes a user for a specified reason and duration. When picking a duration" +
@@ -278,163 +361,7 @@ namespace BotHATTwaffle2.Commands
             [Summary("Reason the user has been muted")] [Remainder]
             string reason)
         {
-            //Convert to total minutes, used later for mute extensions
-            var duration = muteLength.TotalMinutes;
-
-            //Variables used if we are extending a mute.
-            double oldMuteTime = 0;
-            var muteStartTime = DateTime.Now;
-            var added = false;
-
-            //Setup the embed for later.
-            var embed = new EmbedBuilder();
-
-            //This is all for a shitpost on mods trying to mute admins
-            if (user.Roles.Any(x => x.Id == _dataService.AdminRole.Id) || user.IsBot)
-            {
-                user = Context.User as SocketGuildUser;
-                muteLength = new TimeSpan(0, 69, 0);
-                string modReason = null;
-                for (var i = 0; i < reason.Length; i++)
-                    modReason += _random.Next(2) == 1
-                        ? reason[i].ToString().ToLower()
-                        : reason[i].ToString().ToUpper();
-
-                //Set the reason string
-                reason = modReason;
-
-                added = DatabaseUtil.AddMute(new Mute
-                {
-                    UserId = Context.User.Id,
-                    Username = Context.User.Username,
-                    Reason = reason,
-                    Duration = muteLength.TotalMinutes,
-                    MuteTime = muteStartTime,
-                    ModeratorId = Context.User.Id,
-                    Expired = false
-                });
-
-                embed.WithThumbnailUrl(@"https://content.tophattwaffle.com/BotHATTwaffle/reverse.png");
-            }
-
-            if (reason.StartsWith("e ", StringComparison.OrdinalIgnoreCase))
-            {
-                //Get the old mute, and make sure it exists before removing it. Also need some data from it.
-                var oldMute = DatabaseUtil.GetActiveMute(user.Id);
-
-                if (oldMute != null)
-                {
-                    //Set vars for next mute
-                    oldMuteTime = oldMute.Duration;
-                    muteStartTime = oldMute.MuteTime;
-
-                    //Unmute inside the DB
-                    var result = DatabaseUtil.UnmuteUser(user.Id);
-
-                    //Remove old mute from job manager
-                    JobManager.RemoveJob($"[UnmuteUser_{user.Id}]");
-
-                    reason = "Extended from previous mute:" + reason.Substring(reason.IndexOf(' '));
-                }
-            }
-
-            //If a mod mute didn't bring us here
-            if (!added)
-                added = DatabaseUtil.AddMute(new Mute
-                {
-                    UserId = user.Id,
-                    Username = user.Username,
-                    Reason = reason,
-                    Duration = duration + oldMuteTime,
-                    MuteTime = muteStartTime,
-                    ModeratorId = Context.User.Id,
-                    Expired = false
-                });
-
-            if (added)
-            {
-                try
-                {
-                    await user.AddRoleAsync(_dataService.MuteRole);
-                    await user.RemoveRoleAsync(_dataService.Verified);
-
-                    //disconnect user from voice
-                    if(user.VoiceChannel != null)
-                        await user.ModifyAsync(x => x.Channel = null);
-
-                    JobManager.AddJob(async () => await _dataService.UnmuteUser(user.Id), s => s
-                        .WithName($"[UnmuteUser_{user.Id}]")
-                        .ToRunOnceAt(DateTime.Now.AddMinutes(duration + oldMuteTime)));
-                }
-                catch
-                {
-                    await ReplyAsync("Failed to apply mute role, did the user leave the server?");
-                    return;
-                }
-
-                string formatted = null;
-
-                if (muteLength.Days != 0)
-                    formatted += muteLength.Days == 1 ? $"{muteLength.Days} Day," : $"{muteLength.Days} Days,";
-
-                if (muteLength.Hours != 0)
-                    formatted += muteLength.Hours == 1 ? $" {muteLength.Hours} Hour," : $" {muteLength.Hours} Hours,";
-
-                if (muteLength.Minutes != 0)
-                    formatted += muteLength.Minutes == 1
-                        ? $" {muteLength.Minutes} Minute,"
-                        : $" {muteLength.Minutes} Minutes,";
-
-                if (muteLength.Seconds != 0)
-                    formatted += muteLength.Seconds == 1
-                        ? $" {muteLength.Seconds} Second"
-                        : $" {muteLength.Seconds} Seconds";
-
-                //hahaha funny number
-                if (muteLength.TotalMinutes == 69)
-                    formatted = "69 minutes";
-
-                reason = _dataService.RemoveChannelMentionStrings(reason);
-
-                await ReplyAsync(embed: embed
-                    .WithAuthor($"{user.Username} Muted")
-                    .WithDescription(
-                        $"Muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
-                    .WithColor(new Color(165, 55, 55))
-                    .Build());
-
-                await _log.LogMessage(
-                    $"`{Context.User}` muted `{user}` `{user.Id}`\nFor: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`",
-                    color: LOG_COLOR);
-
-                try
-                {
-                    await user.SendMessageAsync(embed: embed
-                        .WithAuthor("You have been muted")
-                        .WithDescription(
-                            $"You have been muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
-                        .WithColor(new Color(165, 55, 55))
-                        .Build());
-                }
-                catch
-                {
-                    //Can't DM then, send in void instead
-                    await _dataService.VoidChannel.SendMessageAsync(embed: embed
-                        .WithAuthor("You have been muted")
-                        .WithDescription(
-                            $"You have been muted for: `{formatted.Trim().TrimEnd(',')}`\nBecause: `{reason}`")
-                        .WithColor(new Color(165, 55, 55))
-                        .Build());
-                }
-            }
-            else
-            {
-                await ReplyAsync(embed: embed
-                    .WithAuthor($"Unable to mute {user.Username}")
-                    .WithDescription($"I could not mute `{user.Username}` `{user.Id}` because they are already muted.")
-                    .WithColor(new Color(165, 55, 55))
-                    .Build());
-            }
+            await _dataService.MuteUser(user, muteLength, reason, Context.Message);
         }
 
         [Command("Unmute")]

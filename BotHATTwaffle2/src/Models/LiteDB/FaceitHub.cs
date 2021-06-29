@@ -12,7 +12,7 @@
         public override string ToString()
         {
             return $"DB ID: {Id}" +
-                   $"HubName: {HubName}" +
+                   $"\nHubName: {HubName}" +
                    $"\nHubGUID: {HubGUID}" +
                    $"\nHubType: {HubType}" +
                    $"\nEndpoint: {Endpoint}";

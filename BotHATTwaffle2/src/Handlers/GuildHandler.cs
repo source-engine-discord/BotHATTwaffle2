@@ -41,6 +41,7 @@ namespace BotHATTwaffle2.Handlers
             if(!started)
             {
                 _schedule.AddRequiredJobs();
+                _dataService.LoadBlacklist();
                 started = true;
             }
 
