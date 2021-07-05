@@ -69,6 +69,14 @@ namespace BotHATTwaffle2.Commands
         [Alias("bl")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         [Summary("Blacklist Management")]
+        [Remarks("Adds, removes, and lists the blacklist entries." +
+                 "\n\nAdding words required an auto mute time in minutes. If over 43200 (30 days) Ido will send a message" +
+                 "inside the admin channel to alert of a violation. This is used for potential scammers. If 0, Ido just warns the user with no mute." +
+                 "\nTo add a word, `>bl add [AutoMuteInMinutes] [word]`" +
+                 "\nExample: `>bl add 30 jerk`." +
+                 "\n\nRemoving a word just requires the word to be removed." +
+                 "\nExample: `>bl remove jerk`" +
+                 "\n\nList the entire blacklist with `>bl list`")]
         public async Task BlacklistAsync(string command, [Optional][Remainder]string word)
         {
             switch (command.ToLower())
