@@ -278,7 +278,7 @@ namespace BotHATTwaffle2.Handlers
                     await LargeMessage(file);
             }*/
             //Check for blacklisting on each message. But don't check mod/admin message
-            if(((SocketGuildUser)message.Author).Roles.All(x => x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
+            if(_dataService.GetSocketGuildUser(message.Author.Id).Roles.All(x => x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
                 if (new BlacklistHandler(_dataService.Blacklist, message, _dataService).CheckBlacklist())
                 {
                     await message.DeleteAsync();
