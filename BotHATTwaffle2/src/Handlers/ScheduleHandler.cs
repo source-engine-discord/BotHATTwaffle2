@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,6 +11,7 @@ using BotHATTwaffle2.Services.Calendar;
 using BotHATTwaffle2.Services.FaceIt;
 using BotHATTwaffle2.Services.Playtesting;
 using BotHATTwaffle2.Util;
+using Discord;
 using Discord.WebSocket;
 using FluentScheduler;
 
@@ -28,6 +30,7 @@ namespace BotHATTwaffle2.Handlers
         private readonly UserHandler _userHandler;
         private bool _allowPlayingCycle = true;
         private int _playtestCount;
+        private string _lastBannerPath;
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log,
             PlaytestService playtestService
@@ -113,6 +116,12 @@ namespace BotHATTwaffle2.Handlers
             //Daily Faceit Demo Fetching
             JobManager.AddJob(async () => await DailyDemoRequests(), s => s
                 .WithName("[FaceitDemoRequest]").ToRunEvery(1).Days().At(1, 00));
+            
+            //Banner update
+            JobManager.AddJob(async () => await UpdateBanner(), s => s
+                .WithName("[BannerUpdate]").ToRunEvery(1).Hours());
+            JobManager.AddJob(async () => await UpdateBanner(), s => s
+                .WithName("[BannerUpdateNow]").ToRunNow());
 
             //Daily FTP Test
             JobManager.AddJob(async () => await _playtestService.TestFtpAccess(), s => s
@@ -190,6 +199,27 @@ namespace BotHATTwaffle2.Handlers
         {
             if (_dataService.RSettings.ProgramSettings.Debug)
                 _ = _log.LogMessage($"FLUENT JOB EXCEPTION:\n{info.Exception}", false, color: LOG_COLOR);
+        }
+
+        private async Task UpdateBanner()
+        {
+            string targetImage;
+            var imageFiles = Directory.GetFiles(_dataService.RSettings.ProgramSettings.BannerPath);
+
+            //If only 1 image, use the one image.
+            if (imageFiles.Length == 1)
+                targetImage = imageFiles[0];
+            //If more than 1 image, bounce between.
+            else if (imageFiles.Length > 1 )
+                do
+                {
+                    targetImage = imageFiles[_random.Next(0, imageFiles.Length)];
+                } while (_lastBannerPath == targetImage);
+            //No images, do nothing
+            else
+                return;
+
+            await _dataService.Guild.ModifyAsync(x => x.Banner = new Image(targetImage));
         }
 
         /// <summary>

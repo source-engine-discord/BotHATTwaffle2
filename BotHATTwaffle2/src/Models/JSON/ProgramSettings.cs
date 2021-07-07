@@ -10,6 +10,7 @@
         public string TestCalendarId { get; set; }
         public string ImgurApi { get; set; }
         public string PlaytestDemoPath { get; set; }
+        public string BannerPath { get; set; }
         public string SteamworksAPI { get; set; }
         public ushort ListenPort { get; set; }
         public string DemoFtpUser { get; set; }
