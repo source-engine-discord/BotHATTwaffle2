@@ -56,7 +56,6 @@ namespace BotHATTwaffle2.Handlers
                 }
             }
 
-
             return false;
         }
 
@@ -76,13 +75,12 @@ namespace BotHATTwaffle2.Handlers
 
         private async Task<string> CheckURL(string url)
         {
+            Console.WriteLine($"Checking to following URL using the Google Safe Browsing API:\n{url}");
             var service = new SafebrowsingService(new BaseClientService.Initializer
             {
                 ApplicationName = "dotnet-client",
-                ApiKey = "" // add APIKEY here
+                ApiKey = _dataService.RSettings.ProgramSettings.GoogleSafeBrowsingAPI
             });
-            if (service.ApiKey == "") return null; //remove this after adding key. (or not. doesn't matter)
-
 
             var request = service.ThreatMatches.Find(new GoogleSecuritySafebrowsingV4FindThreatMatchesRequest()
             {
@@ -112,8 +110,10 @@ namespace BotHATTwaffle2.Handlers
                 //returns only first threat
                 return response.Matches[0].ThreatType;
             }
-            return null;
 
+            service.Dispose();
+
+            return null;
         }
 
 
