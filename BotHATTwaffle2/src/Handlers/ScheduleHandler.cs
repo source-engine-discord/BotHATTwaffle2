@@ -219,6 +219,7 @@ namespace BotHATTwaffle2.Handlers
             else
                 return;
 
+            await _log.LogMessage($"Applying new server banner!\n{targetImage}",false,color: LOG_COLOR);
             await _dataService.Guild.ModifyAsync(x => x.Banner = new Image(targetImage));
         }
 
