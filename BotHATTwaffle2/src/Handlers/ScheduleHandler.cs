@@ -204,7 +204,8 @@ namespace BotHATTwaffle2.Handlers
         private async Task UpdateBanner()
         {
             string targetImage;
-            var imageFiles = Directory.GetFiles(_dataService.RSettings.ProgramSettings.BannerPath);
+            var imageFiles = Directory.GetFiles(_dataService.RSettings.ProgramSettings.BannerPath, "*.*", SearchOption.AllDirectories)
+                .Where(s => s.EndsWith(".png") || s.EndsWith(".jpg")).ToArray();
 
             //If only 1 image, use the one image.
             if (imageFiles.Length == 1)
