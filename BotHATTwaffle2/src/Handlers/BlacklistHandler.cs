@@ -137,7 +137,9 @@ namespace BotHATTwaffle2.Handlers
             await _dataService.VoidChannel.SendMessageAsync(embed: new EmbedBuilder()
                 .WithAuthor($"{_message.Author} | {_message.Author.Id} has been muted")
                 .WithDescription(
-                    $"**BLACKLIST VIOLATION** `{blacklist.Word}` resulted in auto mute for `{blacklist.AutoMuteDuration}` minutes. Their message was:\n`{_message.Content}`")
+                    $"**BLACKLIST VIOLATION** `{blacklist.Word}` resulted in auto mute for `{blacklist.AutoMuteDuration}` minutes." +
+                    $"\nIn channel: `{_message.Channel.Name}`" +
+                    $"\nTheir message was: `{_message.Content}`")
                 .WithColor(new Color(165, 55, 55))
                 .Build());
 
