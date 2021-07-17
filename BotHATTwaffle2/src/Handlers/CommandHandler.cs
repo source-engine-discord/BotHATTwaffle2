@@ -52,6 +52,7 @@ namespace BotHATTwaffle2.Handlers
             // Use our event handlers for the following events.
             _client.MessageReceived += MessageReceivedEventHandler;
             _commands.CommandExecuted += CommandExecutedEventHandler;
+            _client.MessageUpdated += MessageUpdatedEventHandler;
 
             // Register custom type readers.
             _commands.AddTypeReader(typeof(TimeSpan), new BetterTimeSpanReader());
@@ -248,6 +249,12 @@ namespace BotHATTwaffle2.Handlers
             await context.Message.Channel.SendMessageAsync(embed: embed.Build());
         }
 
+        private Task MessageUpdatedEventHandler(Cacheable<IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3)
+        {
+            //arg2 is the new message.
+            Listen(arg2);
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         ///     Checks contents of non-command messages for miscellaneous functionality.
