@@ -285,7 +285,25 @@ namespace BotHATTwaffle2.Handlers
                     await LargeMessage(file);
             }*/
             //Check for blacklisting on each message. But don't check mod/admin message
-            if(_dataService.GetSocketGuildUser(message.Author.Id).Roles.All(x => x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
+            bool blacklistCheck = false;
+
+            //Make sure we only check normal users
+            try
+            {
+                if (_dataService.GetSocketGuildUser(message.Author.Id).Roles.All(x =>
+                    x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
+                    blacklistCheck = true;
+            }
+            catch (Exception e)
+            {
+                //Sometimes this would cause a crash. I think it is due to the user not being a guild user in some situations.
+                await _log.LogMessage($"Issue getting user for black list checking.\n`{e}`" +
+                                      $"\n\n`{message.Author}`" +
+                                      $"\n`{message.Content}`" +
+                                      $"\n`{message.Channel}`");
+            }
+
+            if(!blacklistCheck)
                 if (new BlacklistHandler(_dataService.Blacklist, message, _dataService).CheckBlacklist())
                 {
                     await message.DeleteAsync();
