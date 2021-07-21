@@ -303,7 +303,7 @@ namespace BotHATTwaffle2.Handlers
                                       $"\n`{message.Channel}`");
             }
 
-            if(!blacklistCheck)
+            if(blacklistCheck)
                 if (new BlacklistHandler(_dataService.Blacklist, message, _dataService).CheckBlacklist())
                 {
                     await message.DeleteAsync();
