@@ -291,7 +291,7 @@ namespace BotHATTwaffle2.Handlers
             try
             {
                 if (_dataService.GetSocketGuildUser(message.Author.Id).Roles.All(x =>
-                    x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id))
+                    x.Id != _dataService.AdminRole.Id && x.Id != _dataService.ModeratorRole.Id && x.Id != 436559277251887104))
                     blacklistCheck = true;
             }
             catch (Exception e)
