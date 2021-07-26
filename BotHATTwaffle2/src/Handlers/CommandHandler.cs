@@ -266,6 +266,8 @@ namespace BotHATTwaffle2.Handlers
         /// <param name="message">The message to check.</param>
         private async void Listen(SocketMessage message)
         {
+            if (message == null) return;
+
             // Don't want to listen to what a bot tells us to do
             if (message.Author.IsBot) return;
 
