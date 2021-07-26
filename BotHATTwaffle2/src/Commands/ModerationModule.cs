@@ -121,7 +121,7 @@ namespace BotHATTwaffle2.Commands
                     var removed = DatabaseUtil.RemoveBlacklist(word);
 
                     if (removed)
-                        await ReplyAsync($"Removed {word} from blacklist!");
+                        await ReplyAsync($"Removed `{word}` from blacklist!");
                     else
                         await ReplyAsync("Failed to remove blacklist word. Please check logs.");
 
@@ -138,7 +138,8 @@ namespace BotHATTwaffle2.Commands
                     string reply = $"```Blacklist contains [{_dataService.Blacklist.Count}] items.``````";
                     foreach (var blacklist in _dataService.Blacklist.OrderBy(x=>x.Word))
                     {
-                        reply += $"{blacklist.Word} [{blacklist.AutoMuteDuration}]\n";
+                        string bld = blacklist.AutoMuteDuration >= 43200 ? "High Priority, " + blacklist.AutoMuteDuration : blacklist.AutoMuteDuration == 0 ? "Warn, 0" : blacklist.AutoMuteDuration.ToString();
+                        reply += $"{blacklist.Word} [{bld}]\n";
 
                         if (reply.Length > 1800)
                         {
