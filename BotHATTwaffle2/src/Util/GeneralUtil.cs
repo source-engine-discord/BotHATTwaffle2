@@ -232,6 +232,9 @@ namespace BotHATTwaffle2.Util
         /// <returns>Populated IPHostEntry object, null if not found</returns>
         public static IPHostEntry GetIPHost(string address)
         {
+            if (address == null)
+                return null;
+
             if (address.Contains(':')) address = address.Substring(0, address.IndexOf(":", StringComparison.Ordinal));
             IPHostEntry iPHostEntry = null;
             try

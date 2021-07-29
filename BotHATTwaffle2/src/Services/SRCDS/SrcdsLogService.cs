@@ -45,7 +45,17 @@ namespace BotHATTwaffle2.Services.SRCDS
             var servers = DatabaseUtil.GetAllTestServers();
 
             foreach (var server in servers)
-                _serverIdDictionary.Add(GeneralUtil.GetIpEndPointFromString(server.Address), server);
+            {
+                var ip = GeneralUtil.GetIpEndPointFromString(server.Address);
+
+                if (ip == null)
+                {
+                    _ = _logHandler.LogMessage($"Unable to add SRCDS Log listener for {server.Address} becuase it returned null for IPEndPoint", false,color:LOG_COLOR);
+                    continue;
+                }
+
+                _serverIdDictionary.Add(ip, server);
+            }
 
             var oldSessions = DatabaseUtil.GetAllFeedbackFiles();
 
