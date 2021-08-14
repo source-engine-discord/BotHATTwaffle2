@@ -70,7 +70,7 @@ namespace BotHATTwaffle2.Commands
                     answer = var1 - var2;
                     break;
                 case 2:
-                    mathOperatorString = "*";
+                    mathOperatorString = "✕";
                     answer = var1 * var2;
                     break;
             }
