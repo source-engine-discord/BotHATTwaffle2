@@ -44,38 +44,62 @@ namespace BotHATTwaffle2.Commands
             }
 
             Random random = new Random();
-
-            int var1 = random.Next(0, 10);
-            int var2 = random.Next(0, 10);
-
-            //Make sure var1 is always higher because people can't handle negative numbers.
-            if (var2 > var1)
-            {
-                var temp = var1;
-                var1 = var2;
-                var2 = temp;
-            }
-
-            int mathOperator = random.Next(0, 3);
+            string query = "";
             int answer = 0;
-            string mathOperatorString = null;
-            switch (mathOperator)
+
+            if (random.Next(1, 10001) == 10000)
             {
-                case 0:
-                    mathOperatorString = "+";
-                    answer = var1 + var2;
-                    break;
-                case 1:
-                    mathOperatorString = "-";
-                    answer = var1 - var2;
-                    break;
-                case 2:
-                    mathOperatorString = "✕";
-                    answer = var1 * var2;
-                    break;
+                switch (random.Next(0, 3))
+                {
+                    case 0:
+                        query = "e^(iπ)+1";
+                        answer = 0;
+                        break;
+                    case 1:
+                        query = "2147483647 + 1";
+                        answer = -2147483648;
+                        break;
+                    case 2:
+                        query = "true + true";
+                        answer = 2;
+                        break;
+                }
+            }
+            else
+            {
+                int var1 = random.Next(0, 10);
+                int var2 = random.Next(0, 10);
+
+                //Make sure var1 is always higher because people can't handle negative numbers.
+                if (var2 > var1)
+                {
+                    var temp = var1;
+                    var1 = var2;
+                    var2 = temp;
+                }
+
+                int mathOperator = random.Next(0, 3);
+                string mathOperatorString = null;
+                switch (mathOperator)
+                {
+                    case 0:
+                        mathOperatorString = "+";
+                        answer = var1 + var2;
+                        break;
+                    case 1:
+                        mathOperatorString = "-";
+                        answer = var1 - var2;
+                        break;
+                    case 2:
+                        mathOperatorString = "✕";
+                        answer = var1 * var2;
+                        break;
+                }
+                query = $"{var1} {mathOperatorString} {var2}";
             }
 
-            await ReplyAsync($"{Context.User.Mention} Please answer the following question:\n```{var1} {mathOperatorString} {var2} = ?```");
+
+            await ReplyAsync($"{Context.User.Mention} Please answer the following question:\n```{query} = ?```");
             var reply = await NextMessageAsync();
 
             if (reply == null)
