@@ -67,9 +67,17 @@ namespace BotHATTwaffle2.Commands
             }
             else
             {
-                int var1 = random.Next(0, 10);
-                int var2 = random.Next(0, 10);
 
+                int lowRand = 0;
+                int mathOperator = random.Next(0, 4);
+                string mathOperatorString = null;
+                //Don't let division by 0 happen
+                if (mathOperator == 3)
+                    lowRand = 1;
+
+                int var1 = random.Next(lowRand, 10);
+                int var2 = random.Next(lowRand, 10);
+                
                 //Make sure var1 is always higher because people can't handle negative numbers.
                 if (var2 > var1)
                 {
@@ -78,8 +86,6 @@ namespace BotHATTwaffle2.Commands
                     var2 = temp;
                 }
 
-                int mathOperator = random.Next(0, 3);
-                string mathOperatorString = null;
                 switch (mathOperator)
                 {
                     case 0:
@@ -93,6 +99,14 @@ namespace BotHATTwaffle2.Commands
                     case 2:
                         mathOperatorString = "✕";
                         answer = var1 * var2;
+                        break;
+                    case 3: //thank Tanooki for this shit.
+                        mathOperatorString = "÷";
+                        int bigNumber = var1 * var2;
+                        answer = bigNumber / var1;
+                        //Swap some shit around for display purposes
+                        var2 = var1;
+                        var1 = bigNumber;
                         break;
                 }
                 query = $"{var1} {mathOperatorString} {var2}";
