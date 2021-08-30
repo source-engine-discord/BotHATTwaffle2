@@ -96,6 +96,15 @@ namespace BotHATTwaffle2.Commands
                         await ReplyAsync("Unable to parse duration. Please see `>help blacklist`");
                         return;
                     }
+
+                    foreach (var blacklist in _dataService.Blacklist)
+                    {
+                        if (blWord.Contains(blacklist.Word, StringComparison.OrdinalIgnoreCase))
+                        {
+                            await ReplyAsync($"Aborted adding new blacklist as it would be matched against the existing blacklist entry `{blacklist.Word}`");
+                            return;
+                        }
+                    }
                     
                     var added = DatabaseUtil.AddBlacklist(new Blacklist()
                     {
