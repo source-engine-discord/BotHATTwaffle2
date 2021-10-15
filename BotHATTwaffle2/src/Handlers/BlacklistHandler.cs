@@ -146,7 +146,7 @@ namespace BotHATTwaffle2.Handlers
             if (blacklist.AutoMuteDuration >= 43200)
                 await _dataService.AdminChannel.SendMessageAsync($"The blacklist just had a critical match - Likely a scammer. Please check {_dataService.VoidChannel.Mention}");
 
-            await _dataService.MuteUser((SocketGuildUser)_message.Author,
+            await _dataService.MuteUser(_dataService.GetSocketGuildUser(_message.Author.Id),
                 TimeSpan.FromMinutes(blacklist.AutoMuteDuration),
                 $"BLACKLIST VIOLATION [{blacklist.Word}]", _message);
         }
