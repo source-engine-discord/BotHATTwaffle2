@@ -9,6 +9,7 @@ namespace BotHATTwaffle2.TypeReader
         public override Task<TypeReaderResult> ReadAsync(ICommandContext context, string input,
             IServiceProvider services)
         {
+            var weeks = 0;
             var days = 0;
             var hours = 0;
             var minutes = 0;
@@ -34,6 +35,11 @@ namespace BotHATTwaffle2.TypeReader
                             var unit = input[pointer];
                             switch (unit)
                             {
+                                case 'w':
+                                    int.TryParse(input.Substring(0, 1), out var weeksFirstDigit);
+                                    int.TryParse(input.Substring(0, pointer), out weeks);
+                                    weeks = weeksFirstDigit > 0 ? weeks > maxDays || weeks == 0 ? (maxDays / 7) : weeks : weeks;
+                                    break;
                                 case 'd':
                                     int.TryParse(input.Substring(0, 1), out var daysFirstDigit);
                                     int.TryParse(input.Substring(0, pointer), out days);
@@ -77,6 +83,8 @@ namespace BotHATTwaffle2.TypeReader
                             "Count not parse TimeSpan"));
                     }
 
+                //Slip weeks into the mute span.
+                days = days + (weeks * 7);
                 //sets values back to 0 to stop TimeSpan looping back around to 0
                 seconds = minutes == maxMinutes ? 0 : seconds;
                 minutes = hours == maxHours ? 0 : minutes;
