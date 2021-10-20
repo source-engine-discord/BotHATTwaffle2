@@ -374,7 +374,7 @@ namespace BotHATTwaffle2.Commands
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task MuteAsync([Summary("User to mute")] SocketGuildUser user,
-            [Summary("Length to mute for, in `%D%H%M%S` format")]
+            [Summary("Length to mute for, in `%W%D%H%M%S` format")]
             TimeSpan muteLength,
             [Summary("Reason the user has been muted")] [Remainder]
             string reason)
