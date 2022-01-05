@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -12,6 +14,7 @@ using Discord.WebSocket;
 using Google.Apis.Safebrowsing.v4;
 using Google.Apis.Safebrowsing.v4.Data;
 using Google.Apis.Services;
+using Newtonsoft.Json.Linq;
 
 namespace BotHATTwaffle2.Handlers
 {
@@ -20,6 +23,8 @@ namespace BotHATTwaffle2.Handlers
         private readonly List<Blacklist> _blacklist;
         private readonly SocketMessage _message;
         private readonly DataService _dataService;
+
+        private static readonly HttpClient httpClient = new HttpClient();
         public BlacklistHandler(List<Blacklist> blacklist, SocketMessage message, DataService dataService)
         {
             _blacklist = blacklist;
@@ -42,15 +47,29 @@ namespace BotHATTwaffle2.Handlers
 
             //TODO: Implement "Fuzzy" matching with regex as a "Level 2" check
 
-            Regex rx = new Regex(@"(https?://)[^ ]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            MatchCollection matches = rx.Matches(_message.Content);
+            Regex fullURL = new Regex(@"(https?://)[\S]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            MatchCollection matchesURL = fullURL.Matches(_message.Content);
 
-            foreach (Match match in matches)
+            foreach (Match match in matchesURL)
             {
                 string check = CheckURL(match.Value).Result;
                 if (check != null)
                 {
-                    //_message.Channel.SendMessageAsync("url unsafe: " + check);
+                    MuteUnsafeURL();
+                    return true;
+                }
+            }
+
+            //Looks up domain registration date and rejects anything registered within the past 7 days
+            //fetches domain only, ignores "www.". Maybe there is a better way to write it
+            Regex domain = new Regex(@"(?<=https?://)[^(www.)][^\s/]+|(?<=https?://www.)[^\s/]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            MatchCollection matchesDomain = domain.Matches(_message.Content);
+
+            foreach (Match match in matchesDomain)
+            {
+                var result = CheckDomainRegistryDate(match.Value);
+                if (result)
+                {
                     MuteUnsafeURL();
                     return true;
                 }
@@ -114,6 +133,36 @@ namespace BotHATTwaffle2.Handlers
             service.Dispose();
 
             return null;
+        }
+
+        private Boolean CheckDomainRegistryDate(string value)
+        {
+            httpClient.DefaultRequestHeaders.Accept.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+            httpClient.DefaultRequestHeaders.Add("User-Agent", ".NET Foundation Repository Reporter");
+
+            var stringTask = httpClient.GetStringAsync("https://rdap.org/domain/" + value);
+
+            try
+            {
+                JObject resultJSON = JObject.Parse(stringTask.Result);
+                var registryDate = DateTime.Parse(resultJSON["events"][0]["eventDate"].ToString());
+                var currentDate = DateTime.Now;
+                if (currentDate - registryDate < TimeSpan.FromDays(7))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                //URL not found 
+                return false;
+            }
         }
 
 
