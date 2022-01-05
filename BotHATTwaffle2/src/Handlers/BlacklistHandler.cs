@@ -55,7 +55,7 @@ namespace BotHATTwaffle2.Handlers
                 string check = CheckURL(match.Value).Result;
                 if (check != null)
                 {
-                    MuteUnsafeURL();
+                    UnsafeUrl();
                     return true;
                 }
             }
@@ -70,7 +70,7 @@ namespace BotHATTwaffle2.Handlers
                 var result = CheckDomainRegistryDate(match.Value);
                 if (result)
                 {
-                    MuteUnsafeURL();
+                    UnsafeUrl(true);
                     return true;
                 }
             }
@@ -135,28 +135,27 @@ namespace BotHATTwaffle2.Handlers
             return null;
         }
 
-        private Boolean CheckDomainRegistryDate(string value)
+        private  bool CheckDomainRegistryDate(string value)
         {
+            Console.WriteLine($"Checking to following URL domain registration date:\n{value}");
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
             httpClient.DefaultRequestHeaders.Add("User-Agent", ".NET Foundation Repository Reporter");
 
-            var stringTask = httpClient.GetStringAsync("https://rdap.org/domain/" + value);
+            var httpClientResult = httpClient.GetStringAsync("https://rdap.org/domain/" + value).Result;
 
             try
             {
-                JObject resultJSON = JObject.Parse(stringTask.Result);
+                JObject resultJSON = JObject.Parse(httpClientResult);
                 var registryDate = DateTime.Parse(resultJSON["events"][0]["eventDate"].ToString());
-                var currentDate = DateTime.Now;
-                if (currentDate - registryDate < TimeSpan.FromDays(7))
+                Console.WriteLine($"Current date: {DateTime.Now}\nURL Registration Date: {registryDate}");
+                if (DateTime.Now - registryDate < TimeSpan.FromDays(7))
                 {
                     return true;
                 }
-                else
-                {
-                    return false;
-                }
+
+                return false;
             }
             catch
             {
@@ -200,10 +199,34 @@ namespace BotHATTwaffle2.Handlers
                 $"BLACKLIST VIOLATION [{blacklist.Word}]", _message);
         }
 
-        private async void MuteUnsafeURL()
+        private async void UnsafeUrl(bool shouldMute = false)
         {
-            //For now at least keep the mute at 0 mins since we really can't know how bad the URL is.
-            //Google returns the type of violation so we could change it in the future
+            if (shouldMute)
+            {
+                string msg = _message.Content;
+                if (msg.Length > 1600)
+                {
+                    msg = msg.Substring(0, 1500) + "...";
+                }
+
+                await _dataService.VoidChannel.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithAuthor($"{_message.Author} | {_message.Author.Id} has been muted")
+                    .WithDescription(
+                        $"**BLACKLIST VIOLATION** resulted in auto mute for `43200` minutes." +
+                        $"\nIf you believe this was a mistake, please contact a staff member." +
+                        $"\nIn channel: `{_message.Channel.Name}`" +
+                        $"\nTheir message was:\n```{msg}```")
+                    .WithColor(new Color(165, 55, 55))
+                    .Build());
+
+                await _dataService.MuteUser(_dataService.GetSocketGuildUser(_message.Author.Id),
+                    TimeSpan.FromMinutes(43200),
+                    $"BLACKLIST VIOLATION [NEW DOMAIN LINKED]", _message);
+
+                await _dataService.AdminChannel.SendMessageAsync($"{_message.Author} was muted because they linked a newly registered domain. Please check {_dataService.VoidChannel.Mention}");
+                return;
+            }
+
             var message = await _message.Channel.SendMessageAsync(embed: new EmbedBuilder()
                 .WithAuthor($"{_message.Author.Username}")
                 .WithDescription($"Your message has been deleted because it contained an unsafe URL." +
@@ -213,7 +236,6 @@ namespace BotHATTwaffle2.Handlers
 
             await Task.Delay(10000);
             await message.DeleteAsync();
-            return;
         }
     }
 }
