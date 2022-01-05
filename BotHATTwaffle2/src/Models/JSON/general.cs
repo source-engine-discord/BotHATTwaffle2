@@ -27,5 +27,6 @@
         public string AdminBotsChannel { get; set; }
         public string VerificationChannel { get; set; }
         public string VerificationRulesChannel { get; set; }
+        public string CsgoPlaytestAdminChannel { get; set; }
     }
 }

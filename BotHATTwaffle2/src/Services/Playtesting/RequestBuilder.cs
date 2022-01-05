@@ -471,7 +471,7 @@ namespace BotHATTwaffle2.Services.Playtesting
                     mentionChannel = _dataService.TF2TestingChannel;
                 }
 
-                await _dataService.AdminBotsChannel.SendMessageAsync(
+                await _dataService.CsgoPlaytestAdminChannel.SendMessageAsync(
                     $"{testingAdminMention} a new playtest request for `{_testRequest.MapName}` has been submitted by {creators.Trim()}!",
                     embed: schedule.Build());
 

@@ -61,6 +61,7 @@ namespace BotHATTwaffle2.Services
         public SocketTextChannel AdminBotsChannel { get; private set; }
         public SocketTextChannel VerificationChannel { get; private set; }
         public SocketTextChannel VerificationRulesChannel { get; private set; }
+        public SocketTextChannel CsgoPlaytestAdminChannel { get; private set; }
 
 
         // Roles
@@ -278,6 +279,9 @@ namespace BotHATTwaffle2.Services
 
             VerificationRulesChannel = await ParseChannel(RSettings.General.VerificationRulesChannel);
             Console.WriteLine($"VerificationRulesChannel ID:{VerificationRulesChannel.Id} Discovered Name:{VerificationRulesChannel.Name}");
+
+            CsgoPlaytestAdminChannel = await ParseChannel(RSettings.General.CsgoPlaytestAdminChannel);
+            Console.WriteLine($"CsgoPlaytestAdminChannel ID:{CsgoPlaytestAdminChannel.Id} Discovered Name:{CsgoPlaytestAdminChannel.Name}");
 
             Console.ResetColor();
 
