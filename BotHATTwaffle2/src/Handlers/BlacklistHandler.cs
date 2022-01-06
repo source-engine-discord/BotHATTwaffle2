@@ -148,8 +148,11 @@ namespace BotHATTwaffle2.Handlers
             try
             {
                 JObject resultJSON = JObject.Parse(httpClientResult);
-                var registryDate = DateTime.Parse(resultJSON["events"][0]["eventDate"].ToString());
-                Console.WriteLine($"Current date: {DateTime.Now}\nURL Registration Date: {registryDate}");
+                var registryDate = DateTime.Parse(
+                    resultJSON["events"]
+                    .Where(c => c["eventAction"].ToString() == "registration")
+                    .First()["eventDate"]
+                    .ToString());
                 if (DateTime.Now - registryDate < TimeSpan.FromDays(7))
                 {
                     return true;
