@@ -195,7 +195,7 @@ namespace BotHATTwaffle2.Handlers
                 .Build());
 
             if (blacklist.AutoMuteDuration >= 43200)
-                await _dataService.AdminChannel.SendMessageAsync($"The blacklist just had a critical match - Likely a scammer. Please check {_dataService.VoidChannel.Mention}");
+                await _dataService.AdminChannel.SendMessageAsync($"`{_message.Author}` | `{_message.Author.Id}` caused the blacklist to have a critical match - Likely a scammer. Please check {_dataService.VoidChannel.Mention}");
 
             await _dataService.MuteUser(_dataService.GetSocketGuildUser(_message.Author.Id),
                 TimeSpan.FromMinutes(blacklist.AutoMuteDuration),
@@ -226,7 +226,7 @@ namespace BotHATTwaffle2.Handlers
                     TimeSpan.FromMinutes(43200),
                     $"BLACKLIST VIOLATION [NEW DOMAIN LINKED]", _message);
 
-                await _dataService.AdminChannel.SendMessageAsync($"{_message.Author} was muted because they linked a newly registered domain. Please check {_dataService.VoidChannel.Mention}");
+                await _dataService.AdminChannel.SendMessageAsync($"`{_message.Author}` | `{_message.Author.Id}` was muted because they linked a newly registered domain. Please check {_dataService.VoidChannel.Mention}");
                 return;
             }
 
