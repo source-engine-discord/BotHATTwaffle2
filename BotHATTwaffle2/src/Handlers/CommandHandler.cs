@@ -308,7 +308,24 @@ namespace BotHATTwaffle2.Handlers
             if(blacklistCheck)
                 if (new BlacklistHandler(_dataService.Blacklist, message, _dataService).CheckBlacklist())
                 {
-                    await message.DeleteAsync();
+                    try
+                    {
+                        await message.DeleteAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        string error = $"Issue deleting a black list message.\n`{e}`" +
+                                       $"\n\n`{message.Author}`" +
+                                       $"\n`{message.Content}`" +
+                                       $"\n`{message.Channel}`";
+
+                        if (error.Length > 1800)
+                            error = error.Substring(0, 1800);
+
+                        //Sometimes this would cause a crash. I think it is due to the user not being a guild user in some situations.
+                        await _log.LogMessage(error);
+                    }
+
                     return;
                 }
 
