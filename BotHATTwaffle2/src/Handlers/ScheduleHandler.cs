@@ -31,6 +31,7 @@ namespace BotHATTwaffle2.Handlers
         private bool _allowPlayingCycle = true;
         private int _playtestCount;
         private string _lastBannerPath;
+        const string PLAYERBASE_URL = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
 
         public ScheduleHandler(DataService data, DiscordSocketClient client, LogHandler log,
             PlaytestService playtestService
@@ -271,12 +272,18 @@ namespace BotHATTwaffle2.Handlers
 
         private async Task UpdatePlayerbase()
         {
-            const string playerbaseUrl = @"https://www.tophattwaffle.com/demos/playerBase/fetchPlayers.php";
-            var webClient = new TimeoutWebClient { Timeout = 120};
-            var response = webClient.DownloadString(playerbaseUrl).Trim();
+            try
+            {
+                var webClient = new TimeoutWebClient { Timeout = 120};
+                var response = webClient.DownloadString(PLAYERBASE_URL).Trim();
 
-            await _log.LogMessage($"Got the following response when updating playerbase: `{response}`",
-                color: LOG_COLOR);
+                await _log.LogMessage($"Got the following response when updating playerbase: `{response}`",
+                    color: LOG_COLOR);
+            }
+            catch (Exception e)
+            {
+                await _log.LogMessage($"Failed to update playbase!\n{e}", false, color: LOG_COLOR);
+            }
         }
 
         private async Task DailyDemoRequests()
