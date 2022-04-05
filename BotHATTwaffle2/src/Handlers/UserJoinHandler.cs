@@ -51,7 +51,7 @@ namespace BotHATTwaffle2.Handlers
             //DatabaseUtil.AddJoinedUser(user.Id);
         }
 
-//        private async Task UserLeftEventHandler(SocketGuildUser user)
+//        private async Task UserLeftEventHandler(SocketUser user)
 //        {
 //            
 //        }

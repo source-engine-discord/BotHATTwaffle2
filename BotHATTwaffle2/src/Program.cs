@@ -30,7 +30,8 @@ namespace BotHATTwaffle2
             //Always download users to make sure we can always get them
             var config = new DiscordSocketConfig
             {
-                AlwaysDownloadUsers = true
+                AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
             };
 
             var interactiveConfig = new InteractiveServiceConfig
