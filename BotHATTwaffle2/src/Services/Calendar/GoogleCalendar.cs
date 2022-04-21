@@ -126,6 +126,20 @@ namespace BotHATTwaffle2.Services.Calendar
                 if (_dataService.RSettings.ProgramSettings.Debug)
                     _ = _log.LogMessage("No events found.", false, color: LOG_COLOR);
 
+                //Delete the old message, we have no test to display.
+                if (_activeCsgoPlaytestEvent != null)
+                    await _activeCsgoPlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeCsgoPlaytestEvent
+                        .AnnouncementMessage);
+                //Make the active test null
+                _activeCsgoPlaytestEvent = null;
+
+                //Delete the old message, we have no test to display.
+                if (_activeTf2PlaytestEvent != null)
+                    await _activeTf2PlaytestEvent.AnnouncmentChannel.DeleteMessageAsync(_activeTf2PlaytestEvent
+                        .AnnouncementMessage);
+                //Make the active test null
+                _activeTf2PlaytestEvent = null;
+
                 return;
             }
 
