@@ -67,7 +67,7 @@ namespace BotHATTwaffle2.Handlers
 
             //Ask Google API for new tests every 60 seconds.
             JobManager.AddJob(async () => await _calendar.UpdateTestEventCache(), s => s
-                .WithName("[UpdatePlaytestEventCacheNow]").ToRunNow());
+                .WithName("[UpdatePlaytestEventCacheNow]").ToRunOnceIn(10).Seconds());
 
             JobManager.AddJob(async () => await _calendar.UpdateTestEventCache(), s => s
                 .WithName("[UpdatePlaytestEventCache]").ToRunEvery(60).Seconds());
@@ -87,18 +87,18 @@ namespace BotHATTwaffle2.Handlers
 
             //Early refresh on playtest announcements.
             JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement("csgo"), s => s
-                .WithName("[PostOrUpdateAnnouncementNow_CSGO]").ToRunOnceIn(15).Seconds());
+                .WithName("[PostOrUpdateAnnouncementNow_CSGO]").ToRunOnceIn(20).Seconds());
 
             JobManager.AddJob(async () => await _playtestService.PostOrUpdateAnnouncement("tf2"), s => s
-                .WithName("[PostOrUpdateAnnouncementNow_TF2]").ToRunOnceIn(15).Seconds());
+                .WithName("[PostOrUpdateAnnouncementNow_TF2]").ToRunOnceIn(20).Seconds());
 
             //Reattach to the old announcement message quickly
             JobManager.AddJob(async () => await _playtestService.TryAttachPreviousAnnounceMessage(), s => s
-                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(5).Seconds());
+                .WithName("[TryAttachPreviousAnnounceMessage]").ToRunOnceIn(15).Seconds());
 
             //On start up schedule of playtest announcements
             JobManager.AddJob(() => _playtestService.ScheduleAllPlaytestAnnouncements(), s => s
-                .WithName("[SchedulePlaytestAnnouncementsBoot]").ToRunOnceIn(10).Seconds());
+                .WithName("[SchedulePlaytestAnnouncementsBoot]").ToRunOnceIn(20).Seconds());
 
             //Add schedule for playing information
             JobManager.AddJob(async () => await UpdatePlaying(), s => s

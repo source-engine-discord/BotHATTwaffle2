@@ -35,11 +35,18 @@ namespace BotHATTwaffle2.Handlers
         {
             string alertUser = null;
             var date = DateTime.Now.ToString("HH:mm:ss.fff - dddd, MMMM dd yyyy");
-            if (alert)
-                alertUser = _dataService.AlertUser.Mention;
+            try
+            {
+                if (alert)
+                    alertUser = _dataService.AlertUser.Mention;
+            }
+            catch {
+                Console.WriteLine("Tried to log a message with an alert, but failed.");
+                console = true;
+            }
 
             if (msg.Length > 1950)
-                msg = msg.Substring(0, 1950);
+            msg = msg.Substring(0, 1950);
 
             if (console)
             {
