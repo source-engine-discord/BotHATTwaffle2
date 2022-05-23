@@ -11,8 +11,8 @@ namespace Discord.Addons.Interactive
     {
         public BaseSocketClient Discord { get; }
 
-        private readonly Dictionary<ulong, IReactionCallback> _callbacks;
-        private readonly TimeSpan _defaultTimeout;
+        private Dictionary<ulong, IReactionCallback> _callbacks;
+        private TimeSpan _defaultTimeout;
 
         // helpers to allow DI containers to resolve without a custom factory
         public InteractiveService(DiscordSocketClient discord, InteractiveServiceConfig config = null)
@@ -31,8 +31,6 @@ namespace Discord.Addons.Interactive
 
             _callbacks = new Dictionary<ulong, IReactionCallback>();
         }
-
-
 
         public Task<SocketMessage> NextMessageAsync(SocketCommandContext context, 
             bool fromSourceUser = true, 
@@ -113,6 +111,7 @@ namespace Discord.Addons.Interactive
             => _callbacks.Remove(id);
         public void ClearReactionCallbacks()
             => _callbacks.Clear();
+        
 
         private async Task HandleReactionAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
@@ -136,10 +135,19 @@ namespace Discord.Addons.Interactive
             }
         }
 
+        public async Task<IUserMessage> SendMessageWithReactionCallbacksAsync(SocketCommandContext context, ReactionCallbackData callbacks, bool fromSourceUser = true)
+        {
+            var criterion = new Criteria<SocketReaction>();
+            if (fromSourceUser)
+                criterion.AddCriterion(new EnsureReactionFromSourceUserCriterion());
+            var callback = new InlineReactionCallback(this, context, callbacks, criterion);
+            await callback.DisplayAsync().ConfigureAwait(false);
+            return callback.Message;
+        }
+
         public void Dispose()
         {
             Discord.ReactionAdded -= HandleReactionAsync;
         }
-
     }
 }

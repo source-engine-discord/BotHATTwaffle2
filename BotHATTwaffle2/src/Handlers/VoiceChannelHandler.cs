@@ -37,6 +37,12 @@ namespace BotHATTwaffle2.Handlers
 
             var guildUser = _dataService.GetSocketGuildUser(user.Id);
 
+            if (leftState.VoiceChannel.Id == 227265313836630030 && joinedState.VoiceChannel.Id == 193382848550404097)
+            {
+                guildUser.ModifyAsync(x => x.Channel = null);
+                return Task.CompletedTask;
+            }
+
             if (joinedState.VoiceChannel != null)
             {
                 //If we joined the testing channel, and feedback is active, don't unmute

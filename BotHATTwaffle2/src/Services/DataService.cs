@@ -364,6 +364,8 @@ namespace BotHATTwaffle2.Services
         public SocketUser GetSocketUser(string input)
         {
             SocketUser user = null;
+            if (input == null)
+                return null;
             try
             {
                 //Check if username#1234 was provided

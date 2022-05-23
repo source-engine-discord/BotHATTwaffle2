@@ -243,7 +243,7 @@ namespace BotHATTwaffle2.Util
             }
             catch (Exception e)
             {
-                _ = _log.LogMessage($"Failed to get iPHostEntry for `{address}`", alert: true);
+                Console.WriteLine($"Failed to get iPHostEntry for `{address}`");
                 Console.WriteLine(e);
                 throw;
             }
