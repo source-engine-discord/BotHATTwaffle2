@@ -538,7 +538,7 @@ namespace BotHATTwaffle2.Services
             {
                 user = Guild.GetUser(input);
 
-                if (user == null) _ = _log.LogMessage($"Error Setting SocketGuildUser for string `{input}`");
+                if (user == null) _ = _log.LogMessage($"Error Getting SocketGuildUser for string `{input}`");
             }
             catch (Exception e)
             {
