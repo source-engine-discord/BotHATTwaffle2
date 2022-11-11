@@ -395,13 +395,13 @@ namespace BotHATTwaffle2.Handlers
             {
                 var packingEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
-                    .WithTitle("Click here to learn how to use VIDE!")
-                    .WithUrl("https://www.tophattwaffle.com/packing-custom-content-using-vide-in-steampipe/")
-                    .WithThumbnailUrl("https://www.tophattwaffle.com/wp-content/uploads/2013/11/vide.png")
+                    .WithTitle("Click here to learn how to use CompilePal!")
+                    .WithUrl("https://github.com/ruarai/CompilePal/blob/master/Guides/QuickStart.md")
+                    .WithThumbnailUrl("https://content.tophattwaffle.com/BotHATTwaffle/compilepal.jpg")
                     .WithDescription(
                         "I noticed you may be looking for information on how to pack custom content into your level. " +
-                        "This is easily done using VIDE. Click the link above to download VIDE and learn how to use it.")
-                    .WithColor(new Color(243, 128, 72));
+                        "This is easily done using CompilePal. Click the link above to get started with CompilePal")
+                    .WithColor(new Color(229,30,37));
 
                 await message.Channel.SendMessageAsync(embed: packingEmbed.Build());
             }
@@ -415,13 +415,13 @@ namespace BotHATTwaffle2.Handlers
             {
                 var pakratEmbed = new EmbedBuilder()
                     .WithAuthor($"Hey there {message.Author.Username}!", message.Author.GetAvatarUrl())
-                    .WithTitle("Click here to learn how to use VIDE!")
-                    .WithUrl("https://www.tophattwaffle.com/packing-custom-content-using-vide-in-steampipe/")
-                    .WithThumbnailUrl("https://www.tophattwaffle.com/wp-content/uploads/2013/11/vide.png")
+                    .WithTitle("Click here to learn how to use CompilePal!")
+                    .WithUrl("https://github.com/ruarai/CompilePal/blob/master/Guides/QuickStart.md")
+                    .WithThumbnailUrl("https://content.tophattwaffle.com/BotHATTwaffle/compilepal.jpg")
                     .WithDescription("I was minding my own business when I heard you mention something about PakRat. " +
                                      "Don't know if you know this, but PakRat is super old and has been know to cause issues in newer games. " +
-                                     "There is a newer program that handles packing better called VIDE. You should check that out instead.")
-                    .WithColor(new Color(243, 128, 72));
+                                     "There is a newer program that handles packing better called CompilePal. You should check that out instead.")
+                    .WithColor(new Color(229, 30, 37));
 
                 await message.Channel.SendMessageAsync(embed: pakratEmbed.Build());
             }
