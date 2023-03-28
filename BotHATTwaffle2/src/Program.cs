@@ -31,7 +31,7 @@ namespace BotHATTwaffle2
             var config = new DiscordSocketConfig
             {
                 AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
+                GatewayIntents = GatewayIntents.All//GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
             };
 
             var interactiveConfig = new InteractiveServiceConfig
